@@ -72,16 +72,17 @@ namespace Muhanok.Domain
         public float LostGraceSeconds = .5f, DuckHoldSeconds = 1.5f;
         // Gesture conflicts: a lane must hold briefly, actions need confident joints, and ducking or
         // re-acquiring the body blocks lane/jump for a moment so one movement is not read as several.
-        public float LaneHoldSeconds = .1f, ActionVisibility = .6f, RefractorySeconds = .3f, ReacquireLockSeconds = .25f;
+        public float LaneHoldSeconds = .15f, ActionVisibility = .6f, RefractorySeconds = .3f, ReacquireLockSeconds = .25f;
         public int CalibrationFrames = 20;
         public float CalibrationStillness = .12f;
-        public float LaneEnter = .30f, LaneExit = .17f;
+        // Lanes are real zones: about a third of a stride sideways enters one, so a lean or sway stays in the centre.
+        public float LaneEnter = .65f, LaneExit = .38f;
         public float CrouchDrop = .40f, CrouchConfirmSeconds = .20f, LandingGraceSeconds = .3f;
         // A take-off this soon after a crouch confirms cancels it; a rise this fast (body units/s) is a jump attempt that earns the landing grace.
         public float CrouchJumpCancelSeconds = .35f, JumpAttemptSpeed = .8f;
         public float JumpRise = .15f;
         public float HighKneeLift = .22f, HighKneeHoldSeconds = .35f, StepLift = .06f;
-        public float UpperLaneEnter = .38f, UpperLaneExit = .22f, UpperCrouchDrop = .35f, UpperCrouchConfirmSeconds = .12f, UpperHandsAboveNose = .2f;
+        public float UpperLaneEnter = .75f, UpperLaneExit = .42f, UpperCrouchDrop = .35f, UpperCrouchConfirmSeconds = .12f, UpperHandsAboveNose = .2f;
         public float ArmPumpAmplitude = .6f, ArmSwingAmplitude = .3f;
         public float LostSeconds = 2.5f, BaselineDrift = .01f;
     }

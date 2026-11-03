@@ -45,8 +45,14 @@ namespace Muhanok.Tests
 
         [Test] public void FullBodyStepsSelectLanesAndReturnToCentre()
         {
-            CollectionAssert.AreEqual(new[] { "lane-1", "lane0" }, Play(PlayStyle.FullBody, t => new Body { Dx = In(t, .2, .8) ? -.08f : 0 }, 1.5));
-            CollectionAssert.AreEqual(new[] { "lane-1", "lane1", "lane0" }, Play(PlayStyle.FullBody, t => new Body { Dx = In(t, .2, .6) ? -.08f : In(t, .6, 1) ? .08f : 0 }, 1.5));
+            CollectionAssert.AreEqual(new[] { "lane-1", "lane0" }, Play(PlayStyle.FullBody, t => new Body { Dx = In(t, .2, .8) ? -.14f : 0 }, 1.5));
+            CollectionAssert.AreEqual(new[] { "lane-1", "lane1", "lane0" }, Play(PlayStyle.FullBody, t => new Body { Dx = In(t, .2, .6) ? -.14f : In(t, .6, 1) ? .14f : 0 }, 1.5));
+        }
+        [Test] public void SmallShiftsStayInTheCentreZone()
+        {
+            // A third of a torso (the old lane line) is a sway, not a move into the side zone.
+            Assert.IsEmpty(Play(PlayStyle.FullBody, t => new Body { Dx = In(t, .2, .8) ? -.08f : 0 }, 1.5));
+            Assert.IsEmpty(Play(PlayStyle.UpperBody, t => new Body { Dx = In(t, .2, .8) ? -.06f : 0 }, 1.3));
         }
         [Test] public void DipBeforeJumpIsNotASlideAndRepeatedJumpsAllCount()
         {
@@ -84,7 +90,7 @@ namespace Muhanok.Tests
         }
         [Test] public void UpperBodyUsesLeanHandsDuckAndArmPumps()
         {
-            CollectionAssert.AreEqual(new[] { "lane-1", "lane0" }, Play(PlayStyle.UpperBody, t => new Body { Dx = In(t, .2, .8) ? -.06f : 0 }, 1.3));
+            CollectionAssert.AreEqual(new[] { "lane-1", "lane0" }, Play(PlayStyle.UpperBody, t => new Body { Dx = In(t, .2, .8) ? -.10f : 0 }, 1.3));
             CollectionAssert.AreEqual(new[] { "jump" }, Play(PlayStyle.UpperBody, t => new Body { WristL = In(t, .2, .6) ? .08f : .6f, WristR = In(t, .2, .6) ? .08f : .6f }, 1.2));
             CollectionAssert.AreEqual(new[] { "crouch", "stand" }, Play(PlayStyle.UpperBody, t => new Body { Shoulder = In(t, .2, 1) ? .07f : 0 }, 1.4));
             CollectionAssert.AreEqual(new[] { "knee" }, Play(PlayStyle.UpperBody, t => { int s = (int)(t / .3) % 2; bool on = In(t, .2, 1.8); return new Body { WristL = on ? (s == 0 ? .4f : .62f) : .6f, WristR = on ? (s == 1 ? .4f : .62f) : .6f }; }, 2.0));
@@ -129,7 +135,7 @@ namespace Muhanok.Tests
         }
         [Test] public void OneFrameSwayDoesNotChangeLane()
         {
-            Assert.IsEmpty(Play(PlayStyle.FullBody, t => new Body { Dx = In(t, .5, .55) ? -.09f : 0 }, 1.2));
+            Assert.IsEmpty(Play(PlayStyle.FullBody, t => new Body { Dx = In(t, .5, .55) ? -.16f : 0 }, 1.2));
         }
         [Test] public void SettingsPresetsChangeGraphicsOnlyAndClampKeepsValuesSafe()
         {
