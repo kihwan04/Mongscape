@@ -20,6 +20,8 @@ namespace Muhanok.Editor
         [MenuItem("Mongscape/Build Windows Demo")]
         public static void BuildWindows()
         {
+            // A bad face server address stops the build before it starts, not after.
+            IdentityServerSetup.Resolve(out _);
             ValidateContent();
             // Graphics options enable this at runtime. Advertise it at build time so Unity retains its compute resources.
             var pipeline=AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>("Assets/Settings/PC_RPAsset.asset");
@@ -39,6 +41,8 @@ namespace Muhanok.Editor
                 target = BuildTarget.StandaloneWindows64, options = BuildOptions.Development
             });
             if (report.summary.result != BuildResult.Succeeded) throw new Exception("MUHANOK_BUILD_FAIL: " + report.summary.result);
+            // The game reads identity-server.json next to the exe; no environment variable is needed on the player PC.
+            IdentityServerSetup.ApplyToBuild(Path.GetDirectoryName(destination));
             File.WriteAllText(complete,DateTime.UtcNow.ToString("O"));
             Debug.Log("MUHANOK_BUILD_PASS: " + destination + " / " + report.summary.totalSize + " bytes");
         }

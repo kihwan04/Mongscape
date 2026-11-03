@@ -31,7 +31,9 @@ Unity Hub에서 `Unity/`를 **6000.3.10f1**로 열고 패키지 복원 후 **Mon
 {"url":"https://faces.your-domain.com"}
 ```
 
-환경 변수 `MONGSCAPE_IDENTITY_URL`이 파일보다 우선합니다. 원격 연결은 HTTPS, 테스트 loopback은 HTTP를 사용합니다. 주소를 바꾼 뒤 게임을 다시 실행합니다. 얼굴 사진은 서버에 보관하지 않고 인식 특징값·계정·기록을 PostgreSQL에 저장합니다.
+개발 PC에서는 Unity 메뉴 **Mongscape → Identity Server Address…**에서 주소를 한 번 저장하면 됩니다. `Unity/identity-server.json`(Git 제외)에 저장되고, **Build Windows Demo**가 빌드할 때마다 `Builds/Mongscape/Windows/identity-server.json`으로 복사하므로 환경 변수를 설정하거나 Unity를 다시 켤 필요가 없습니다. 명령줄 빌드는 `-identityUrl https://…` 인수로도 지정할 수 있습니다. 주소가 잘못되면 빌드가 시작 전에 멈춥니다.
+
+환경 변수 `MONGSCAPE_IDENTITY_URL`이 파일보다 우선합니다(Unity Editor는 실행할 때의 환경 변수만 읽습니다). 원격 연결은 HTTPS, 테스트 loopback은 HTTP를 사용합니다. 주소를 바꾼 뒤 게임을 다시 실행합니다. 얼굴 사진은 서버에 보관하지 않고 인식 특징값·계정·기록을 PostgreSQL에 저장합니다.
 
 기존 스키마 v1 서버는 백업 후 계정 v2 이전이 필요합니다. 이전 도구는 자동 실행하지 않으며 이번 작업에서 개인 DB에 적용하지 않았습니다. 구체적인 설정/백업은 [서버 안내](Services/Identity/README_DOCKER.md)를 확인하세요. 문서의 명령은 운영 방법을 설명하며 이번 작업에서 서버를 기동·배포했다는 뜻이 아닙니다.
 
