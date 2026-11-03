@@ -8,12 +8,13 @@ namespace Muhanok.Tests
         [Test]
         public void StepsFollowThePlayStyle()
         {
-            CollectionAssert.AreEqual(new[] { TutorialStep.Calibrate, TutorialStep.Lane, TutorialStep.Jump, TutorialStep.Crouch, TutorialStep.HighKnee, TutorialStep.Fork, TutorialStep.Done },
+            CollectionAssert.AreEqual(new[] { TutorialStep.Calibrate, TutorialStep.Lane, TutorialStep.Jump, TutorialStep.Crouch, TutorialStep.HighKnee, TutorialStep.Rail, TutorialStep.Fork, TutorialStep.Done },
                 new TutorialScript(PlayStyle.FullBody).Steps);
             CollectionAssert.AreEqual(new TutorialScript(PlayStyle.FullBody).Steps, new TutorialScript(PlayStyle.UpperBody).Steps);
-            CollectionAssert.AreEqual(new[] { TutorialStep.Lane, TutorialStep.Jump, TutorialStep.Crouch, TutorialStep.HighKnee, TutorialStep.Fork, TutorialStep.Done },
+            CollectionAssert.AreEqual(new[] { TutorialStep.Lane, TutorialStep.Jump, TutorialStep.Crouch, TutorialStep.HighKnee, TutorialStep.Rail, TutorialStep.Fork, TutorialStep.Done },
                 new TutorialScript(PlayStyle.Keyboard).Steps, "Keyboard play needs no calibration");
             CollectionAssert.DoesNotContain(new TutorialScript(PlayStyle.Keyboard, false).Steps, TutorialStep.Fork, "A route without forks has no lean lesson");
+            CollectionAssert.Contains(new TutorialScript(PlayStyle.Keyboard, false).Steps, TutorialStep.Rail, "Every lap layout rides the cart, so the broken rail stays");
         }
 
         [Test]
@@ -25,6 +26,9 @@ namespace Muhanok.Tests
             Assert.AreEqual(MotionCommand.HighKnee, TutorialScript.AwaitedOf(TutorialStep.HighKnee));
             Assert.AreEqual(TutorialPass.ForkChosen, TutorialScript.PassOf(TutorialStep.Fork));
             Assert.IsTrue(TutorialScript.Accepts(TutorialStep.Lane, MotionCommand.Right)); Assert.IsTrue(TutorialScript.Accepts(TutorialStep.Fork, MotionCommand.Left));
+            Assert.AreEqual(TutorialPass.ObstaclePassed, TutorialScript.PassOf(TutorialStep.Rail)); Assert.AreEqual(TutorialCourse.RailLean, TutorialScript.AwaitedOf(TutorialStep.Rail));
+            Assert.IsTrue(TutorialScript.Accepts(TutorialStep.Rail, TutorialCourse.RailLean));
+            Assert.IsFalse(TutorialScript.Accepts(TutorialStep.Rail, TutorialCourse.RailLean == MotionCommand.Right ? MotionCommand.Left : MotionCommand.Right), "Leaning toward the gap is not the lesson");
             Assert.IsFalse(TutorialScript.Accepts(TutorialStep.Jump, MotionCommand.Crouch)); Assert.IsFalse(TutorialScript.Accepts(TutorialStep.Done, MotionCommand.Jump));
             foreach (var step in new TutorialScript(PlayStyle.UpperBody).Steps) Assert.IsNotEmpty(TutorialScript.Instruction(step, PlayStyle.UpperBody));
         }
@@ -79,6 +83,11 @@ namespace Muhanok.Tests
             Assert.AreEqual(TutorialHazard.LaneBlock, TutorialCourse.HazardAt(TutorialCourse.LaneChunk));
             Assert.AreEqual(TutorialHazard.StairRow, TutorialCourse.HazardAt(TutorialCourse.StairChunk)); Assert.AreEqual(7, plan.TypeAt(TutorialCourse.StairChunk));
             Assert.AreEqual(TutorialHazard.None, TutorialCourse.HazardAt(0));
+            Assert.AreEqual(TutorialHazard.RailGap, TutorialCourse.HazardAt(TutorialCourse.RailChunk)); Assert.AreEqual(1, plan.TypeAt(TutorialCourse.RailChunk), "The broken rail is on a cart chunk");
+            Assert.AreEqual(1, TutorialCourse.Plan(new RunConfig { ExtendedRoutes = false }).TypeAt(TutorialCourse.RailChunk), "also on the authored lap");
+            Assert.Less(TutorialCourse.RestartZ(TutorialStep.Rail), TutorialCourse.RailGapZ - 14f, "A rail retry rides up to the gap again");
+            Assert.Greater(TutorialCourse.RestartZ(TutorialStep.Fork), TutorialCourse.RailGapZ, "A fork retry starts past the rail lesson");
+            Assert.Less(TutorialCourse.RestartZ(TutorialStep.Fork), TutorialCourse.ForkLapStart * RouteSurface.Length + CartFork.Start, "and before the fork window");
         }
 
         [Test]

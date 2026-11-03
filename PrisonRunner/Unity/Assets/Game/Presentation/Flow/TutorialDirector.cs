@@ -75,6 +75,16 @@ namespace Muhanok.Presentation
                     Approach(plan.ForkWindow(runner.Z) && TutorialScript.Performed(Script.Current, runner));
                     return;
                 }
+                case TutorialPass.ObstaclePassed when Script.Current == TutorialStep.Rail:
+                {
+                    // The broken rail judges itself (a wrong lean counts as a miss); the lean can be held from the slowdown on.
+                    var gap = FindRail();
+                    if (gap == null) { LessonDistance = float.PositiveInfinity; Waiting = false; session.SpeedScale = 1; Message = null; return; }
+                    if (gap.Passed) { Next(now); return; }
+                    LessonDistance = gap.transform.position.z - runner.Z;
+                    Approach(LessonDistance <= SlowDistance && TutorialScript.Performed(Script.Current, runner));
+                    return;
+                }
                 case TutorialPass.ObstaclePassed:
                 {
                     FindLesson();
@@ -118,6 +128,19 @@ namespace Muhanok.Presentation
                 if (item.Chunk.Sequence != sequence || !item.Chunk.gameObject.activeSelf) continue;
                 Collect(item.Chunk.Obstacles); Collect(item.Chunk.ExerciseObstacles); Collect(item.Chunk.DynamicObstacles);
             }
+        }
+        // The lesson's broken rail window on the tutorial cart chunk, once that chunk is spawned.
+        private CartRailGap FindRail()
+        {
+            if (map == null) return null;
+            foreach (var item in map.Active)
+            {
+                if (item.Chunk.Sequence != TutorialCourse.RailChunk || !item.Chunk.gameObject.activeSelf) continue;
+                var gaps = item.Chunk.RailGaps;
+                if (gaps != null && gaps.Length > TutorialCourse.RailGapIndex && gaps[TutorialCourse.RailGapIndex] != null
+                    && gaps[TutorialCourse.RailGapIndex].gameObject.activeSelf) return gaps[TutorialCourse.RailGapIndex];
+            }
+            return null;
         }
         private void Collect(IList<ObstacleController> hazards)
         {

@@ -70,12 +70,14 @@ namespace Muhanok.Domain
             int s = Math.Max(0, (int)(z / RouteSurface.Length)); Ensure(s);
             return choices.ContainsKey(cycles[s]);
         }
+        // Cart chunks that keep both rails: the fork track and the one in front of its window (a broken rail there
+        // would ask for a lean right before the branch choice). The earlier cart chunks keep their broken rails.
         public bool IsForkChunk(int sequence)
         {
             if (!Extended) return false; Ensure(sequence);
             if (!ForkCycle(cycles[sequence])) return false;
             int local = sequence - starts[cycles[sequence]];
-            return local >= 2 && local <= CartFork.LastChunk;
+            return local >= CartFork.FirstChunk - 1 && local <= CartFork.LastChunk;
         }
         public void UpdateChoice(float z, int lane)
         {
