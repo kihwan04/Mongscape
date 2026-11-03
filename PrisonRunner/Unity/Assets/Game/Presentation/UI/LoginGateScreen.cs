@@ -2,9 +2,10 @@ using UnityEngine;
 
 namespace Muhanok.Presentation
 {
-    public enum LoginAction { None, Face, SignUp, Guest, Settings }
+    public enum LoginAction { None, Face, SignUp, Guest, Settings, Quit }
 
     // First screen after the title: face login, sign-up or guest play. Without the account server only guest play is offered.
+    // Settings and quitting the game stay available here, so the game can be closed without signing in.
     internal sealed class LoginGateScreen
     {
         static readonly string[] Labels = { "얼굴 로그인", "회원가입", "게스트 플레이" };
@@ -68,6 +69,7 @@ namespace Muhanok.Presentation
             if (!server && !checking) { GUI.color = Palette.A(Palette.Sand, 0.85f); GUI.Label(new Rect(760, 490, 440, 36), "이유: " + problem, reason); }
             GUI.color = Color.white;
             skin.Text(new Rect(760, 532, 440, 26), GesturePointer.Hint("숫자키 1~3을 누르세요."), 14, Palette.Sand, TextAnchor.MiddleLeft, false);
+            if (skin.Button(new Rect(890, 590, 150, 48), "게임 종료", Palette.A(Palette.Ground, 0.9f), Palette.Wood, Palette.Cream, 20)) action = LoginAction.Quit;
             if (skin.Button(new Rect(1050, 590, 150, 48), "설정", Palette.A(Palette.Ground, 0.9f), Palette.Wood, Palette.Cream, 20)) action = LoginAction.Settings;
             return action;
         }
