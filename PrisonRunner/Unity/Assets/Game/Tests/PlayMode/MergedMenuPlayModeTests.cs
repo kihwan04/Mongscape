@@ -25,8 +25,7 @@ namespace Muhanok.Tests
             float deadline=Time.realtimeSinceStartup+10;
             while((game.IsLoading||game.IsRevealing)&&Time.realtimeSinceStartup<deadline) yield return null;
             yield return null;
-            Assert.AreEqual(GameFlowState.Running,game.Session.Flow.State); Assert.IsTrue(hud.RunModel.ShowWorkout);
-            StringAssert.Contains("0.0 kcal",hud.RunModel.BurnLabel);StringAssert.Contains("미집계",hud.RunModel.WorkoutHint);
+            Assert.AreEqual(GameFlowState.Running,game.Session.Flow.State); Assert.IsFalse(hud.RunModel.ShowWorkout);
             game.TogglePause(); yield return null;
             int searches=hud.RunModel.CueScans;
             yield return new WaitForSecondsRealtime(.3f);

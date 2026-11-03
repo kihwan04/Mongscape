@@ -188,6 +188,10 @@ namespace Muhanok.Presentation
         }
         private void DrawMenu()
         {
+            // Esc is "뒤로" on the pages whose back button returns to the main menu (the profile handles its own keys).
+            var e = Event.current;
+            if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape && (Page == MenuPage.Shop || Page == MenuPage.Ranking || Page == MenuPage.Setup))
+            { e.Use(); OpenMainMenu(); return; }
             switch (Page)
             {
                 case MenuPage.None: title.Draw(TitleLogo, Fade, OpenLogin); break;
@@ -197,11 +201,11 @@ namespace Muhanok.Presentation
                     else profile.Draw(Profile, OpenMainMenu, Logout, DeleteAccount);
                     break;
                 case MenuPage.Shop: shop.Draw(Data, OpenMainMenu); break;
-                case MenuPage.Ranking: board.Draw(Data, session, OpenMainMenu, "닫기", null, null); break;
+                case MenuPage.Ranking: board.Draw(Data, session, OpenMainMenu, "뒤로", null, null); break;
                 case MenuPage.Login: ChooseLogin(gate.Draw(Account, TitleLogo)); break;
                 case MenuPage.SignUp: if (Account != null) signUp.Draw(Data, Account, SignUp, EnrollFace, OpenLogin); break;
                 case MenuPage.Identity:
-                    if (Account != null) identity.Draw(Data, Account, "얼굴 로그인", "정면을 보고 틀 안에 얼굴을 맞춘 뒤 [얼굴로 로그인]을 누르세요.\n가입한 얼굴이면 이름 입력 없이 로그인됩니다.", "얼굴로 로그인", LoginWithFace, OpenLogin);
+                    if (Account != null) identity.Draw(Data, Account, "얼굴 로그인", "정면을 보고 틀 안에 얼굴을 맞춘 뒤 [얼굴 로그인]을 누르세요.\n가입한 얼굴이면 이름 입력 없이 로그인됩니다.", "얼굴 로그인", LoginWithFace, OpenLogin);
                     break;
                 case MenuPage.Main: SelectMenu(menu.Draw(Data, TitleLogo)); break;
                 case MenuPage.TutorialOffer: ChooseTutorial(tutorialOffer.Draw(offerAfterSignUp)); break;

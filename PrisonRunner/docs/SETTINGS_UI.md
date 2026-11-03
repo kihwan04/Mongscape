@@ -1,6 +1,6 @@
 # 설정창과 성능 측정 표시 (UI/UX 작업 안내)
 
-설정창은 **UI Toolkit**으로 만들었습니다. 기능은 모두 동작하고, 모양은 임시(단색 패널과 버튼)입니다. 그래픽은 코드 수정 없이 Unity에서 입힐 수 있습니다.
+설정창은 **UI Toolkit**으로 만들었습니다. 다른 게임 화면과 같은 나무 패널·금색 강조·Black Han Sans 제목 글꼴을 씁니다(왼쪽 탭 목록, 오른쪽 항목 줄). 그래픽은 코드 수정 없이 Unity에서 입힐 수 있습니다.
 
 ## 여는 방법
 
@@ -11,7 +11,7 @@
 | 플레이 중 | 일시정지 → **설정**, 또는 F1 (자동으로 일시정지) |
 | 성능 측정 표시 | **F3** 또는 설정 → 표시 → 성능 측정 표시 |
 
-설정은 이 PC에 저장됩니다(PlayerPrefs `Muhanok.UserSettings`). **확인**이나 **닫기**를 누르면 저장되고, 값은 바꾸는 즉시 게임에 적용됩니다.
+설정은 이 PC에 저장됩니다(PlayerPrefs `Muhanok.UserSettings`). 값은 바꾸는 즉시 게임에 적용됩니다. **저장**(또는 F1)을 누르면 저장하고, **취소**를 누르면 창을 열었을 때의 값으로 되돌립니다.
 
 ## 파일
 
@@ -24,11 +24,12 @@
 
 ### 코드가 찾는 요소 이름 (바꾸면 기능이 끊깁니다)
 
-- 창: `settings-root`, `settings-panel`, `close-button`, `apply-button`, `reset-button`
+- 창: `settings-root`, `settings-panel`, `close-button`(취소), `apply-button`(저장), `reset-button`(기본값으로)
+- 손 스크롤: `scroll-up`, `scroll-down` (페이지가 창보다 길 때만 보입니다)
 - 탭: `tab-graphics`, `tab-sound`, `tab-body`, `tab-display` / 페이지: `page-graphics`, `page-sound`, `page-body`, `page-display`
-- 화면: `quality-preset`, `render-scale`, `frame-cap`, `vsync`, `shadow-quality`, `ambient-occlusion`, `detail-distance`, `gpu-resident-drawer`, `fullscreen`
+- 화면: `auto-performance`, `quality-preset`, `render-scale`, `frame-cap`, `vsync`, `shadow-quality`, `ambient-occlusion`, `detail-distance`, `gpu-resident-drawer`, `fullscreen`
 - 소리: `music-volume`, `effects-volume`
-- 몸동작: `camera-device`, `lite-model`, `lane-sensitivity`, `camera-preview`(웹캠 영상이 들어가는 칸), `pose-status`, `recalibrate-button`
+- 몸동작: `camera-device`, `refresh-cameras`, `phone-camera-guide`, `phone-guide`, `hand-menus`, `lite-model`, `lane-sensitivity`, `camera-preview`(웹캠 영상이 들어가는 칸), `pose-status`, `recalibrate-button`
 - 표시: `performance-overlay`, `pose-diagnostics`, `ingame-camera`(플레이 중 우측 하단 웹캠 화면)
 
 요소가 없으면 Console에 경고만 나오고 나머지는 동작합니다. 선택된 탭에는 코드가 `settings-tab--selected` 클래스를 붙입니다.
@@ -45,7 +46,7 @@
 .settings-root { -unity-font-definition: url("project://database/Assets/Art/Fonts/OurFont SDF.asset"); }
 ```
 
-폰트를 지정하지 않으면 한글을 위해 Windows의 맑은 고딕을 씁니다.
+항목 이름은 맑은 고딕, `settings-display` 클래스(제목·탭·버튼)는 코드에서 Black Han Sans를 지정합니다.
 
 ## 설정 항목과 실제 동작
 

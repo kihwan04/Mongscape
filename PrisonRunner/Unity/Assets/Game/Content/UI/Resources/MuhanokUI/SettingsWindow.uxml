@@ -1,69 +1,78 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="False">
     <!--
-        Muhanok settings window (placeholder art).
+        Mongscape settings window: the wooden panel, gold accent and fonts of the other game screens.
         UI/UX: change visuals in SettingsWindow.uss or in UI Builder. Keep the element *names* (name="...");
         SettingsWindow.cs finds controls by name. Classes (class="...") are only for styling and can be added freely.
+        Elements with class "settings-display" get the game's display font (Black Han Sans) from code.
     -->
     <Style src="SettingsWindow.uss" />
     <ui:VisualElement name="settings-root" class="settings-root">
         <ui:VisualElement name="settings-panel" class="settings-panel">
             <ui:VisualElement name="settings-header" class="settings-header">
-                <ui:Label name="settings-title" text="설정" class="settings-title" />
-                <ui:Button name="close-button" text="닫기" class="settings-button settings-button--close" />
+                <ui:Label name="settings-title" text="설정" class="settings-title settings-display" />
+                <ui:Button name="close-button" text="취소" class="settings-button settings-display" />
             </ui:VisualElement>
-            <ui:VisualElement name="tab-bar" class="settings-tab-bar">
-                <ui:Button name="tab-graphics" text="화면" class="settings-tab" />
-                <ui:Button name="tab-sound" text="소리" class="settings-tab" />
-                <ui:Button name="tab-body" text="몸동작" class="settings-tab" />
-                <ui:Button name="tab-display" text="표시" class="settings-tab" />
-            </ui:VisualElement>
-            <ui:ScrollView name="settings-content" class="settings-content">
-                <ui:VisualElement name="page-graphics" class="settings-page">
-                    <ui:Toggle name="auto-performance" label="성능에 맞춰 화질 자동 조절" class="settings-row" />
-                    <ui:DropdownField name="quality-preset" label="화질" class="settings-row" />
-                    <ui:Slider name="render-scale" label="렌더 해상도" low-value="0.5" high-value="1" show-input-field="false" class="settings-row" />
-                    <ui:DropdownField name="frame-cap" label="프레임 제한" class="settings-row" />
-                    <ui:Toggle name="vsync" label="수직 동기화" class="settings-row" />
-                    <ui:DropdownField name="shadow-quality" label="그림자" class="settings-row" />
-                    <ui:Toggle name="ambient-occlusion" label="주변광 차폐 (SSAO)" class="settings-row" />
-                    <ui:Slider name="detail-distance" label="소품·조명 표시 거리" low-value="0.5" high-value="1" class="settings-row" />
-                    <ui:Toggle name="gpu-resident-drawer" label="GPU 대량 렌더링 (GPU Resident Drawer)" class="settings-row" />
-                    <ui:Toggle name="fullscreen" label="전체 화면" class="settings-row" />
+            <ui:VisualElement class="settings-body">
+                <ui:VisualElement name="tab-bar" class="settings-tab-bar">
+                    <ui:Button name="tab-graphics" text="화면" class="settings-tab settings-display" />
+                    <ui:Button name="tab-sound" text="소리" class="settings-tab settings-display" />
+                    <ui:Button name="tab-body" text="몸동작" class="settings-tab settings-display" />
+                    <ui:Button name="tab-display" text="표시" class="settings-tab settings-display" />
+                    <ui:VisualElement class="settings-tab-spacer" />
+                    <ui:Button name="scroll-up" text="위로" class="settings-scroll settings-display" />
+                    <ui:Button name="scroll-down" text="아래로" class="settings-scroll settings-display" />
                 </ui:VisualElement>
-                <ui:VisualElement name="page-sound" class="settings-page">
-                    <ui:Slider name="music-volume" label="배경 음악" low-value="0" high-value="1" class="settings-row" />
-                    <ui:Slider name="effects-volume" label="효과음" low-value="0" high-value="1" class="settings-row" />
-                </ui:VisualElement>
-                <ui:VisualElement name="page-body" class="settings-page">
-                    <ui:DropdownField name="camera-device" label="웹캠" class="settings-row" />
-                    <ui:Button name="refresh-cameras" text="연결된 카메라 다시 검색" class="settings-button" />
-                    <ui:Button name="phone-camera-guide" text="아이폰 · 안드로이드 연결 방법" class="settings-button" />
-                    <ui:VisualElement name="phone-guide" style="display: none; padding-top: 8px; padding-bottom: 8px;">
-                        <ui:Label text="Windows 연결 안내" style="font-size: 22px; color: rgb(255, 206, 112);" />
-                        <ui:Label text="아이폰: PC에 Camo Studio, 휴대폰에 Camo Camera 설치 → USB 연결·신뢰 승인 → 두 앱 실행 → 위 웹캠에서 Camo 선택" style="white-space: normal; font-size: 19px; color: rgb(232, 236, 244);" />
-                        <ui:Label text="안드로이드: USB 설정에 웹캠이 있으면 선택. 없으면 휴대폰 웹캠 앱과 PC 드라이버가 필요합니다." style="white-space: normal; font-size: 19px; color: rgb(232, 236, 244);" />
-                        <ui:Label text="연결 후 다시 검색 → 웹캠 선택 → 자세 다시 맞추기. 충전 전용 케이블은 사용할 수 없습니다. 게임에 직접 USB 수신 기능이 내장된 것은 아닙니다." style="white-space: normal; font-size: 19px; color: rgb(232, 236, 244);" />
+                <ui:ScrollView name="settings-content" class="settings-content" vertical-scroller-visibility="Hidden" horizontal-scroller-visibility="Hidden">
+                    <ui:VisualElement name="page-graphics" class="settings-page">
+                        <ui:Toggle name="auto-performance" label="성능에 맞춰 화질 자동 조절" class="settings-row" />
+                        <ui:DropdownField name="quality-preset" label="화질" class="settings-row" />
+                        <ui:Slider name="render-scale" label="렌더 해상도" low-value="0.5" high-value="1" show-input-field="false" class="settings-row" />
+                        <ui:DropdownField name="frame-cap" label="프레임 제한" class="settings-row" />
+                        <ui:Toggle name="vsync" label="수직 동기화" class="settings-row" />
+                        <ui:DropdownField name="shadow-quality" label="그림자" class="settings-row" />
+                        <ui:Toggle name="ambient-occlusion" label="주변광 차폐 (입체감)" class="settings-row" />
+                        <ui:Slider name="detail-distance" label="소품·조명 표시 거리" low-value="0.5" high-value="1" class="settings-row" />
+                        <ui:Toggle name="gpu-resident-drawer" label="반복 물체 묶어 그리기 (성능)" class="settings-row" />
+                        <ui:Toggle name="fullscreen" label="전체 화면" class="settings-row" />
                     </ui:VisualElement>
-                    <ui:Toggle name="hand-menus" label="손으로 메뉴 선택 (0.75초 머무르기)" class="settings-row" />
-                    <ui:Toggle name="lite-model" label="가벼운 인식 모델 (저사양 PC)" class="settings-row" />
-                    <ui:Slider name="lane-sensitivity" label="좌우 민감도" low-value="0.6" high-value="1.4" class="settings-row" />
-                    <ui:VisualElement name="camera-preview-row" class="settings-preview-row">
-                        <ui:VisualElement name="camera-preview" class="settings-preview" />
-                        <ui:VisualElement class="settings-preview-side">
-                            <ui:Label name="pose-status" text="카메라 꺼짐" class="settings-status" />
-                            <ui:Button name="recalibrate-button" text="자세 다시 맞추기" class="settings-button" />
+                    <ui:VisualElement name="page-sound" class="settings-page">
+                        <ui:Slider name="music-volume" label="배경 음악" low-value="0" high-value="1" class="settings-row" />
+                        <ui:Slider name="effects-volume" label="효과음" low-value="0" high-value="1" class="settings-row" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="page-body" class="settings-page">
+                        <ui:VisualElement name="camera-preview-row" class="settings-preview-row">
+                            <ui:VisualElement name="camera-preview" class="settings-preview" />
+                            <ui:VisualElement class="settings-preview-side">
+                                <ui:Label name="pose-status" text="카메라 꺼짐" class="settings-status" />
+                                <ui:Button name="recalibrate-button" text="자세 다시 맞추기" class="settings-button settings-display" />
+                            </ui:VisualElement>
                         </ui:VisualElement>
+                        <ui:DropdownField name="camera-device" label="웹캠" class="settings-row" />
+                        <ui:VisualElement class="settings-row settings-row--actions">
+                            <ui:Button name="refresh-cameras" text="카메라 다시 찾기" class="settings-button settings-display" />
+                            <ui:Button name="phone-camera-guide" text="휴대폰을 웹캠으로 쓰기" class="settings-button settings-display" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="phone-guide" class="settings-guide" style="display: none;">
+                            <ui:Label text="아이폰" class="settings-guide-title" />
+                            <ui:Label text="1. PC에 Camo Studio, 휴대폰에 Camo Camera를 설치합니다.&#10;2. USB로 연결하고 신뢰를 승인한 뒤 두 앱을 켭니다.&#10;3. 위 웹캠 목록에서 Camo를 고릅니다." class="settings-guide-text" />
+                            <ui:Label text="안드로이드" class="settings-guide-title" />
+                            <ui:Label text="USB 설정에 웹캠 항목이 있으면 고르세요. 없으면 휴대폰 웹캠 앱과 PC 드라이버가 필요합니다." class="settings-guide-text" />
+                            <ui:Label text="연결한 뒤 카메라 다시 찾기, 웹캠 선택, 자세 다시 맞추기 순서로 진행하세요. 충전 전용 케이블로는 연결되지 않습니다." class="settings-guide-text settings-guide-text--muted" />
+                        </ui:VisualElement>
+                        <ui:Toggle name="hand-menus" label="손으로 메뉴 고르기" class="settings-row" />
+                        <ui:Toggle name="lite-model" label="가벼운 인식 모델 (저사양 PC)" class="settings-row" />
+                        <ui:Slider name="lane-sensitivity" label="좌우 민감도" low-value="0.6" high-value="1.4" class="settings-row" />
                     </ui:VisualElement>
-                </ui:VisualElement>
-                <ui:VisualElement name="page-display" class="settings-page">
-                    <ui:Toggle name="performance-overlay" label="성능 측정 표시 (F3)" class="settings-row" />
-                    <ui:Toggle name="pose-diagnostics" label="몸동작 진단 정보" class="settings-row" />
-                    <ui:Toggle name="ingame-camera" label="플레이 중 웹캠 화면" class="settings-row" />
-                </ui:VisualElement>
-            </ui:ScrollView>
+                    <ui:VisualElement name="page-display" class="settings-page">
+                        <ui:Toggle name="ingame-camera" label="플레이 중 웹캠 화면" class="settings-row" />
+                        <ui:Toggle name="performance-overlay" label="성능 측정 표시 (F3)" class="settings-row" />
+                        <ui:Toggle name="pose-diagnostics" label="몸동작 진단 정보" class="settings-row" />
+                    </ui:VisualElement>
+                </ui:ScrollView>
+            </ui:VisualElement>
             <ui:VisualElement name="settings-footer" class="settings-footer">
-                <ui:Button name="reset-button" text="기본값" class="settings-button" />
-                <ui:Button name="apply-button" text="확인" class="settings-button settings-button--primary" />
+                <ui:Button name="reset-button" text="기본값으로" class="settings-button settings-display" />
+                <ui:Button name="apply-button" text="저장" class="settings-button settings-button--primary settings-display" />
             </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>

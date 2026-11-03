@@ -36,7 +36,7 @@ namespace Muhanok.Presentation
                 if (e.keyCode == KeyCode.Alpha1 || e.keyCode == KeyCode.Keypad1 || e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) { e.Use(); choice = TutorialChoice.Start; }
                 else if (e.keyCode == KeyCode.Alpha2 || e.keyCode == KeyCode.Keypad2 || e.keyCode == KeyCode.Escape) { e.Use(); choice = TutorialChoice.Skip; }
             }
-            skin.Text(new Rect(380, 516, 520, 26), "손을 들어 버튼을 0.75초 가리키거나 1(Enter) · 2(Esc)를 누르세요.", 14, Palette.Muted, TextAnchor.MiddleCenter, false, true);
+            skin.Text(new Rect(380, 516, 520, 26), GesturePointer.Hint("1(시작)이나 2(건너뛰기)를 누르세요."), 14, Palette.Muted, TextAnchor.MiddleCenter, false, true);
             return choice;
         }
     }

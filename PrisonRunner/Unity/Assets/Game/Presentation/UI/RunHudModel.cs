@@ -49,8 +49,15 @@ namespace Muhanok.Presentation
         public static string PlayTime(float seconds)
         {
             int total = float.IsNaN(seconds) || float.IsInfinity(seconds) ? 0 : (int)Math.Max(0, Math.Floor(seconds));
-            return "플레이 " + total / 60 + ":" + (total % 60).ToString("00");
+            return "플레이 " + Clock(seconds);
         }
+        public static string Clock(float seconds)
+        {
+            int total = float.IsNaN(seconds) || float.IsInfinity(seconds) ? 0 : (int)Math.Max(0, Math.Floor(seconds));
+            return total / 60 + ":" + (total % 60).ToString("00");
+        }
+        // One wording wherever a keyboard run's calories are shown as not counted.
+        public const string KeyboardKcal = "키보드는 칼로리 제외";
         public static string Points(int score) => score.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) + "점";
 
         public void Tick(RunSession session, ChunkSpawner map, PlayStyle style, PoseStatus pose, bool police, float now)
@@ -78,23 +85,25 @@ namespace Muhanok.Presentation
             lastZ = session.Runner.Z; lastTime = now;
             if (session.Score.Coins != coins) { coins = session.Score.Coins; Coins = coins.ToString(); }
             CoinBoost = session.Items.IsActive(ItemKind.DoubleScore);
-            ShowWorkout = true;
-            int mode = PlayStyleInfo.UsesCamera(style) ? 2 : 0;
-            GoalProgress = mode == 2 ? (float)session.Workout.GoalProgress : 0;
+            // Keyboard runs count no calories, so the goal card only shows for camera styles.
+            ShowWorkout = PlayStyleInfo.UsesCamera(style);
+            int mode = ShowWorkout ? 2 : 0;
+            GoalProgress = ShowWorkout ? (float)session.Workout.GoalProgress : 0;
             if (ShowWorkout)
             {
-                int nextKcal = mode == 2 ? (int)Math.Round(session.Workout.EstimatedKcal * 10) : 0;
+                int nextKcal = (int)Math.Round(session.Workout.EstimatedKcal * 10);
                 double nextGoal = session.Workout.GoalKcal;
-                bool reached = mode == 2 && session.Workout.GoalReached;
+                bool reached = session.Workout.GoalReached;
                 if (kcal != nextKcal || goal != nextGoal || reached != goalReached || workoutMode != mode)
                 {
                     kcal = nextKcal; goal = nextGoal; goalReached = reached; workoutMode = mode;
-                    GoalLabel = "목표  " + goal.ToString("0.##") + " kcal";
-                    BurnLabel = "소모  " + (kcal / 10.0).ToString("F1") + " kcal" + (reached ? "  ✓" : "");
-                    WorkoutHint = mode == 0 ? "키보드 · 운동량 미집계" : reached ? "목표 달성!" : "동작 기반 추정치";
+                    GoalLabel = "목표  " + goal.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " kcal";
+                    BurnLabel = "소모  " + (kcal / 10.0).ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + " kcal";
+                    WorkoutHint = reached ? "목표 달성!" : "몸동작으로 추정한 값";
                     Workout = BurnLabel + " / " + GoalLabel;
                 }
             }
+            else workoutMode = mode;
             for (int i = 0; i < ItemLabels.Length; i++)
             {
                 var item = ItemCatalog.All[i];
@@ -116,7 +125,7 @@ namespace Muhanok.Presentation
             ShowCamera = CameraEnabled && PlayStyleInfo.UsesCamera(style);
             if (session.DodgeStreak > streak && session.DodgeStreak > 1)
             {
-                comboText = session.DodgeStreak + " COMBO"; comboUntil = now + 1.1f;
+                comboText = session.DodgeStreak + " 콤보!"; comboUntil = now + 1.1f;
             }
             streak = session.DodgeStreak;
             if (police && !previousPolice) policeUntil = now + 2.2f;
@@ -138,9 +147,9 @@ namespace Muhanok.Presentation
             switch (NoticeKind)
             {
                 case HudNoticeKind.Tracking:
-                    Notice = pose == PoseStatus.NoCamera || pose == PoseStatus.NoModel ? "카메라 연결 확인 · F1 설정" : "몸이 보이게 서 주세요 · R 재보정"; break;
+                    Notice = pose == PoseStatus.NoCamera || pose == PoseStatus.NoModel ? "카메라 연결을 확인하세요 (F1 설정)" : "몸이 보이게 서 주세요 (R 다시 맞추기)"; break;
                 case HudNoticeKind.Obstacle: Notice = actionCue; break;
-                case HudNoticeKind.Fork: Notice = style == PlayStyle.Keyboard ? "← A · C · D →  경로 선택" : "← 몸을 옮겨 경로 선택 →"; break;
+                case HudNoticeKind.Fork: Notice = style == PlayStyle.Keyboard ? "A 왼쪽   C 가운데   D 오른쪽" : "← 몸을 옮겨 경로 선택 →"; break;
                 case HudNoticeKind.Police: Notice = "경찰 접근!"; break;
                 case HudNoticeKind.Combo: Notice = comboText; break;
                 case HudNoticeKind.Section: Notice = session.Runner.Riding ? "수레 구간" : "달리기 구간"; break;

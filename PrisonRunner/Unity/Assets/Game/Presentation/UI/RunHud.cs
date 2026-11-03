@@ -102,7 +102,7 @@ namespace Muhanok.Presentation
         {
             if (Model.Notice == null) return;
             skin.Card(NoticeArea, Palette.A(Palette.Ground, .9f));
-            GUI.color = Model.NoticeKind == HudNoticeKind.Tracking || Model.NoticeKind == HudNoticeKind.Police ? new Color(1, .7f, .3f) : Palette.Cream;
+            GUI.color = Model.NoticeKind == HudNoticeKind.Tracking || Model.NoticeKind == HudNoticeKind.Police ? Palette.Warn : Palette.Cream;
             GUI.Label(NoticeArea, Model.Notice, skin.Centered(23, FontStyle.Bold));
             GUI.color = Color.white;
         }

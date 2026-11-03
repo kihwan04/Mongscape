@@ -21,6 +21,9 @@ namespace Muhanok.Presentation
         public static readonly Color Bronze = new Color32(0xD9, 0x92, 0x5B, 0xFF);
         public static readonly Color MeFill = new Color32(0x3A, 0x2E, 0x14, 0xFF);
         public static readonly Color MeNote = new Color32(0xFF, 0xD5, 0x8C, 0xFF);
+        // Failed actions (save, unlock, input checks) and softer warnings (no server, expired session).
+        public static readonly Color Error = new Color32(0xFF, 0x8C, 0x59, 0xFF);
+        public static readonly Color Warn = new Color32(0xFF, 0xA8, 0x6E, 0xFF);
 
         public static Color A(Color c, float a) { c.a = a; return c; }
         public static string Hex(Color c) { return "#" + ColorUtility.ToHtmlStringRGB(c); }
@@ -37,10 +40,11 @@ namespace Muhanok.Presentation
 
         public OverlaySkin(Font title, Font body)
         {
+            // The heavy display face is for headings and numbers; small body text uses the system Korean font to stay readable.
             if (title == null || body == null)
                 osFont = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Apple SD Gothic Neo", "AppleGothic", "Arial" }, 32);
             titleFont = title != null ? title : osFont;
-            bodyFont = body != null ? body : (title != null ? title : osFont);
+            bodyFont = body != null ? body : osFont;
         }
 
         public GUIStyle Style(int size, bool title, TextAnchor anchor, bool bold = false)

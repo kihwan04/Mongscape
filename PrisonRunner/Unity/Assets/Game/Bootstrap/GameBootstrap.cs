@@ -314,7 +314,10 @@ namespace Muhanok.Bootstrap
         private void UpdateMenuCamera(bool menu)
         {
             bool accountCamera=Session.Flow.State==GameFlowState.TitleIdle&&hud.AccountPageOpen;
-            bool needsCamera=!automated && menu && (userSettings.HandMenus||accountCamera);
+            // Keyboard players keep the webcam off in menus; the login gate, sign-up and face capture always use it.
+            bool handCamera=userSettings.HandMenus&&PlayStyleInfo.UsesCamera(player.Style);
+            GesturePointer.Enabled=userSettings.HandMenus&&(handCamera||accountCamera);
+            bool needsCamera=!automated && menu && (handCamera||accountCamera);
             if(needsCamera && (!Pose.UsesCamera||accountCamera&&Pose.Style!=PlayStyle.UpperBody))
             {if(!menuCamera)cameraBeforeMenu=Pose.Style;menuCamera=true;Pose.SetStyle(PlayStyle.UpperBody);}
             else if(menuCamera && !needsCamera){menuCamera=false;Pose.SetStyle(cameraBeforeMenu);}
@@ -328,7 +331,7 @@ namespace Muhanok.Bootstrap
             UpdateAdaptive(live);
             Pose.Tick(now, live);
             // The calibration panel takes no hand pointing: the player stands still and it closes by itself.
-            GesturePointer.Feed(Pose.LastFrame,menu&&userSettings.HandMenus&&Pose.Tracking&&!hud.CalibrationOpen,now);
+            GesturePointer.Feed(Pose.LastFrame,menu&&GesturePointer.Enabled&&Pose.Tracking&&!hud.CalibrationOpen,now);
             OperatorKeys();
             if (ExpiryPending && Session.Flow.State == GameFlowState.TitleIdle && !hud.Loading) ApplyExpiry();
             TickInput();

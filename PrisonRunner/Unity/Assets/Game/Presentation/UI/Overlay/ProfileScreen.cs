@@ -120,7 +120,7 @@ namespace Muhanok.Presentation
                     form.Style = option;
             }
             GUI.enabled = wasEnabled;
-            skin.Text(new Rect(x, 426, 420, 26), form.Message, 16, form.Failed ? new Color(1, .55f, .35f) : Palette.Sand, TextAnchor.MiddleLeft, false, true);
+            skin.Text(new Rect(x, 426, 420, 26), form.Message, 16, form.Failed ? Palette.Error : Palette.Sand, TextAnchor.MiddleLeft, false, true);
 
             DrawStats(form, new Rect(x + 450, 130, w - 450, 300));
             if (asking) DrawDeleteQuestion(form, new Rect(x, 462, w, 128), delete, escape);
@@ -140,7 +140,7 @@ namespace Muhanok.Presentation
             bool last = form.Deleting == ProfileDeleteStep.Confirm;
             skin.BorderBox(r, Palette.A(new Color(.3f, .07f, .05f), 0.96f), new Color(.85f, .3f, .2f), 2);
             skin.Text(new Rect(r.x + 24, r.y + 12, r.width - 48, 30), last ? "정말 탈퇴할까요? 되돌릴 수 없습니다." : "탈퇴하면 얼굴 특징값, 닉네임, 설정, 코인과 아이템, 플레이 기록이 모두 삭제됩니다.", 18, Palette.Cream, TextAnchor.MiddleLeft, false, true);
-            skin.Text(new Rect(r.x + 24, r.y + 42, r.width - 48, 24), last ? "확인 2/2" : "확인 1/2 · 계속하려면 [계속]을 누르세요.", 14, Palette.Sand, TextAnchor.MiddleLeft, false, true);
+            skin.Text(new Rect(r.x + 24, r.y + 42, r.width - 48, 24), last ? "확인 2/2" : "확인 1/2: 계속하려면 [계속]을 누르세요.", 14, Palette.Sand, TextAnchor.MiddleLeft, false, true);
             bool wasEnabled = GUI.enabled; GUI.enabled = wasEnabled && !form.Busy;
             var go = last ? new Rect(r.x + 24, r.y + 70, 240, 48) : new Rect(r.xMax - 264, r.y + 70, 240, 48);
             if (skin.Button(go, last ? "탈퇴하기" : "계속", new Color(.7f, .2f, .14f), Color.clear, Palette.Cream, 20)) delete?.Invoke();
@@ -155,7 +155,7 @@ namespace Muhanok.Presentation
             skin.Text(new Rect(r.x + 24, r.y + 16, r.width - 48, 34), "내 기록", 24, Palette.Gold, TextAnchor.MiddleLeft);
             var stats = form.Stats;
             if (stats == null) { skin.Text(new Rect(r.x + 24, r.y + 70, r.width - 48, 40), form.StatsNote, 16, Palette.Sand, TextAnchor.MiddleLeft, false, true); return; }
-            string[] labels = { "오늘 소모 칼로리", "누적 소모 칼로리", "최고 점수 · 전신", "최고 점수 · 상체", "최고 점수 · 키보드" };
+            string[] labels = { "오늘 소모 칼로리", "누적 소모 칼로리", "전신 최고 점수", "상체 최고 점수", "키보드 최고 점수" };
             string[] values = { stats.today_kcal.ToString("N0", Num) + "kcal", stats.total_kcal.ToString("N0", Num) + "kcal", Best(stats, 0), Best(stats, 1), Best(stats, 2) };
             for (int i = 0; i < labels.Length; i++)
             {

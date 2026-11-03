@@ -18,7 +18,8 @@ namespace Muhanok.Presentation
 
         readonly OverlaySkin skin;
         readonly RankingBoard board;
-        string summary = "";
+        readonly List<KeyValuePair<string, string>> summary = new List<KeyValuePair<string, string>>();
+        GUIStyle note;
 
         readonly GuestNameRow guestName;
         public LeaderboardScreen(OverlaySkin overlaySkin, RankingBoard ranking) { skin = overlaySkin; board = ranking; guestName = new GuestNameRow(overlaySkin, ranking.RefreshLocal); }
@@ -34,17 +35,16 @@ namespace Muhanok.Presentation
         // After a run: member → 회원 랭킹, guest → 이 PC; the mode just played and today's tab.
         public void OpenResult(IHudData data, IIdentityData account, RunSession session)
         {
-            var parts = new List<string>();
-            parts.Add(RunHudModel.PlayTime(session.Elapsed));
-            parts.Add("거리 " + Dist(session.Score.Distance));
-            parts.Add("코인 +" + session.Score.Coins);
-            parts.Add("최고 콤보 " + session.BestDodgeStreak);
-            summary = string.Join("  ·  ", parts);
+            summary.Clear();
+            summary.Add(new KeyValuePair<string, string>("시간", RunHudModel.Clock(session.Elapsed)));
+            summary.Add(new KeyValuePair<string, string>("거리", Dist(session.Score.Distance)));
+            summary.Add(new KeyValuePair<string, string>("코인", "+" + session.Score.Coins.ToString(Num)));
+            summary.Add(new KeyValuePair<string, string>("최고 콤보", session.BestDodgeStreak.ToString(Num)));
             guestName.Show(data);
             board.OpenResult(data, account);
         }
 
-        static string Dist(float m) { return Mathf.FloorToInt(m).ToString("N0", Num) + "m"; }
+        static string Dist(float m) { return Mathf.FloorToInt(m).ToString("N0", Num) + " m"; }
 
         // primary/secondary: result buttons (다시 하기 / 메인으로 or 다음 플레이어); the menu board only shows a close button.
         // middle: an optional third result button between them (웹캠 보정).
@@ -68,11 +68,22 @@ namespace Muhanok.Presentation
                     skin.BorderBox(badge, Palette.Gold, Palette.Cream, 2);
                     skin.Text(badge, RankingBoard.NewBestText, 22, Palette.Outline, TextAnchor.MiddleCenter);
                 }
-                skin.Text(new Rect(x, 78, 640, 22), summary, 15, Palette.Sand, TextAnchor.MiddleLeft, false, true);
+                // Run facts as label/value pairs in fixed columns.
+                for (int i = 0; i < summary.Count; i++)
+                {
+                    float sx = x + i * 150;
+                    float labelWidth = skin.Style(14, false, TextAnchor.MiddleLeft).CalcSize(new GUIContent(summary[i].Key)).x;
+                    skin.Text(new Rect(sx, 78, labelWidth + 4, 22), summary[i].Key, 14, Palette.Sand, TextAnchor.MiddleLeft, false);
+                    skin.Text(new Rect(sx + labelWidth + 8, 78, 90, 22), summary[i].Value, 15, Palette.Cream, TextAnchor.MiddleLeft, false, true);
+                }
             }
             else skin.Text(new Rect(x, 36, 300, 48), "랭킹", 44, Palette.Cream, TextAnchor.MiddleLeft);
             DrawTabs(x, w);
-            if (board.Status != RankingStatus.Ready) skin.Text(new Rect(x, 200, w, 60), board.StatusText, 20, Palette.Sand, TextAnchor.MiddleCenter, false, true);
+            if (board.Status != RankingStatus.Ready)
+            {
+                skin.Text(new Rect(x, 200, w, 60), board.StatusText, 20, Palette.Sand, TextAnchor.MiddleCenter, false, true);
+                if (board.Status == RankingStatus.Failed && skin.Button(new Rect(x + w / 2 - 90, 266, 180, 48), "다시 시도", Palette.A(Palette.Ground, 0.9f), Palette.Wood, Palette.Cream, 20)) board.Retry();
+            }
             else
             {
                 DrawTop3(x, w);
@@ -100,14 +111,14 @@ namespace Muhanok.Presentation
             skin.Text(new Rect(38,190,164,26),"최고 콤보 "+session.BestDodgeStreak,16,Palette.Cream,TextAnchor.MiddleLeft,false,true);
             if (!PlayStyleInfo.UsesCamera(data?.Player?.Style ?? PlayStyle.Keyboard))
             {
-                skin.Text(new Rect(38,235,164,30),"키보드 · 칼로리 계산 제외",16,Palette.Sand,TextAnchor.MiddleLeft,false,true);
+                skin.Text(new Rect(38,235,164,30),RunHudModel.KeyboardKcal,15,Palette.Sand,TextAnchor.MiddleLeft,false,true);
                 return;
             }
-            skin.Text(new Rect(38,220,164,26),"목표 "+session.Workout.GoalKcal.ToString("F0")+" kcal",14,Palette.Sand,TextAnchor.MiddleLeft,false,true);
+            skin.Text(new Rect(38,220,164,26),"목표 "+session.Workout.GoalKcal.ToString("F0",Num)+" kcal",15,Palette.Sand,TextAnchor.MiddleLeft,false,true);
             for(int i=0;i<5;i++)
             {
-                skin.Text(new Rect(38,258+i*46,164,22),WorkoutEstimate.ActivityNames[i],12,Palette.Sand,TextAnchor.MiddleLeft,false,true);
-                skin.Text(new Rect(38,278+i*46,164,22),session.Workout.KcalFor(i).ToString("F2")+" kcal",15,Palette.Cream,TextAnchor.MiddleLeft,false,true);
+                skin.Text(new Rect(38,258+i*46,164,22),WorkoutEstimate.ActivityNames[i],14,Palette.Sand,TextAnchor.MiddleLeft,false);
+                skin.Text(new Rect(38,278+i*46,164,22),session.Workout.KcalFor(i).ToString("F1",Num)+" kcal",16,Palette.Cream,TextAnchor.MiddleLeft,false,true);
             }
         }
 
@@ -124,8 +135,13 @@ namespace Muhanok.Presentation
                 skin.Text(new Rect(panel.x + 14, y, panel.width - 28, 20), lines[i].Key, 13, Palette.Sand, TextAnchor.MiddleLeft, false, true);
                 skin.Text(new Rect(panel.x + 14, y + 20, panel.width - 28, 26), lines[i].Value, 17, Palette.Cream, TextAnchor.MiddleLeft, false, true);
             }
-            string note = board.KcalNote;
-            if (note.Length > 0) skin.Text(new Rect(panel.x + 14, panel.y + 52 + lines.Count * 50, panel.width - 28, 60), note, 13, board.MemberResult ? Palette.Sand : Palette.Gold, TextAnchor.UpperLeft, false, true);
+            string text = board.KcalNote;
+            if (text.Length == 0) return;
+            // Notes wrap inside the 162 px column instead of running off the screen edge.
+            note ??= new GUIStyle(skin.Style(14, false, TextAnchor.UpperLeft)) { wordWrap = true, clipping = TextClipping.Clip };
+            var old = GUI.color; GUI.color = board.MemberResult ? Palette.Sand : Palette.Gold;
+            GUI.Label(new Rect(panel.x + 14, panel.y + 52 + lines.Count * 50, panel.width - 28, 64), text, note);
+            GUI.color = old;
         }
 
         void DrawTabs(float x, float w)
@@ -155,8 +171,16 @@ namespace Muhanok.Presentation
             return GUI.Button(r, GUIContent.none, GUIStyle.none)||GesturePointer.Activate(r,label);
         }
 
-        // This PC's board marks member runs.
-        string Name(RankingRow row) => !board.MemberTab && row.Member ? row.Name + " · 회원" : row.Name;
+        // This PC's board marks member runs with a small badge after the name.
+        bool Badge(RankingRow row) => !board.MemberTab && row.Member;
+        void MemberBadge(Rect nameRect, string name, int size, TextAnchor anchor)
+        {
+            float width = skin.Style(size, false, anchor, true).CalcSize(new GUIContent(name)).x;
+            float left = anchor == TextAnchor.MiddleCenter ? nameRect.center.x + width / 2 + 6 : nameRect.x + width + 8;
+            var r = new Rect(left, nameRect.center.y - 10, 40, 20);
+            skin.Box(r, Palette.A(Palette.Gold, 0.85f));
+            skin.Text(r, "회원", 12, Palette.Outline, TextAnchor.MiddleCenter, false, true);
+        }
 
         void DrawTop3(float x, float w)
         {
@@ -171,7 +195,9 @@ namespace Muhanok.Presentation
                 skin.BorderBox(r, Palette.A(Palette.Panel, 0.95f), rankColor[rank], 2);
                 float cy = r.center.y;
                 skin.Text(new Rect(r.x, cy - 54, r.width, 34), list[rank].Rank.ToString(), 30, rankColor[rank], TextAnchor.MiddleCenter);
-                skin.Text(new Rect(r.x, cy - 16, r.width, 24), Name(list[rank]), 17, Palette.Cream, TextAnchor.MiddleCenter, false, true);
+                var nameRect = new Rect(r.x, cy - 16, r.width, 24);
+                skin.Text(nameRect, list[rank].Name, 17, Palette.Cream, TextAnchor.MiddleCenter, false, true);
+                if (Badge(list[rank])) MemberBadge(nameRect, list[rank].Name, 17, TextAnchor.MiddleCenter);
                 skin.Text(new Rect(r.x, cy + 12, r.width, 34), RunHudModel.Points(list[rank].Score), 28, Palette.Cream, TextAnchor.MiddleCenter);
             }
             if (list.Count == 0)
@@ -187,7 +213,8 @@ namespace Muhanok.Presentation
                 if (rank >= list.Count) break;
                 var r = new Rect(x, 318 + i * 42, w, 38);
                 skin.BorderBox(r, Palette.A(Palette.Panel, 0.92f), Palette.WoodDim, 2);
-                Columns(r, list[rank].Rank, Name(list[rank]), RunHudModel.Points(list[rank].Score), 18, 20, Palette.Muted, Palette.Cream);
+                Columns(r, list[rank].Rank, list[rank].Name, RunHudModel.Points(list[rank].Score), 18, 20, Palette.Muted, Palette.Cream);
+                if (Badge(list[rank])) MemberBadge(new Rect(r.x + 84, r.y, r.width - 260, r.height), list[rank].Name, 16, TextAnchor.MiddleLeft);
             }
         }
 

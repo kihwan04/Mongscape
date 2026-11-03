@@ -1,10 +1,9 @@
 /*
-   Muhanok settings window — placeholder look.
-   UI/UX: replace colours with your art. Typical changes:
-     .settings-panel   { background-image: url("project://database/Assets/.../panel.png"); -unity-slice-left: 24; ... }
-     .settings-tab     { background-image: ...; }
-     .settings-button--primary { background-image: ...; }
-   Fonts: set -unity-font-definition on .settings-root (code falls back to Malgun Gothic for Korean).
+   Mongscape settings window: the wooden panel and gold accent of the IMGUI screens (Palette in OverlaySkin.cs).
+     ground  #1E140E   panel  #2B1D14   wood  #6B4426   wood-dim  #4A3020
+     gold    #FFC83D   cream  #FFF3DC   sand  #E9D3B0   muted     #9C8467   outline #2A170B
+   Reference resolution 1920x1080. Row labels use the system Korean font set in code;
+   the title, tabs and buttons (class settings-display) use Black Han Sans, also set in code.
 */
 
 .settings-root {
@@ -12,52 +11,87 @@
     left: 0; top: 0; right: 0; bottom: 0;
     align-items: center;
     justify-content: center;
-    background-color: rgba(4, 6, 10, 0.72);
+    background-color: rgba(30, 20, 14, 0.78);
 }
 
 .settings-panel {
-    width: 1100px;
-    height: 700px;
-    padding: 28px 36px;
-    background-color: rgb(16, 21, 31);
-    border-radius: 18px;
-    border-width: 2px;
-    border-color: rgb(255, 170, 60);
+    width: 1320px;
+    height: 860px;
+    background-color: rgb(43, 29, 20);
+    border-radius: 14px;
+    border-width: 4px;
+    border-color: rgb(107, 68, 38);
 }
 
 .settings-header {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 14px;
+    height: 104px;
+    padding: 0 40px;
+    border-bottom-width: 2px;
+    border-color: rgb(74, 48, 32);
 }
 
 .settings-title {
-    font-size: 40px;
-    -unity-font-style: bold;
-    color: rgb(255, 199, 82);
+    font-size: 52px;
+    color: rgb(255, 200, 61);
 }
 
-.settings-tab-bar {
+.settings-body {
     flex-direction: row;
-    margin-bottom: 16px;
+    flex-grow: 1;
+    min-height: 0;
+}
+
+/* Left rail: one tab per page, the scroll buttons at the bottom for hand pointing. */
+.settings-tab-bar {
+    width: 260px;
+    padding: 24px 20px;
+    background-color: rgb(30, 20, 14);
+    border-right-width: 2px;
+    border-color: rgb(74, 48, 32);
 }
 
 .settings-tab {
-    width: 160px;
-    height: 52px;
-    margin-right: 10px;
-    font-size: 22px;
-    color: rgb(225, 230, 240);
-    background-color: rgb(32, 41, 56);
+    height: 76px;
+    margin: 0 0 12px 0;
+    padding-left: 24px;
+    font-size: 32px;
+    -unity-text-align: middle-left;
+    color: rgb(233, 211, 176);
+    background-color: rgba(0, 0, 0, 0);
     border-radius: 10px;
     border-width: 0;
 }
 
-.settings-tab--selected {
-    color: rgb(40, 20, 4);
-    background-color: rgb(255, 150, 30);
-    -unity-font-style: bold;
+.settings-tab:hover {
+    background-color: rgb(58, 39, 26);
+}
+
+.settings-tab--selected,
+.settings-tab--selected:hover {
+    color: rgb(42, 23, 11);
+    background-color: rgb(255, 200, 61);
+}
+
+.settings-tab-spacer {
+    flex-grow: 1;
+}
+
+.settings-scroll {
+    height: 64px;
+    margin: 10px 0 0 0;
+    font-size: 26px;
+    color: rgb(255, 243, 220);
+    background-color: rgb(43, 29, 20);
+    border-width: 2px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 10px;
+}
+
+.settings-scroll:hover {
+    background-color: rgb(74, 48, 32);
 }
 
 .settings-content {
@@ -65,77 +99,233 @@
 }
 
 .settings-page {
-    padding: 6px 4px;
+    padding: 12px 48px 24px 44px;
 }
 
+/* One setting per row: label on the left, control on the right, a divider under it. */
 .settings-row {
-    height: 56px;
-    margin-bottom: 8px;
-    font-size: 22px;
-    color: rgb(232, 236, 244);
-}
-
-.settings-row > Label {
-    min-width: 320px;
-    color: rgb(232, 236, 244);
-}
-
-.settings-preview-row {
     flex-direction: row;
-    margin-top: 10px;
+    align-items: center;
+    min-height: 84px;
+    margin: 0;
+    border-bottom-width: 2px;
+    border-color: rgb(74, 48, 32);
 }
 
-.settings-preview {
-    width: 400px;
-    height: 300px;
-    background-color: rgb(6, 8, 12);
-    border-radius: 10px;
+.settings-root .settings-row > .unity-base-field__label,
+.settings-root .settings-row > Label {
+    flex-grow: 1;
+    flex-shrink: 1;
+    width: auto;
+    min-width: 0;
+    font-size: 28px;
+    color: rgb(255, 243, 220);
+    -unity-text-align: middle-left;
 }
 
-.settings-preview-side {
-    margin-left: 24px;
+.settings-root .settings-row > .unity-base-field__input {
+    flex-grow: 0;
+    flex-shrink: 0;
+    width: 440px;
+    min-width: 440px;
+}
+
+/* Toggle: a wooden box that fills gold when on, at the right end of the row. */
+.settings-root .settings-row.unity-toggle > .unity-base-field__input {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
     justify-content: center;
 }
 
-.settings-status {
-    font-size: 22px;
-    color: rgb(140, 255, 160);
-    margin-bottom: 16px;
-    white-space: normal;
-    max-width: 480px;
+.settings-root .settings-row .unity-toggle__checkmark {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    background-color: rgb(30, 20, 14);
+    border-width: 3px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 8px;
+    -unity-background-image-tint-color: rgba(0, 0, 0, 0);
 }
 
+.settings-root .settings-row.unity-toggle:checked .unity-toggle__checkmark {
+    background-color: rgb(255, 200, 61);
+    border-color: rgb(255, 200, 61);
+    -unity-background-image-tint-color: rgb(42, 23, 11);
+}
+
+/* Dropdown */
+.settings-root .settings-row .unity-base-popup-field__input {
+    flex-grow: 0;
+    height: 56px;
+    padding: 0 18px;
+    background-color: rgb(30, 20, 14);
+    border-width: 2px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 10px;
+}
+
+.settings-row .unity-base-popup-field__input:hover {
+    border-color: rgb(255, 200, 61);
+}
+
+.settings-row .unity-base-popup-field__text {
+    font-size: 26px;
+    color: rgb(255, 243, 220);
+}
+
+.settings-row .unity-base-popup-field__arrow {
+    -unity-background-image-tint-color: rgb(255, 200, 61);
+}
+
+/* Slider */
+.settings-row .unity-base-slider__tracker {
+    height: 10px;
+    margin-top: -5px;
+    background-color: rgb(30, 20, 14);
+    border-width: 2px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 5px;
+}
+
+.settings-row .unity-base-slider__dragger {
+    width: 30px;
+    height: 40px;
+    margin-top: -20px;
+    background-color: rgb(255, 200, 61);
+    border-width: 3px;
+    border-color: rgb(42, 23, 11);
+    border-radius: 8px;
+}
+
+.settings-row .unity-base-slider__dragger-border {
+    display: none;
+}
+
+/* Body page: camera preview first so it is visible without scrolling. */
+.settings-preview-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 20px 0 24px 0;
+    border-bottom-width: 2px;
+    border-color: rgb(74, 48, 32);
+}
+
+.settings-preview {
+    width: 360px;
+    height: 270px;
+    background-color: rgb(18, 11, 7);
+    border-width: 3px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.settings-preview-side {
+    flex-grow: 1;
+    margin-left: 32px;
+    align-items: flex-start;
+}
+
+.settings-status {
+    font-size: 28px;
+    color: rgb(233, 211, 176);
+    margin-bottom: 20px;
+    white-space: normal;
+}
+
+.settings-row--actions {
+    justify-content: flex-start;
+}
+
+.settings-row--actions > .settings-button {
+    margin: 0 16px 0 0;
+}
+
+.settings-guide {
+    padding: 20px 24px;
+    margin: 16px 0;
+    background-color: rgb(30, 20, 14);
+    border-radius: 10px;
+}
+
+.settings-guide-title {
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: rgb(255, 200, 61);
+    margin: 6px 0;
+}
+
+.settings-guide-text {
+    font-size: 24px;
+    color: rgb(255, 243, 220);
+    white-space: normal;
+    margin-bottom: 10px;
+}
+
+.settings-guide-text--muted {
+    color: rgb(156, 132, 103);
+}
+
+/* Buttons: wooden outline; the primary action is gold with dark text like the IMGUI screens. */
 .settings-footer {
     flex-direction: row;
-    justify-content: flex-end;
-    margin-top: 12px;
+    justify-content: space-between;
+    align-items: center;
+    height: 112px;
+    padding: 0 40px;
+    border-top-width: 2px;
+    border-color: rgb(74, 48, 32);
 }
 
 .settings-button {
-    min-width: 180px;
-    height: 54px;
-    margin-left: 12px;
-    font-size: 22px;
-    color: rgb(235, 240, 250);
-    background-color: rgb(30, 90, 150);
-    border-radius: 10px;
-    border-width: 0;
+    min-width: 200px;
+    height: 64px;
+    margin: 0;
+    padding: 0 28px;
+    font-size: 28px;
+    color: rgb(255, 243, 220);
+    background-color: rgb(30, 20, 14);
+    border-width: 3px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 12px;
 }
 
 .settings-button:hover {
-    background-color: rgb(45, 115, 185);
+    background-color: rgb(58, 39, 26);
+    border-color: rgb(255, 200, 61);
 }
 
 .settings-button--primary {
-    color: rgb(255, 255, 255);
-    -unity-font-style: bold;
-    background-color: rgb(255, 122, 5);
+    min-width: 260px;
+    color: rgb(42, 23, 11);
+    background-color: rgb(255, 200, 61);
+    border-color: rgb(255, 200, 61);
 }
 
 .settings-button--primary:hover {
-    background-color: rgb(255, 152, 30);
+    background-color: rgb(255, 214, 110);
 }
 
-.settings-button--close {
-    min-width: 120px;
+/* The dropdown list opens on the panel root; the window adds this sheet there too. */
+.unity-base-dropdown__container-outer {
+    background-color: rgb(43, 29, 20);
+    border-width: 2px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 8px;
+}
+
+.unity-base-dropdown__item {
+    height: 52px;
+    font-size: 26px;
+    color: rgb(255, 243, 220);
+}
+
+.unity-base-dropdown__item:hover {
+    background-color: rgb(74, 48, 32);
+}
+
+.unity-base-dropdown__checkmark {
+    -unity-background-image-tint-color: rgb(255, 200, 61);
 }

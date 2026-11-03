@@ -95,7 +95,7 @@ namespace Muhanok.Presentation
             if ((status == PoseStatus.NoCamera || status == PoseStatus.NoModel) && !string.IsNullOrEmpty(data.PoseMessage))
                 GUI.Label(new Rect(area.x + 16, area.y + 16, area.width - 32, area.height - 70), data.PoseMessage, skin.Style(16, FontStyle.Normal));
             string text = PoseStatusText.Korean(status);
-            if (status == PoseStatus.Tracking && data.StepsPerMinute > 0) text += "  ·  " + Mathf.RoundToInt(data.StepsPerMinute) + "걸음/분";
+            if (status == PoseStatus.Tracking && data.StepsPerMinute > 0) text += " (분당 " + Mathf.RoundToInt(data.StepsPerMinute) + "걸음)";
             var label = new Rect(area.x, area.yMax - 34, area.width, 30);
             skin.Card(label, new Color(0, 0, 0, .6f));
             GUI.Label(label, text, skin.Centered(18, FontStyle.Bold));

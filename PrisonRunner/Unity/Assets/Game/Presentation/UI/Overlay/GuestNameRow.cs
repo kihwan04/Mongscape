@@ -43,7 +43,7 @@ namespace Muhanok.Presentation
             if (focus && e.type == EventType.Repaint) { GUI.FocusControl("MongscapeGuestName"); focus = false; }
             if (skin.Button(new Rect(field.xMax + 12, field.y, 110, 52), "저장", Palette.Gold, Color.clear, Palette.Outline, 20) || enter) Save(data, text);
             if (skin.Button(new Rect(field.xMax + 134, field.y, 130, 52), "건너뛰기", Palette.A(Palette.Ground, 0.9f), Palette.Wood, Palette.Cream, 20) || escape) Skip();
-            skin.Text(new Rect(r.x + 24, r.y + 144, r.width - 48, 26), message, 15, new Color(1, .55f, .35f), TextAnchor.MiddleLeft, false, true);
+            skin.Text(new Rect(r.x + 24, r.y + 144, r.width - 48, 26), message, 15, Palette.Error, TextAnchor.MiddleLeft, false, true);
         }
     }
 }

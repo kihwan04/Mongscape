@@ -49,7 +49,7 @@ namespace Muhanok.Presentation
             {
                 var badge = new Rect(40, 640, 330, 40);
                 skin.BorderBox(badge, Palette.A(new Color(.45f, .08f, .05f), 0.92f), Palette.Gold, 2);
-                skin.Text(badge, "개발자 모드 · 모든 아이템 해금", 16, Palette.Cream, TextAnchor.MiddleCenter, false, true);
+                skin.Text(badge, "개발자 모드 (아이템 전체 해금)", 16, Palette.Cream, TextAnchor.MiddleCenter, false, true);
             }
             return action;
         }

@@ -54,9 +54,7 @@ namespace Muhanok.Presentation
                 var oldColor = GUI.color; GUI.color = Palette.Sand;
                 GUI.Label(new Rect(r.x + 14, r.y + 188, r.width - 28, 48), item.Description, wrapped);
                 GUI.color = oldColor;
-                skin.Text(new Rect(r.x, r.y + 240, r.width, 24), item.Seconds.ToString("0", Num) + "초 지속", 16, Palette.Sand, TextAnchor.MiddleCenter, false, true);
-                // Only unlocked items are placed on the map during play.
-                skin.Text(new Rect(r.x, r.y + 270, r.width, 24), owned ? "플레이 중에 등장합니다" : "해금하면 플레이 중에 등장합니다", 15, owned ? Palette.Gold : Palette.Muted, TextAnchor.MiddleCenter, false, true);
+                skin.Text(new Rect(r.x, r.y + 246, r.width, 24), item.Seconds.ToString("0", Num) + "초 지속", 16, Palette.Gold, TextAnchor.MiddleCenter, false, true);
                 var button = new Rect(r.x + 24, r.yMax - 82, r.width - 48, 56);
                 if (owned)
                 {
@@ -72,14 +70,24 @@ namespace Muhanok.Presentation
                 }
                 else
                 {
-                    bool affordable = wallet != null && wallet.Coins >= item.UnlockCost && !buying;
-                    string label = "해금  " + item.UnlockCost.ToString("N0", Num) + "코인";
-                    if (affordable ? skin.Button(button, label, Palette.Gold, Color.clear, Palette.Outline, 20)
-                                   : skin.Button(button, label, Palette.A(Palette.Ground, 0.9f), Palette.WoodDim, Palette.Muted, 20))
-                        if (affordable) Buy(data, item);
+                    int have = wallet != null ? wallet.Coins : 0;
+                    string price = item.UnlockCost.ToString("N0", Num) + "코인";
+                    if (have >= item.UnlockCost)
+                    {
+                        bool wasEnabled = GUI.enabled; GUI.enabled = wasEnabled && !buying;
+                        if (skin.Button(button, "해금  " + price, Palette.Gold, Color.clear, Palette.Outline, 20)) Buy(data, item);
+                        GUI.enabled = wasEnabled;
+                    }
+                    else
+                    {
+                        // Not a button: nothing happens until enough coins are collected, so say how many are missing.
+                        skin.BorderBox(button, Palette.A(Palette.Ground, 0.6f), Palette.WoodDim, 2);
+                        skin.Text(new Rect(button.x, button.y + 4, button.width, 26), price, 18, Palette.Muted, TextAnchor.MiddleCenter);
+                        skin.Text(new Rect(button.x, button.y + 28, button.width, 24), (item.UnlockCost - have).ToString("N0", Num) + "코인 더 필요", 13, Palette.Muted, TextAnchor.MiddleCenter, false, true);
+                    }
                 }
             }
-            skin.Text(new Rect(x, 558, w, 30), buying ? "구매 중…" : message, 16, failed ? new Color(1, .55f, .35f) : Palette.Gold, TextAnchor.MiddleCenter, false, true);
+            skin.Text(new Rect(x, 558, w, 30), buying ? "해금 중…" : message, 16, failed ? Palette.Error : Palette.Gold, TextAnchor.MiddleCenter, false, true);
 
             if (skin.Button(new Rect(540, 606, 200, 56), "뒤로", Palette.A(Palette.Ground, 0.9f), Palette.Wood, Palette.Cream, 22)) back?.Invoke();
         }
@@ -88,7 +96,7 @@ namespace Muhanok.Presentation
         void Buy(IHudData data, ItemDefinition item)
         {
             int mine = opened; buying = true; message = ""; failed = false;
-            data.Unlock(item.Kind, (ok, reason) => { if (mine != opened) return; buying = false; failed = !ok; message = ok ? item.Name + " 해금 완료! 이제 맵에 등장합니다." : reason; });
+            data.Unlock(item.Kind, (ok, reason) => { if (mine != opened) return; buying = false; failed = !ok; message = ok ? item.Name + " 해금 완료! 다음 판부터 맵에 나옵니다." : reason; });
         }
 
         static Color Accent(ItemKind kind) =>

@@ -33,7 +33,9 @@ namespace Muhanok.Presentation
         private Label status;
         private Font font;
         private bool syncing;
-        private GUIStyle handScrollStyle;
+        private UserSettings opened;
+        private ScrollView scroll;
+        private VisualElement scrollUp, scrollDown;
         private readonly Dictionary<VisualElement,Action> gestureActions=new Dictionary<VisualElement,Action>();
         public bool IsOpen { get; private set; }
         public event Action Closed;
@@ -58,6 +60,9 @@ namespace Muhanok.Presentation
             // Korean glyphs: default to the Windows Korean font unless the USS sets its own font.
             font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Arial" }, 24);
             root.style.unityFontDefinition = FontDefinition.FromFont(font);
+            // The title, tabs and buttons use the game's display face like the other screens.
+            var display = Resources.Load<Font>(Folder + "BlackHanSans-Regular");
+            if (display != null) root.Query(className: "settings-display").ForEach(e => e.style.unityFontDefinition = FontDefinition.FromFont(display));
             root.style.position = Position.Absolute; root.style.left = 0; root.style.top = 0; root.style.right = 0; root.style.bottom = 0;
             Bind();
             SetVisible(false);
@@ -97,7 +102,8 @@ namespace Muhanok.Presentation
             if(camera!=null)gestureActions[camera]=()=>camera.index=(camera.index+1)%camera.choices.Count;
             if (camera != null) camera.RegisterValueChangedCallback(e => { if (syncing) return; s.CameraDevice = camera.index <= 0 ? "" : e.newValue; host.ApplySettings(false); });
             for (int i = 0; i < Pages.Length; i++) { string page = Pages[i]; var tab = Find<Button>("tab-" + page); if (tab != null) { tab.clicked += () => ShowPage(page); gestureActions[tab]=()=>ShowPage(page); } }
-            Clicked("close-button", () => Close(true));
+            // 취소 puts back what was set when the window opened; 저장 keeps and stores the changes.
+            Clicked("close-button", () => Close(false));
             Clicked("apply-button", () => Close(true));
             Clicked("reset-button", () => { CopyInto(host.Defaults, s); host.ApplySettings(false); Refresh(); });
             Clicked("recalibrate-button", () => host.Hud?.Recalibrate());
@@ -109,6 +115,10 @@ namespace Muhanok.Presentation
                 preview.style.flexGrow = 1; slot.Add(preview);
             }
             status = Find<Label>("pose-status");
+            scroll = Find<ScrollView>("settings-content");
+            scrollUp = Find<Button>("scroll-up"); scrollDown = Find<Button>("scroll-down");
+            Clicked("scroll-up", () => { if (scroll != null) scroll.scrollOffset -= new Vector2(0, 260); });
+            Clicked("scroll-down", () => { if (scroll != null) scroll.scrollOffset += new Vector2(0, 260); });
             ShowPage(Pages[0]);
         }
 
@@ -156,7 +166,7 @@ namespace Muhanok.Presentation
             syncing = false;
         }
 
-        private void ShowPage(string page)
+        public void ShowPage(string page)
         {
             foreach (var name in Pages)
             {
@@ -167,14 +177,23 @@ namespace Muhanok.Presentation
             }
         }
 
+        // Screenshot review: show the bottom of a long page.
+        public void ScrollToEnd() { if (scroll != null) scroll.scrollOffset = new Vector2(0, scroll.verticalScroller.highValue); }
         public void Open()
         {
             if (root == null) return;
+            opened = host.Settings.Clone();
+            // Dropdown lists open on the panel root, outside the window's own style sheet.
+            var sheet = Resources.Load<StyleSheet>(Folder + "SettingsWindow");
+            var top = root.panel?.visualTree;
+            if (sheet != null && top != null && !top.styleSheets.Contains(sheet)) top.styleSheets.Add(sheet);
             Refresh(); SetVisible(true); IsOpen = true;
         }
+        // save=false (취소) restores the settings from when the window opened.
         public void Close(bool save)
         {
             if (!IsOpen) return;
+            if (!save && opened != null) CopyInto(opened, host.Settings);
             host.ApplySettings(save); SetVisible(false); IsOpen = false; Closed?.Invoke();
         }
         private void SetVisible(bool visible) { if (root != null) root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None; }
@@ -182,6 +201,10 @@ namespace Muhanok.Presentation
         private void Update()
         {
             if (!IsOpen || host?.Hud == null) return;
+            // The rail's scroll buttons only show when the page is longer than the window.
+            bool scrolls = scroll != null && scroll.verticalScroller.highValue > 1;
+            var shown = scrolls ? DisplayStyle.Flex : DisplayStyle.None;
+            if (scrollUp != null && scrollUp.style.display != shown) { scrollUp.style.display = shown; scrollDown.style.display = shown; }
             if (preview != null && preview.image != host.Hud.CameraTexture) preview.image = host.Hud.CameraTexture;
             if (status != null)
             {
@@ -211,14 +234,6 @@ namespace Muhanok.Presentation
             var picked=root.panel?.Pick(panelPoint);
             foreach(var pair in gestureActions)
                 if(Shown(pair.Key) && picked!=null && (picked==pair.Key || pair.Key.Contains(picked)) && GesturePointer.Activate(ToGui(pair.Key),pair.Key.name)){pair.Value();break;}
-            var scroll=root.Q<ScrollView>("settings-content");
-            if(scroll!=null && scroll.verticalScroller.highValue>0)
-            {
-                handScrollStyle??=new GUIStyle(GUI.skin.button){fontSize=25};
-                var up=new Rect(1120,310,72,60);var down=new Rect(1120,390,72,60);
-                if(GUI.Button(up,"↑",handScrollStyle)||GesturePointer.Activate(up,"settings-scroll-up"))scroll.scrollOffset-=new Vector2(0,180);
-                if(GUI.Button(down,"↓",handScrollStyle)||GesturePointer.Activate(down,"settings-scroll-down"))scroll.scrollOffset+=new Vector2(0,180);
-            }
             GesturePointer.Draw();GUI.matrix=old;
         }
         private static void CopyInto(UserSettings from, UserSettings to) => JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(from), to);

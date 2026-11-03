@@ -67,7 +67,7 @@ namespace Muhanok.Presentation
             Step = (SignUpStep)((int)Step - 1); return true;
         }
         public static string Summary(string nickname, AccountSettings settings) =>
-            "닉네임 " + nickname + " · 몸무게 " + settings.Weight.ToString("0.##", CultureInfo.InvariantCulture) + "kg · " + PlayStyleInfo.Label(settings.Style);
+            "닉네임 " + nickname + ", 몸무게 " + settings.Weight.ToString("0.##", CultureInfo.InvariantCulture) + "kg, " + PlayStyleInfo.Label(settings.Style);
     }
 
     // Draws the sign-up steps; the capture step is the shared face capture screen.
@@ -88,7 +88,7 @@ namespace Muhanok.Presentation
         {
             if (flow.Step == SignUpStep.Capture)
             {
-                capture.Draw(data, identity, "회원가입 · 얼굴 등록",
+                capture.Draw(data, identity, "회원가입: 얼굴 등록",
                     SignUpFlow.Summary(flow.Nickname, flow.Settings) + "\n정면을 보고 틀 안에 얼굴을 맞춘 뒤 등록하세요.\n촬영에 실패해도 입력한 내용은 그대로 남습니다.",
                     "얼굴 등록하기", enroll, () => flow.Back());
                 return;
@@ -96,7 +96,7 @@ namespace Muhanok.Presentation
             paragraph ??= new GUIStyle(skin.Style(22, FontStyle.Normal)) { wordWrap = true };
             skin.Card(new Rect(0, 0, 1280, 720), Palette.A(Palette.Ground, .9f));
             skin.Panel(new Rect(150, 60, 980, 600), .97f);
-            GUI.color = new Color(1, .78f, .32f); GUI.Label(new Rect(195, 82, 500, 50), "회원가입", skin.Style(36, FontStyle.Bold)); GUI.color = Color.white;
+            GUI.color = Palette.Gold; GUI.Label(new Rect(195, 82, 500, 50), "회원가입", skin.Style(36, FontStyle.Bold)); GUI.color = Color.white;
             for (int i = 0; i < StepNames.Length; i++)
             {
                 bool on = i == (int)flow.Step;
@@ -109,8 +109,8 @@ namespace Muhanok.Presentation
             else if (flow.Step == SignUpStep.Nickname) Nickname(body, flow);
             else Settings(body, flow);
             GUI.color = new Color(1, 1, 1, .7f);
-            GUI.Label(new Rect(195, 610, 700, 30), "손을 들어 버튼을 가리키고 0.75초 유지하면 선택됩니다. 키보드는 Enter.", skin.Style(16, FontStyle.Normal)); GUI.color = Color.white;
-            if (skin.FlatButton(new Rect(940, 600, 150, 46), flow.Step == SignUpStep.Consent ? "돌아가기" : "이전", false) && !flow.Back()) leave?.Invoke();
+            GUI.Label(new Rect(195, 610, 700, 30), GesturePointer.Hint("Enter를 누르세요."), skin.Style(16, FontStyle.Normal)); GUI.color = Color.white;
+            if (skin.FlatButton(new Rect(940, 600, 150, 46), flow.Step == SignUpStep.Consent ? "뒤로" : "이전", false) && !flow.Back()) leave?.Invoke();
         }
         private void Consent(Rect r, SignUpFlow flow)
         {
@@ -129,7 +129,7 @@ namespace Muhanok.Presentation
             nameText = GUI.TextField(new Rect(r.x, r.y + 50, 420, 56), nameText, AccountSession.MaxNicknameInput, skin.Input);
             GUI.enabled = wasEnabled;
             if (focusName && Event.current.type == EventType.Repaint) { GUI.FocusControl("MongscapeSignUpName"); focusName = false; }
-            GUI.color = flow.Checking ? Color.white : new Color(1, .55f, .35f);
+            GUI.color = flow.Checking ? Color.white : Palette.Error;
             GUI.Label(new Rect(r.x, r.y + 120, r.width, 34), flow.NameMessage, skin.Small); GUI.color = Color.white;
             GUI.enabled = wasEnabled && !flow.Checking;
             if (skin.PrimaryButton(new Rect(r.x, 540, 450, 58), flow.Checking ? "확인 중…" : "중복 확인 후 다음") || enter && !flow.Checking) flow.SubmitNickname(nameText);
@@ -153,9 +153,9 @@ namespace Muhanok.Presentation
                 GUI.Label(rect, PlayStyleInfo.Label(option), skin.Centered(22, FontStyle.Bold)); GUI.color = Color.white;
                 if (pressed) style = option;
             }
-            GUI.color = new Color(1, .55f, .35f); GUI.Label(new Rect(r.x, r.y + 230, r.width, 34), flow.Validation, skin.Small); GUI.color = Color.white;
+            GUI.color = Palette.Error; GUI.Label(new Rect(r.x, r.y + 230, r.width, 34), flow.Validation, skin.Small); GUI.color = Color.white;
             if (skin.PrimaryButton(new Rect(r.x, 540, 300, 58), "다음") || enter) flow.SubmitSettings(weightText, style);
-            if (skin.FlatButton(new Rect(r.x + 320, 540, 300, 58), "건너뛰기 (65kg · 전신)", false)) { weightText = ""; style = PlayStyle.FullBody; flow.SkipSettings(); }
+            if (skin.FlatButton(new Rect(r.x + 320, 540, 300, 58), "건너뛰기 (65kg, 전신)", false)) { weightText = ""; style = PlayStyle.FullBody; flow.SkipSettings(); }
         }
     }
 }

@@ -64,6 +64,8 @@ namespace Muhanok.Presentation
         bool SignedIn => identity != null && identity.SignedIn;
         // Rows hold copied names: after this PC's records change (a guest named the run) the 이 PC tab is rebuilt.
         public void RefreshLocal() { if (!MemberTab) Reload(); }
+        // The failed member board asks the server again.
+        public void Retry() { if (Status == RankingStatus.Failed) Reload(); }
 
         void Reload()
         {
@@ -113,7 +115,7 @@ namespace Muhanok.Presentation
             var lines = new List<KeyValuePair<string, string>>();
             bool camera = PlayStyleInfo.UsesCamera(data?.Player?.Style ?? PlayStyle.Keyboard);
             // Keyboard runs keep the existing note: this run's calories are not counted.
-            lines.Add(new KeyValuePair<string, string>("이번 판", camera && session != null ? Kcal(session.Workout.EstimatedKcal) : "키보드 · 계산 제외"));
+            lines.Add(new KeyValuePair<string, string>("이번 판", camera && session != null ? Kcal(session.Workout.EstimatedKcal) : "키보드 제외"));
             if (!MemberResult) return lines;
             var stats = data?.LastStats;
             if (stats != null)

@@ -51,10 +51,10 @@ namespace Muhanok.Presentation
             GUI.enabled=!identity.IdentityBusy;
             if(skin.PrimaryButton(new Rect(680,420,490,64),action)||Enter())capture?.Invoke();
             GUI.enabled=true;
-            GUI.Label(new Rect(70,552,560,60),"손을 들어 버튼을 가리키고 0.75초 유지하면 선택됩니다. 키보드는 Enter.",paragraph);
+            GUI.Label(new Rect(70,552,560,60),GesturePointer.Hint("Enter를 누르세요."),paragraph);
             GUI.Label(new Rect(70,615,950,60),identity.IdentityMessage,skin.Style(18,FontStyle.Normal));
             GUI.enabled=!identity.IdentityBusy;
-            if(skin.FlatButton(new Rect(1020,615,190,52),"돌아가기",false))back?.Invoke();
+            if(skin.FlatButton(new Rect(1020,615,190,52),"뒤로",false))back?.Invoke();
             GUI.enabled=true;
         }
         // Enter (or keypad Enter) presses the screen's main button.

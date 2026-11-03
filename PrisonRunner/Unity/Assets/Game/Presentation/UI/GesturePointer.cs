@@ -9,6 +9,10 @@ namespace Muhanok.Presentation
         private static readonly HandMenuPointer hand=new HandMenuPointer();
         public static Vector2 Position {get;private set;}
         public static bool Visible=>hand.Visible;
+        // Hand pointing is on for this screen (the setting is on and the menu camera runs); hints follow it.
+        public static bool Enabled {get;set;}=true;
+        // Screen hints: the hand part only while hand pointing is on, then the keys.
+        public static string Hint(string keys)=>Enabled?"손으로 버튼을 잠시 가리키거나 "+keys:keys;
         private static bool hovered;
         private static string target;
         private static Rect targetRect;

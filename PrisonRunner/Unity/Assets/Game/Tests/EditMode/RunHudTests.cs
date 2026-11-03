@@ -16,10 +16,10 @@ namespace Muhanok.Tests
             run.Workout.SetWeight("70"); run.Workout.SetGoal(180);
             return run;
         }
-        [TestCase(PlayStyle.Keyboard, true)]
+        [TestCase(PlayStyle.Keyboard, false)]
         [TestCase(PlayStyle.FullBody, true)]
         [TestCase(PlayStyle.UpperBody, true)]
-        public void GoalAndBurnCounterAreVisibleForEveryStyle(PlayStyle style, bool expected)
+        public void GoalAndBurnCounterShowOnlyForCameraStyles(PlayStyle style, bool expected)
         {
             var model = new RunHudModel(); model.Tick(Running(), null, style, PoseStatus.Tracking, false, 1);
             Assert.AreEqual(expected, model.ShowWorkout);
@@ -40,8 +40,7 @@ namespace Muhanok.Tests
             var model=new RunHudModel();model.Tick(run,null,PlayStyle.FullBody,PoseStatus.Tracking,false,1);
             StringAssert.Contains("목표  80.5 kcal",model.GoalLabel);StringAssert.Contains("소모  4.9 kcal",model.BurnLabel);
             model.Tick(run,null,PlayStyle.Keyboard,PoseStatus.Off,false,2);
-            StringAssert.Contains("0.0 kcal",model.BurnLabel);StringAssert.Contains("미집계",model.WorkoutHint);
-            Assert.AreEqual(0,model.GoalProgress);
+            Assert.IsFalse(model.ShowWorkout);Assert.AreEqual(0,model.GoalProgress);
         }
         [Test] public void ForkPreviewShowsTheLiveLaneThenCommittedDestinationAndHidesAtExit()
         {
