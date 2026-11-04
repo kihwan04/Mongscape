@@ -61,8 +61,12 @@ namespace Muhanok.Presentation.Map
             slots=new System.Collections.Generic.List<ObstacleSlot>(12);floorSlots=new System.Collections.Generic.List<LanePlacement>(2);
             for(int i=0;i<Obstacles.Length;i++)
                 slots.Add(new ObstacleSlot(Obstacles[i].Kind,i%3-1,LocalZ(Obstacles[i].transform),false,RouteType==7));
+            exerciseHome=new Vector3[ExerciseObstacles!=null?ExerciseObstacles.Length:0];
             if(ExerciseObstacles!=null)for(int i=0;i<ExerciseObstacles.Length;i++)
+            {
                 slots.Add(new ObstacleSlot(ExerciseObstacles[i].Kind,i%3-1,LocalZ(ExerciseObstacles[i].transform),true));
+                var socket=ExerciseObstacles[i].transform.parent;if(socket!=null)exerciseHome[i]=socket.localPosition;
+            }
             if(FloorItems!=null)foreach(var item in FloorItems)
             {
                 var p=transform.InverseTransformPoint(item.transform.position);
@@ -70,6 +74,17 @@ namespace Muhanok.Presentation.Map
             }
         }
         private float LocalZ(Transform item)=>transform.InverseTransformPoint(item.position).z;
+        // Authored socket positions of the exercise rows; a pooled chunk returns to them unless the layout moves the row.
+        private Vector3[] exerciseHome;
+        private void PlaceExercise(int i)
+        {
+            var socket=ExerciseObstacles[i].transform.parent;if(socket==null||socket==transform)return;
+            int slot=Obstacles.Length+i;float from=slots[slot].Z,to=Layout.ZOf(slot);
+            var p=exerciseHome[i];
+            // Follow the route's curve and height at the new spot.
+            if(Mathf.Abs(to-from)>.001f)p+=new Vector3(RouteSurface.LocalX(RouteType,to)-RouteSurface.LocalX(RouteType,from),RouteSurface.LocalHeight(RouteType,to)-RouteSurface.LocalHeight(RouteType,from),to-from);
+            socket.localPosition=p;
+        }
         public void Prepare(int sequence, float chance, System.Random random)
         {
             DescribeSlots();
@@ -95,6 +110,7 @@ namespace Muhanok.Presentation.Map
             if(ExerciseObstacles!=null)for(int i=0;i<ExerciseObstacles.Length;i++)
             {
                 var obstacle=ExerciseObstacles[i];
+                PlaceExercise(i);
                 obstacle.ResetPass();obstacle.FullExerciseRow=true;obstacle.gameObject.SetActive(Layout.Slots[Obstacles.Length+i]);
             }
             if (Coins != null) foreach(var coin in Coins) { coin.ResetCoin(); coin.gameObject.SetActive(sequence>0); }

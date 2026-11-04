@@ -75,6 +75,8 @@ namespace Muhanok.Tests
                 {
                     if (!layout.Slots[i]) continue;
                     Assert.IsTrue(slots[i].FullRow, "Only one full exercise row opens the run");
+                    // Random action, fixed spot: a jump row never stands right in front of the start line (z 2).
+                    Assert.AreEqual(ObstacleLayout.OpeningZ, layout.ZOf(i), .001f, "The opening row stands at the fixed spot");
                     if (slots[i].Kind == C) crates++; else if (slots[i].Kind == P) pipes++;
                 }
                 Assert.IsTrue(crates == 3 && pipes == 0 || pipes == 3 && crates == 0, "Exactly one row: " + crates + "/" + pipes);
@@ -82,6 +84,9 @@ namespace Muhanok.Tests
                 Assert.IsNull(layout.Violation());
             }
             Assert.GreaterOrEqual(jump, 150); Assert.GreaterOrEqual(duck, 150);
+            // Later chunks keep the authored spots.
+            var later = Plan(3, 0, 4, false, false, 1f); var authored = Slots(0);
+            for (int i = 0; i < authored.Count; i++) Assert.AreEqual(authored[i].Z, later.ZOf(i), .001f);
         }
 
         [Test] public void EverySeedAndChunkTypeKeepsTheSafetyRules()

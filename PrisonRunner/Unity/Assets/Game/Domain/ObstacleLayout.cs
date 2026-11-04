@@ -26,6 +26,9 @@ namespace Muhanok.Domain
     {
         public const float SeamClearance = 4f, ActionSpacing = 6f, CentreZ = 12f, ExerciseChance = .5f, RailGapHalfLength = 1.5f;
         public static readonly float[] RailGapZ = { 8f, 18f };
+        // The run opens with one full row whose action (jump or duck) is random but whose spot is fixed: the runner starts
+        // at z 2, so the authored jump row at z 7 left about half a second to react. This is the duck row's spot, ~17 m ahead.
+        public const float OpeningZ = 19f;
         // Per authored slot / floor item: switched on in this run.
         public readonly List<bool> Slots = new List<bool>(12), FloorItems = new List<bool>(2);
         public readonly List<LanePlacement> Blockers = new List<LanePlacement>(2), Bananas = new List<LanePlacement>(4);
@@ -37,6 +40,10 @@ namespace Muhanok.Domain
         private readonly List<float> rows = new List<float>(4);
         private IReadOnlyList<ObstacleSlot> slots;
         private IReadOnlyList<LanePlacement> floor;
+        // Authored z of the row moved to OpeningZ in the first chunk, NaN otherwise.
+        private float openingFrom = float.NaN;
+        // Where an authored slot stands in this run: the first chunk's opening row is moved to OpeningZ.
+        public float ZOf(int slot) => slots[slot].FullRow && !slots[slot].Terrain && Same(slots[slot].Z, openingFrom) ? OpeningZ : slots[slot].Z;
 
         public static HazardAction ActionFor(ObstacleKind kind) => kind == ObstacleKind.Crate || kind == ObstacleKind.Cart ? HazardAction.Jump
             : kind == ObstacleKind.Pipe ? HazardAction.Crouch : kind == ObstacleKind.Stair ? HazardAction.HighKnee : HazardAction.Dodge;
@@ -55,7 +62,7 @@ namespace Muhanok.Domain
             float chance, bool extended, bool fork, bool boarding = false)
         {
             slots = authored; floor = floorItems;
-            Slots.Clear(); FloorItems.Clear(); Blockers.Clear(); Bananas.Clear(); Animal = false; SafeLane = 0;
+            Slots.Clear(); FloorItems.Clear(); Blockers.Clear(); Bananas.Clear(); Animal = false; SafeLane = 0; openingFrom = float.NaN;
             for (int i = 0; i < slots.Count; i++) Slots.Add(false);
             for (int i = 0; i < floor.Count; i++) FloorItems.Add(false);
             Array.Clear(RailGaps, 0, RailGaps.Length);
@@ -63,9 +70,9 @@ namespace Muhanok.Domain
             for (int i = 0; i < slots.Count; i++) if (slots[i].Terrain) Slots[i] = true;
             if (sequence == 0)
             {
-                // The first chunk opens with either the jump row or the duck row.
+                // The first chunk opens with either the jump row or the duck row, always at OpeningZ.
                 Rows(true);
-                if (rows.Count > 0) SetRow(rows[random.Next(rows.Count)]);
+                if (rows.Count > 0) { openingFrom = rows[random.Next(rows.Count)]; SetRow(openingFrom); }
                 return;
             }
             SafeLane = random.Next(3) - 1;
@@ -138,7 +145,7 @@ namespace Muhanok.Domain
         // Nothing within the seam clearance, and a different action needs the full action spacing.
         private bool Conflicts(float z, HazardAction action)
         {
-            for (int i = 0; i < slots.Count; i++) if (Slots[i] && TooClose(slots[i].Z, slots[i].Action, z, action)) return true;
+            for (int i = 0; i < slots.Count; i++) if (Slots[i] && TooClose(ZOf(i), slots[i].Action, z, action)) return true;
             for (int i = 0; i < FloorItems.Count; i++) if (FloorItems[i] && TooClose(floor[i].Z, HazardAction.Dodge, z, action)) return true;
             foreach (var block in Blockers) if (TooClose(block.Z, HazardAction.Dodge, z, action)) return true;
             foreach (var peel in Bananas) if (TooClose(peel.Z, HazardAction.Dodge, z, action)) return true;
@@ -158,7 +165,7 @@ namespace Muhanok.Domain
             {
                 var slot = slots[i];
                 if (slot.FullRow && !SafePatternValidator.IsActionRowSafe(7, slot.Kind)) return "Full row cannot be passed: " + slot.Kind;
-                hazards.Add((slot.Z, slot.Action, slot.FullRow ? 0 : 1 << (slot.Lane + 1), slot.Terrain, slot.FullRow));
+                hazards.Add((ZOf(i), slot.Action, slot.FullRow ? 0 : 1 << (slot.Lane + 1), slot.Terrain, slot.FullRow));
             }
             for (int i = 0; i < FloorItems.Count; i++) if (FloorItems[i]) hazards.Add((floor[i].Z, HazardAction.Dodge, 1 << (floor[i].Lane + 1), false, false));
             foreach (var block in Blockers) hazards.Add((block.Z, HazardAction.Dodge, 1 << (block.Lane + 1), false, false));

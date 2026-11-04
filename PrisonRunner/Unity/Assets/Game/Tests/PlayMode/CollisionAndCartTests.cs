@@ -46,6 +46,7 @@ namespace Muhanok.Tests
             // The first chunk keeps either its jump row or its duck row for this seed; cross whichever is there.
             ObstacleController row=null;foreach(var obstacle in mine.ExerciseObstacles)if(obstacle.gameObject.activeSelf)row=obstacle;
             Assert.IsNotNull(row,"The first chunk opens with one full exercise row");
+            Assert.AreEqual(Muhanok.Domain.ObstacleLayout.OpeningZ,mine.transform.InverseTransformPoint(row.transform.position).z,.05f,"Jump or duck, the opening row stands at the fixed spot");
             game.Session.Runner.SetStartZ(row.transform.position.z);
             foreach(var obstacle in mine.ExerciseObstacles)if(obstacle.FullExerciseRow)obstacle.Evaluate(game.Session,game.Session.Runner.Z-1);
             Assert.AreEqual(GameFlowState.Caught,game.Session.Flow.State);
