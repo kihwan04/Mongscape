@@ -1,0 +1,13 @@
+# Temporary public HTTPS via Cloudflare quick tunnel (random https://*.trycloudflare.com, changes on every start).
+# Usage: docker compose --env-file .env -f compose.yaml -f compose.cloudflare.yaml up -d --wait
+# Then read the URL: docker compose -p mongscape-identity logs cloudflared | grep trycloudflare
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:2024.12.2
+    restart: unless-stopped
+    # The tunnel host is random, so present the loopback Host the server already allows.
+    command: tunnel --no-autoupdate --url http://identity:8765 --http-host-header localhost:8765
+    depends_on:
+      identity:
+        condition: service_healthy
+    logging: {driver: json-file, options: {max-size: 10m, max-file: "3"}}
