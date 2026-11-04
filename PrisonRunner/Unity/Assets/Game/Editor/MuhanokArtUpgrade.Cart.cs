@@ -58,17 +58,16 @@ namespace Muhanok.Editor
                     Lantern(env,new Vector3(side*1.2f,2.65f,z),false,side<0);
                 }
             }
-            // Both rails are left out of the baked bridge around each gap window; AddRailGaps bakes switchable rail pieces there.
+            // Rails, sleepers and deck edges are left out of the baked bridge around each gap window; AddRailGaps bakes
+            // switchable halves there, so a broken side opens a hole in the deck instead of losing only its rail.
             for(int station=0;station<48;station++)
             {
-                float z=station*.5f+.25f;bool window=ObstacleLayout.RailGapAt(z)>=0;
+                float z=station*.5f+.25f;
+                if(ObstacleLayout.RailGapAt(z)>=0)continue;
                 for(int side=-1;side<=1;side+=2)
                 {
-                    if(!window)
-                    {
-                        Shape("SingleRail",env,new Vector3(side*.70f,.11f,z),new Vector3(.095f,.14f,.502f),iron);
-                        Shape("RailFastener",env,new Vector3(side*.70f,.05f,z),new Vector3(.18f,.045f,.13f),pale);
-                    }
+                    Shape("SingleRail",env,new Vector3(side*.70f,.11f,z),new Vector3(.095f,.14f,.502f),iron);
+                    Shape("RailFastener",env,new Vector3(side*.70f,.05f,z),new Vector3(.18f,.045f,.13f),pale);
                     Shape("DeckEdge",env,new Vector3(side*1.02f,-.10f,z),new Vector3(.09f,.18f,.502f),iron);
                 }
                 Shape("BridgeSleeper",env,new Vector3(0,-.035f,z),new Vector3(2.04f,.09f,.22f),wood);
@@ -105,17 +104,21 @@ namespace Muhanok.Editor
                 gap.Configure(-gap.RequiredLean);
             }
         }
-        // The same rail and fastener boxes as the baked bridge, one per 0.5m station, following the curved route.
+        // One side of the bridge, one piece per 0.5m station following the curved route: the same rail, fastener and deck edge
+        // boxes as the baked bridge, half of its sleeper, and half of the deck that the editable route floor leaves open here.
         private static GameObject WindowRail(Transform parent,string name,int side,float gapZ,int type)
         {
             var rail=Node(name,parent,Vector3.zero);
             for(int station=0;station<48;station++)
             {
                 float z=station*.5f+.25f;if(ObstacleLayout.RailGapAt(z)<0||Mathf.Abs(z-gapZ)>ObstacleLayout.RailGapHalfLength)continue;
-                float slope=(RouteSurface.LocalX(type,z+.01f)-RouteSurface.LocalX(type,z-.01f))/.02f;
+                float slope=(RouteSurface.LocalX(type,z+.01f)-RouteSurface.LocalX(type,z-.01f))/.02f,length=.502f*Mathf.Sqrt(1+slope*slope);
                 var turn=Quaternion.Euler(0,Mathf.Atan(slope)*Mathf.Rad2Deg,0);
-                Shape("SingleRail",rail,RoutePoint(new Vector3(side*.70f,.11f,z),type),new Vector3(.095f,.14f,.502f*Mathf.Sqrt(1+slope*slope)),iron).transform.localRotation=turn;
+                Shape("SingleRail",rail,RoutePoint(new Vector3(side*.70f,.11f,z),type),new Vector3(.095f,.14f,length),iron).transform.localRotation=turn;
                 Shape("RailFastener",rail,RoutePoint(new Vector3(side*.70f,.05f,z),type),new Vector3(.18f,.045f,.13f),pale).transform.localRotation=turn;
+                Shape("DeckEdge",rail,RoutePoint(new Vector3(side*1.02f,-.10f,z),type),new Vector3(.09f,.18f,length),iron).transform.localRotation=turn;
+                Shape("BridgeSleeper",rail,RoutePoint(new Vector3(side*.51f,-.035f,z),type),new Vector3(1.02f,.09f,.22f),wood).transform.localRotation=turn;
+                Shape("DeckHalf",rail,RoutePoint(new Vector3(side*.525f,-.02f,z),type),new Vector3(1.05f,.04f,length),wood).transform.localRotation=turn;
             }
             return rail.gameObject;
         }
