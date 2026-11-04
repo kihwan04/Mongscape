@@ -41,20 +41,23 @@ namespace Muhanok.Presentation
         {
             paragraph??=new GUIStyle(skin.Style(20,FontStyle.Normal)){wordWrap=true};
             notice??=new GUIStyle(skin.Style(17,FontStyle.Normal)){wordWrap=true};
-            skin.Card(new Rect(0,0,1280,720),new Color(.025f,.035f,.06f,.99f));
-            GUI.Label(new Rect(80,45,950,56),heading,skin.Style(38,FontStyle.Bold));
+            // Same wooden panel and gold heading as the setup and sign-up screens.
+            skin.Card(new Rect(0,0,1280,720),Palette.A(Palette.Ground,.9f));
+            skin.Panel(new Rect(40,40,1200,640),.97f);
+            GUI.color=Palette.Gold;GUI.Label(new Rect(80,58,950,56),heading,skin.Style(36,FontStyle.Bold));GUI.color=Color.white;
             // Video only: no body skeleton or pose status here, just a fixed face guide. Hand pointing still runs.
-            var view=PosePreview.Draw(skin,new Rect(70,130,560,400),data,showStatus:false,drawSkeleton:false);
-            DrawFaceGuide(view,identity.IdentityBusy);
-            GUI.Label(new Rect(680,145,510,160),guide,paragraph);
-            GUI.Label(new Rect(680,305,510,90),"전시용 얼굴 로그인입니다. 사진·영상 위조를 차단하는 보안 인증 기능은 포함하지 않습니다.",notice);
-            GUI.enabled=!identity.IdentityBusy;
-            if(skin.PrimaryButton(new Rect(680,420,490,64),action)||Enter())capture?.Invoke();
+            var view=PosePreview.Draw(skin,new Rect(80,130,560,400),data,showStatus:false,drawSkeleton:false);
+            if(view.width>0)DrawFaceGuide(view,identity.IdentityBusy);
+            GUI.Label(new Rect(680,140,510,160),guide,paragraph);
+            GUI.color=Palette.Sand;GUI.Label(new Rect(680,305,510,90),"전시용 얼굴 로그인입니다.\n사진·영상 위조를 차단하는 보안 인증 기능은 포함하지 않습니다.",notice);GUI.color=Color.white;
+            // Without a webcam there is nothing to capture.
+            GUI.enabled=!identity.IdentityBusy&&data.CameraDetected;
+            if(skin.PrimaryButton(new Rect(680,420,500,64),action)||Enter())capture?.Invoke();
             GUI.enabled=true;
-            GUI.Label(new Rect(70,552,560,60),GesturePointer.Hint("Enter를 누르세요."),paragraph);
-            GUI.Label(new Rect(70,615,950,60),identity.IdentityMessage,skin.Style(18,FontStyle.Normal));
+            GUI.color=new Color(1,1,1,.75f);GUI.Label(new Rect(80,548,560,32),GesturePointer.Hint("Enter를 누르세요."),skin.Style(17,FontStyle.Normal));GUI.color=Color.white;
+            GUI.color=Palette.MeNote;GUI.Label(new Rect(80,590,900,60),identity.IdentityMessage,notice);GUI.color=Color.white;
             GUI.enabled=!identity.IdentityBusy;
-            if(skin.FlatButton(new Rect(1020,615,190,52),"뒤로",false))back?.Invoke();
+            if(skin.FlatButton(new Rect(1030,604,150,46),"뒤로",false))back?.Invoke();
             GUI.enabled=true;
         }
         // Enter (or keypad Enter) presses the screen's main button.

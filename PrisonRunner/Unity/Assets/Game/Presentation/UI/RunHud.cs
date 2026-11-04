@@ -51,7 +51,8 @@ namespace Muhanok.Presentation
             if (session.Flow.State == GameFlowState.Running)
             {
                 if (Model.ShowSiren) DrawSiren();
-                if (Model.ShowCamera && data?.CameraTexture != null)
+                // The small corner needs live video; the recovery panel also shows when the camera fails, to say why. No webcam at all: nothing.
+                if (Model.ShowCamera && data != null && data.CameraDetected && (Model.ShowPoseRecovery || PosePreview.Live(data)))
                     PosePreview.Draw(skin, Model.ShowPoseRecovery ? RecoveryCameraArea : CameraArea, data, Model.ShowPoseRecovery);
                 if (Model.ShowFork && Model.NoticeKind!=HudNoticeKind.Tracking && Model.NoticeKind!=HudNoticeKind.Obstacle) DrawFork();
                 else if (data == null || data.StartBanner <= 0) DrawNotice();

@@ -4,36 +4,29 @@ using UnityEngine;
 namespace Muhanok.Presentation
 {
     // Shared IMGUI resources. Styles are created once inside OnGUI and reused every frame.
-    // Colors and the title font follow the overlay palette (wood and gold); body text keeps the OS font for readability.
+    // Colors follow the overlay palette (wood and gold); every label uses the one game font (UiFont).
     internal sealed class HudSkin
     {
-        public readonly Font Font;
-        private readonly Font titleFont;
+        // Smallest text size on the 1280x720 canvas; the heavy game font blurs below it.
+        public const int MinSize = 16;
+        public Font Font => UiFont.Main;
         private readonly Dictionary<int, GUIStyle> styles = new Dictionary<int, GUIStyle>();
         private readonly Dictionary<int, GUIStyle> centeredStyles = new Dictionary<int, GUIStyle>();
         private GUIStyle button, flatButton, panelStyle, inputStyle;
         private Texture2D panelTexture, coinIcon, distanceIcon;
-        public HudSkin()
-        {
-            Font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Arial" }, 28);
-            titleFont = Resources.Load<Font>("MuhanokUI/BlackHanSans-Regular");
-        }
         public GUIStyle Large => Style(74, FontStyle.Bold);
         public GUIStyle Small => Style(20, FontStyle.Normal);
         public GUIStyle Label => Style(25, FontStyle.Bold);
-        public GUIStyle Button => button ??= new GUIStyle(GUI.skin.button) { font = titleFont != null ? titleFont : Font, fontSize = 22 };
+        public GUIStyle Button => button ??= new GUIStyle(GUI.skin.button) { font = Font, fontSize = 22 };
         public GUIStyle Input => inputStyle ??= InputStyle();
         public Texture2D CoinIcon => coinIcon ??= CreateHudIcon(false);
         public Texture2D DistanceIcon => distanceIcon ??= CreateHudIcon(true);
-        // Bold text uses the title font (it has a single heavy weight, so no synthetic bold).
+        // The game font has one heavy weight, so "Bold" never adds a synthetic bold; the weight only keeps call sites readable.
         public GUIStyle Style(int size, FontStyle weight)
         {
-            int key = size * 4 + (int)weight;
+            int key = Mathf.Max(size, MinSize);
             if (!styles.TryGetValue(key, out var style))
-            {
-                bool title = weight == FontStyle.Bold && titleFont != null;
-                styles[key] = style = new GUIStyle(GUI.skin.label) { font = title ? titleFont : Font, fontSize = size, fontStyle = title ? FontStyle.Normal : weight, normal = { textColor = Color.white } };
-            }
+                styles[key] = style = new GUIStyle(GUI.skin.label) { font = Font, fontSize = key, fontStyle = FontStyle.Normal, normal = { textColor = Color.white } };
             return style;
         }
         // Wooden frame with a dark fill, like the overlay screens.
@@ -51,7 +44,7 @@ namespace Muhanok.Presentation
         }
         public GUIStyle Centered(int size, FontStyle weight)
         {
-            int key = size * 4 + (int)weight;
+            int key = Mathf.Max(size, MinSize);
             if (!centeredStyles.TryGetValue(key, out var style))
                 centeredStyles[key] = style = new GUIStyle(Style(size, weight)) { alignment = TextAnchor.MiddleCenter };
             return style;
@@ -101,7 +94,6 @@ namespace Muhanok.Presentation
         }
         public void Dispose()
         {
-            if (Font != null) Object.Destroy(Font);
             if (panelTexture != null) Object.Destroy(panelTexture);
             if (coinIcon != null) Object.Destroy(coinIcon);
             if (distanceIcon != null) Object.Destroy(distanceIcon);

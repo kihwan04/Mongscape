@@ -72,7 +72,7 @@ namespace Muhanok.Presentation
         {
             session = run; retry = again;
             skin = new HudSkin();
-            overlaySkin = new OverlaySkin(Resources.Load<Font>("MuhanokUI/BlackHanSans-Regular"), null);
+            overlaySkin = new OverlaySkin();
             title = new TitleScreen(skin); setup = new SetupScreen(skin); loading = new LoadingScreen(skin); identity=new IdentityScreen(skin); signUp=new SignUpScreen(skin,identity);
             menu = new MainMenuScreen(overlaySkin); tutorialOffer = new TutorialOfferScreen(overlaySkin); gate = new LoginGateScreen(overlaySkin); profile = new ProfileScreen(overlaySkin); shop = new ShopScreen(overlaySkin); board = new LeaderboardScreen(overlaySkin, Ranking);
             calibration = new CalibrationPanel(overlaySkin, skin);
@@ -161,6 +161,8 @@ namespace Muhanok.Presentation
         private void OnGUI()
         {
             if (session == null || Hidden) return;
+            // Any style without its own font (IMGUI defaults, text fields) falls back to the game font too.
+            if (GUI.skin.font != UiFont.Main) GUI.skin.font = UiFont.Main;
             Matrix4x4 old = GUI.matrix;
             GUI.matrix = ViewportLayout.GuiMatrix;
             GesturePointer.BeginPass();
@@ -184,8 +186,34 @@ namespace Muhanok.Presentation
                 GUI.enabled = true;
                 if (calibrating) calibration.Draw(Data);
             }
+            var cameraSlot = CameraSlot(state);
+            if (cameraSlot.width > 0) PosePreview.DrawCorner(skin, cameraSlot, Data);
             GesturePointer.Draw();
             GUI.color = Color.white; GUI.matrix = old;
+        }
+        // Bottom-left webcam corner, clear of every screen's panels and buttons.
+        public static readonly Rect CameraCorner = new Rect(20, 578, 216, 122);
+        // Where this screen shows the small webcam view; Rect.zero where the screen draws its own large preview
+        // (camera setup, face capture, calibration, the run HUD). Nothing is drawn without a live webcam (PosePreview.DrawCorner).
+        public Rect CameraSlot(GameFlowState state)
+        {
+            if (Data == null) return Rect.zero;
+            if (Loading || Revealing) return CameraCorner;
+            if (state == GameFlowState.TitleIdle)
+            {
+                switch (Page)
+                {
+                    case MenuPage.Identity: return Rect.zero;
+                    // Inside the setup panel, under the play style buttons.
+                    case MenuPage.Setup: return PlayStyleInfo.UsesCamera(Data.Player?.Style ?? PlayStyle.Keyboard) ? Rect.zero : new Rect(195, 540, 192, 108);
+                    // Inside the sign-up panel, right of the step's main button.
+                    case MenuPage.SignUp: return SignUp.Step == SignUpStep.Capture ? Rect.zero : new Rect(880, 462, 210, 118);
+                    default: return CameraCorner;
+                }
+            }
+            if (state == GameFlowState.Running || state == GameFlowState.Caught) return session.Paused ? CameraCorner : Rect.zero;
+            if (state == GameFlowState.Result) return calibration.Open ? Rect.zero : CameraCorner;
+            return Rect.zero;
         }
         private void DrawMenu()
         {

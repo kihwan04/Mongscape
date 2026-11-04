@@ -28,6 +28,7 @@ namespace Muhanok.Presentation.Map
         {
             var chunk = Object.Instantiate(prefabs[index], parent);
             chunk.gameObject.SetActive(false); CreatedCount++;
+            SignFont.Apply(chunk.gameObject);
             if (budget != null) Budgets[chunk] = new ChunkRenderBudget(chunk, budget);
             return chunk;
         }

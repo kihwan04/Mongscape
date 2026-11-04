@@ -81,6 +81,9 @@ namespace Muhanok.Bootstrap
         private UserSettings effectiveGraphics;
         private bool menuCamera;
         private PlayStyle cameraBeforeMenu;
+        // Whether any webcam is plugged in; re-read every few seconds outside runs (never during play, enumeration can stall a frame).
+        private bool cameraDetected, wasMenu;
+        private double nextCameraScan;
         // Tutorial lessons on the ordinary run; offered once per session on "게임 시작".
         public TutorialDirector Tutorial { get; private set; }
         private bool tutorialOffered;
@@ -314,10 +317,13 @@ namespace Muhanok.Bootstrap
         private void UpdateMenuCamera(bool menu)
         {
             bool accountCamera=Session.Flow.State==GameFlowState.TitleIdle&&hud.AccountPageOpen;
-            // Keyboard players keep the webcam off in menus; the login gate, sign-up and face capture always use it.
+            // Every menu screen shows the webcam when one is plugged in, keyboard players included; hand pointing still follows the setting.
             bool handCamera=userSettings.HandMenus&&PlayStyleInfo.UsesCamera(player.Style);
             GesturePointer.Enabled=userSettings.HandMenus&&(handCamera||accountCamera);
-            bool needsCamera=!automated && menu && (handCamera||accountCamera);
+            // A keyboard run's pause stays without the camera: opening it on every pause and closing it on resume hitches play.
+            // The login, sign-up and face capture pages open it even before the device list shows one (some drivers list it late).
+            bool keyboardPause=Session.Paused&&!PlayStyleInfo.UsesCamera(player.Style);
+            bool needsCamera=!automated && menu && (accountCamera || cameraDetected && !keyboardPause);
             if(needsCamera && (!Pose.UsesCamera||accountCamera&&Pose.Style!=PlayStyle.UpperBody))
             {if(!menuCamera)cameraBeforeMenu=Pose.Style;menuCamera=true;Pose.SetStyle(PlayStyle.UpperBody);}
             else if(menuCamera && !needsCamera){menuCamera=false;Pose.SetStyle(cameraBeforeMenu);}
@@ -327,6 +333,10 @@ namespace Muhanok.Bootstrap
             double now = Time.realtimeSinceStartupAsDouble;
             bool live = Session.Flow.State == GameFlowState.Running && !Session.Paused && !hud.Loading;
             bool menu=(Session.Flow.State==GameFlowState.TitleIdle || Session.Flow.State==GameFlowState.Result || Session.Paused || settingsWindow.IsOpen) && !hud.Loading && !hud.Revealing;
+            // Re-read the device list on entering a menu, then every 5 s on calm menu screens only (not during play, pause, loading or reveal).
+            bool calmMenu=menu&&!Session.Paused;
+            if(menu&&!wasMenu || calmMenu&&now>=nextCameraScan){nextCameraScan=now+5;cameraDetected=!automated&&WebCamTexture.devices.Length>0;}
+            wasMenu=menu;
             UpdateMenuCamera(menu);
             UpdateAdaptive(live);
             Pose.Tick(now, live);
@@ -584,6 +594,8 @@ namespace Muhanok.Bootstrap
         PlayerProfile IHudData.SavedProfile => Account.Profile;
         bool IHudData.DeveloperMode => userSettings != null && userSettings.DeveloperMode;
         Texture IHudData.CameraTexture => Pose.CameraTexture;
+        // Listed, or already delivering frames (a camera the driver listed late still counts).
+        bool IHudData.CameraDetected => cameraDetected || Pose.CameraTexture != null && Pose.CameraTexture.width > 16;
         PoseFrame IHudData.PoseFrame => Pose.LastFrame;
         PoseStatus IHudData.PoseStatus => Pose.Status;
         string IHudData.PoseMessage => Pose.Message;

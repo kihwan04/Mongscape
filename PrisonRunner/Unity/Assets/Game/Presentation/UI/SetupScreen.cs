@@ -14,7 +14,9 @@ namespace Muhanok.Presentation
         private PlayStyle style = PlayStyle.FullBody;
         private string goalText="50";
         private GUIStyle guideStyle;
-        private static readonly string[] KeyboardLines = { "A / ←   왼쪽", "D / →   오른쪽", "Space   점프", "S / ↓   숙이기 (누르고 있기)", "W / ↑   무릎 들기 (계단)" };
+        // Key and action columns, so the actions line up whatever the key glyphs' widths.
+        private static readonly string[] KeyboardKeys = { "A / ←", "D / →", "Space", "S / ↓", "W / ↑" };
+        private static readonly string[] KeyboardActions = { "왼쪽", "오른쪽", "점프", "숙이기 (누르고 있기)", "무릎 들기 (계단)" };
         public SetupScreen(HudSkin hudSkin) { skin = hudSkin; }
         public void Open(IHudData data)
         {
@@ -95,7 +97,16 @@ namespace Muhanok.Presentation
         private void KeyboardGuide(Rect area)
         {
             skin.Panel(area, .9f);
-            for (int i = 0; i < KeyboardLines.Length; i++) GUI.Label(new Rect(area.x + 40, area.y + 40 + i * 52, area.width - 80, 40), KeyboardLines[i], skin.Style(25, FontStyle.Normal));
+            GUI.color = Palette.Gold; GUI.Label(new Rect(area.x + 36, area.y + 22, area.width - 72, 34), "키보드 조작", skin.Style(22, FontStyle.Bold));
+            for (int i = 0; i < KeyboardKeys.Length; i++)
+            {
+                float y = area.y + 72 + i * 50;
+                var key = new Rect(area.x + 36, y, 116, 40);
+                skin.Card(key, Palette.A(Palette.Dark, .85f));
+                GUI.color = Palette.Cream; GUI.Label(key, KeyboardKeys[i], skin.Centered(21, FontStyle.Bold));
+                GUI.color = Color.white; GUI.Label(new Rect(area.x + 170, y + 2, area.width - 200, 38), KeyboardActions[i], skin.Style(22, FontStyle.Normal));
+            }
+            GUI.color = Color.white;
         }
     }
 }

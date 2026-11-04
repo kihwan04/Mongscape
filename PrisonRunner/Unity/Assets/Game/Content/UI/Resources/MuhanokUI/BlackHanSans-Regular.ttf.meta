@@ -10,6 +10,10 @@ TrueTypeFontImporter:
   includeFontData: 1
   fontNames:
   - Black Han Sans
+  - Malgun Gothic
+  - Segoe UI Symbol
+  - Apple SD Gothic Neo
+  - Arial
   fallbackFontReferences: []
   customCharacters: 
   fontRenderingMode: 0

@@ -82,7 +82,7 @@ namespace Muhanok.Presentation
             if (style == null)
             {
                 style = new GUIStyle(GUI.skin.label) { fontSize = 15, richText = false, normal = { textColor = new Color(.55f, 1f, .6f) } };
-                style.font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Consolas", "Arial" }, 15);
+                style.font = UiFont.Main;
                 background = new Texture2D(1, 1) { hideFlags = HideFlags.DontSave }; background.SetPixel(0, 0, new Color(0, 0, 0, .65f)); background.Apply();
             }
             if (measuredText != text)
@@ -97,6 +97,6 @@ namespace Muhanok.Presentation
             GUI.DrawTexture(rect, background);
             GUI.Label(new Rect(rect.x + 7, rect.y + 5, size.x, height), content, style);
         }
-        private void OnDestroy() { if (background != null) Destroy(background); if (style?.font != null) Destroy(style.font); }
+        private void OnDestroy() { if (background != null) Destroy(background); }
     }
 }

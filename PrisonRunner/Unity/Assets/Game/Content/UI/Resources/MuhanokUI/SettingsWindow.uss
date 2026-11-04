@@ -2,8 +2,8 @@
    Mongscape settings window: the wooden panel and gold accent of the IMGUI screens (Palette in OverlaySkin.cs).
      ground  #1E140E   panel  #2B1D14   wood  #6B4426   wood-dim  #4A3020
      gold    #FFC83D   cream  #FFF3DC   sand  #E9D3B0   muted     #9C8467   outline #2A170B
-   Reference resolution 1920x1080. Row labels use the system Korean font set in code;
-   the title, tabs and buttons (class settings-display) use Black Han Sans, also set in code.
+   Reference resolution 1920x1080. Every element uses the game font (Black Han Sans):
+   MuhanokRuntimeTheme.tss sets it for the panel and SettingsWindow.cs for the window tree.
 */
 
 .settings-root {
@@ -252,7 +252,7 @@
 
 .settings-guide-title {
     font-size: 26px;
-    -unity-font-style: bold;
+    -unity-font-style: normal;
     color: rgb(255, 200, 61);
     margin: 6px 0;
 }

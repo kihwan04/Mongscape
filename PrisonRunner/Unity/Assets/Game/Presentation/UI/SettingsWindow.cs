@@ -31,7 +31,6 @@ namespace Muhanok.Presentation
         private VisualElement root;
         private Image preview;
         private Label status;
-        private Font font;
         private bool syncing;
         private UserSettings opened;
         private ScrollView scroll;
@@ -57,12 +56,8 @@ namespace Muhanok.Presentation
             document.panelSettings = panel;
             document.visualTreeAsset = tree;
             root = document.rootVisualElement;
-            // Korean glyphs: default to the Windows Korean font unless the USS sets its own font.
-            font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Arial" }, 24);
-            root.style.unityFontDefinition = FontDefinition.FromFont(font);
-            // The title, tabs and buttons use the game's display face like the other screens.
-            var display = Resources.Load<Font>(Folder + "BlackHanSans-Regular");
-            if (display != null) root.Query(className: "settings-display").ForEach(e => e.style.unityFontDefinition = FontDefinition.FromFont(display));
+            // Every label, field and button uses the one game font, like the IMGUI screens.
+            root.style.unityFontDefinition = FontDefinition.FromFont(UiFont.Main);
             root.style.position = Position.Absolute; root.style.left = 0; root.style.top = 0; root.style.right = 0; root.style.bottom = 0;
             Bind();
             SetVisible(false);
@@ -206,10 +201,15 @@ namespace Muhanok.Presentation
             var shown = scrolls ? DisplayStyle.Flex : DisplayStyle.None;
             if (scrollUp != null && scrollUp.style.display != shown) { scrollUp.style.display = shown; scrollDown.style.display = shown; }
             if (preview != null && preview.image != host.Hud.CameraTexture) preview.image = host.Hud.CameraTexture;
+            // No webcam plugged in: no video frame at all, only the status line saying so.
+            var slot = preview?.parent;
+            var frame = host.Hud.CameraDetected ? DisplayStyle.Flex : DisplayStyle.None;
+            if (slot != null && slot.style.display != frame) slot.style.display = frame;
             if (status != null)
             {
                 var hud = host.Hud; string text = PoseStatusText.Korean(hud.PoseStatus);
                 if (hud.PoseStatus == PoseStatus.NoCamera || hud.PoseStatus == PoseStatus.NoModel) text = hud.PoseMessage;
+                if (!hud.CameraDetected) text = "카메라가 감지되지 않았어요";
                 if (status.text != text) status.text = text;
             }
         }
@@ -237,6 +237,6 @@ namespace Muhanok.Presentation
             GesturePointer.Draw();GUI.matrix=old;
         }
         private static void CopyInto(UserSettings from, UserSettings to) => JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(from), to);
-        private void OnDestroy() { if (font != null) Destroy(font); if(document!=null&&document.panelSettings!=null)Destroy(document.panelSettings); }
+        private void OnDestroy() { if(document!=null&&document.panelSettings!=null)Destroy(document.panelSettings); }
     }
 }

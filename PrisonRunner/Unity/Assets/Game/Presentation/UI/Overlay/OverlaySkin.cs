@@ -32,36 +32,28 @@ namespace Muhanok.Presentation
     // Draws on the same 1280x720 letterboxed screen as the rest of the HUD (ViewportLayout.GuiMatrix).
     internal sealed class OverlaySkin
     {
-        readonly Font titleFont, bodyFont, osFont;
         readonly Dictionary<int, GUIStyle> styles = new Dictionary<int, GUIStyle>();
         readonly Dictionary<string, GUIContent> contents = new Dictionary<string, GUIContent>();
         Texture2D bigTex, smallTex, circleTex;
         GUIStyle bigBox, smallBox, circleBox, inputStyle;
 
-        public OverlaySkin(Font title, Font body)
-        {
-            // The heavy display face is for headings and numbers; small body text uses the system Korean font to stay readable.
-            if (title == null || body == null)
-                osFont = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Apple SD Gothic Neo", "AppleGothic", "Arial" }, 32);
-            titleFont = title != null ? title : osFont;
-            bodyFont = body != null ? body : osFont;
-        }
-
+        // Headings and body text share the one game font (UiFont); "title" and "bold" are kept for call sites only.
+        // The font has a single heavy weight, so no synthetic bold, and small sizes are raised like the HUD's.
         public GUIStyle Style(int size, bool title, TextAnchor anchor, bool bold = false)
         {
-            int key = (size * 2 + (title ? 1 : 0)) * 64 + (int)anchor * 2 + (bold ? 1 : 0);
+            int key = Mathf.Max(size, HudSkin.MinSize - 1) * 64 + (int)anchor;
             GUIStyle s;
             if (!styles.TryGetValue(key, out s))
             {
                 s = new GUIStyle(GUI.skin.label)
                 {
-                    font = title ? titleFont : bodyFont,
-                    fontSize = size,
+                    font = UiFont.Main,
+                    fontSize = Mathf.Max(size, HudSkin.MinSize - 1),
                     alignment = anchor,
                     richText = true,
                     wordWrap = false,
                     clipping = TextClipping.Overflow,
-                    fontStyle = bold ? FontStyle.Bold : FontStyle.Normal,
+                    fontStyle = FontStyle.Normal,
                     padding = new RectOffset(0, 0, 0, 0),
                     margin = new RectOffset(0, 0, 0, 0)
                 };
@@ -157,7 +149,7 @@ namespace Muhanok.Presentation
         {
             if (inputStyle == null)
             {
-                inputStyle = new GUIStyle(GUI.skin.textField) { font = bodyFont, fontSize = size, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(14, 14, 0, 0) };
+                inputStyle = new GUIStyle(GUI.skin.textField) { font = UiFont.Main, fontSize = size, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(14, 14, 0, 0) };
                 inputStyle.normal.background = inputStyle.focused.background = inputStyle.hover.background = null;
                 inputStyle.normal.textColor = inputStyle.focused.textColor = inputStyle.hover.textColor = Palette.Cream;
             }
@@ -206,7 +198,6 @@ namespace Muhanok.Presentation
 
         public void Dispose()
         {
-            if (osFont != null) Object.Destroy(osFont);
             if (bigTex != null) Object.Destroy(bigTex);
             if (smallTex != null) Object.Destroy(smallTex);
             if (circleTex != null) Object.Destroy(circleTex);

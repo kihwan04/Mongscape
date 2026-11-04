@@ -12,6 +12,8 @@ namespace Muhanok.Presentation
         PlayerProfile SavedProfile { get; }
         bool DeveloperMode { get; }
         Texture CameraTexture { get; }
+        // A webcam is plugged in. Without one no screen shows a camera view.
+        bool CameraDetected { get; }
         PoseFrame PoseFrame { get; }
         PoseStatus PoseStatus { get; }
         string PoseMessage { get; }
@@ -56,8 +58,28 @@ namespace Muhanok.Presentation
     internal static class PosePreview
     {
         private static readonly Color Bone = new Color(.3f, 1f, .55f), Joint = new Color(1f, .85f, .2f);
+        // A webcam is plugged in and already delivering frames.
+        public static bool Live(IHudData data)
+        {
+            var texture = data?.CameraTexture;
+            return data != null && data.CameraDetected && texture != null && texture.width > 16 && data.PoseStatus != PoseStatus.NoCamera;
+        }
+        // The small mirrored webcam corner of the menu screens: only while a camera is live, nothing otherwise.
+        public static void DrawCorner(HudSkin skin, Rect area, IHudData data)
+        {
+            if (!Live(data) || Event.current.type != EventType.Repaint) return;
+            skin.Panel(area, .95f);
+            var inner = new Rect(area.x + 4, area.y + 4, area.width - 8, area.height - 8);
+            // Fill the frame: crop the video's centre to the frame's shape instead of leaving side bars; mirrored like a mirror.
+            var texture = data.CameraTexture;
+            float video = texture.width / (float)texture.height, frame = inner.width / inner.height;
+            var uv = video > frame ? new Rect(.5f + frame / video * .5f, 0, -frame / video, 1) : new Rect(1, .5f - video / frame * .5f, -1, video / frame);
+            GUI.color = Color.white; GUI.DrawTextureWithTexCoords(inner, texture, uv);
+        }
+        // Without a webcam the video area becomes a short notice instead of an empty frame; returns Rect.zero then.
         public static Rect Draw(HudSkin skin, Rect area, IHudData data, bool showStatus, bool drawSkeleton = true)
         {
+            if (!data.CameraDetected) { NoCamera(skin, area); return Rect.zero; }
             skin.Panel(area, .9f);
             var inner = new Rect(area.x + 6, area.y + 6, area.width - 12, area.height - 12);
             var texture = data.CameraTexture;
@@ -112,6 +134,13 @@ namespace Muhanok.Presentation
                 GUI.color = Color.white;
             }
             return view;
+        }
+        private static void NoCamera(HudSkin skin, Rect area)
+        {
+            skin.Panel(area, .9f);
+            GUI.color = Palette.Cream; GUI.Label(new Rect(area.x, area.center.y - 34, area.width, 36), "카메라가 감지되지 않았어요", skin.Centered(24, FontStyle.Bold));
+            GUI.color = Palette.Sand; GUI.Label(new Rect(area.x + 16, area.center.y + 6, area.width - 32, 28), "웹캠을 연결하면 자동으로 켜집니다", skin.Centered(17, FontStyle.Normal));
+            GUI.color = Color.white;
         }
         // Live feedback: which lane zone the body is in and which action is being recognised.
         private static void DrawMotion(HudSkin skin, Rect area, IHudData data)
