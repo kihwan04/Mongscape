@@ -52,14 +52,14 @@ namespace Muhanok.Domain
         private static bool InsideSeams(float z) => z >= SeamClearance - .001f && z <= RouteSurface.Length - SeamClearance + .001f;
 
         public void Plan(Random random, int type, int sequence, IReadOnlyList<ObstacleSlot> authored, IReadOnlyList<LanePlacement> floorItems,
-            float chance, bool extended, bool fork)
+            float chance, bool extended, bool fork, bool boarding = false)
         {
             slots = authored; floor = floorItems;
             Slots.Clear(); FloorItems.Clear(); Blockers.Clear(); Bananas.Clear(); Animal = false; SafeLane = 0;
             for (int i = 0; i < slots.Count; i++) Slots.Add(false);
             for (int i = 0; i < floor.Count; i++) FloorItems.Add(false);
             Array.Clear(RailGaps, 0, RailGaps.Length);
-            if (IsCart(type)) { if (!fork) PlanRails(random); return; }
+            if (IsCart(type)) { if (!fork) PlanRails(random, boarding); return; }
             for (int i = 0; i < slots.Count; i++) if (slots[i].Terrain) Slots[i] = true;
             if (sequence == 0)
             {
@@ -108,11 +108,13 @@ namespace Muhanok.Domain
                 for (int lane = -1; lane <= 1; lane++) if (lane != SafeLane && random.NextDouble() < .82) Bananas.Add(new LanePlacement(lane, z));
             }
         }
-        private void PlanRails(Random random)
+        private void PlanRails(Random random, bool boarding)
         {
             for (int i = 0; i < RailGaps.Length; i++) RailGaps[i] = random.Next(3) - 1;
+            // The cart is boarded at this chunk's entry and the lane resets there, so the first window comes too soon to lean for.
+            if (boarding) RailGaps[0] = 0;
             bool any = false; foreach (int side in RailGaps) any |= side != 0;
-            if (!any) RailGaps[random.Next(RailGaps.Length)] = random.Next(2) == 0 ? -1 : 1;
+            if (!any) RailGaps[boarding ? RailGaps.Length - 1 : random.Next(RailGaps.Length)] = random.Next(2) == 0 ? -1 : 1;
         }
         private static bool Same(float a, float b) => Math.Abs(a - b) < .01f;
         // Distinct z of full rows (true) or single-lane rows (false) that are not terrain and keep clear of the seams.

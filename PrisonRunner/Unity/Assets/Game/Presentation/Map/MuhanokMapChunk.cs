@@ -75,7 +75,9 @@ namespace Muhanok.Presentation.Map
             DescribeSlots();
             var plan=RouteSurface.ActivePlan;
             bool fork=plan!=null&&(plan.IsForkChunk(sequence)||plan.IsForkTrackChunk(sequence));
-            Layout.Plan(random,RouteType,sequence,slots,floorSlots,chance,plan!=null&&plan.Extended,fork);
+            // The first cart chunk after walking is where the cart is boarded.
+            bool boarding=sequence<=0||plan!=null&&!ObstacleLayout.IsCart(plan.TypeAt(sequence-1));
+            Layout.Plan(random,RouteType,sequence,slots,floorSlots,chance,plan!=null&&plan.Extended,fork,boarding);
             if(Gates!=null) foreach(var gate in Gates) gate.ResetGate();
             if(SlideGates!=null)foreach(var gate in SlideGates)gate.ResetGate();
             if(FloorItems!=null)for(int i=0;i<FloorItems.Length;i++){FloorItems[i].ResetItem();FloorItems[i].gameObject.SetActive(Layout.FloorItems[i]);}
