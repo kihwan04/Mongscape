@@ -46,6 +46,10 @@ namespace Muhanok.Tests
             }
             finally { InputSystem.RemoveDevice(mouse);InputSystem.settings.backgroundBehavior=background;InputSystem.settings.editorInputBehaviorInPlayMode=editorBehavior; }
             CollectionAssert.Contains(fake.Calls,"health");Assert.IsFalse(Identity.ServerChecking);Assert.AreEqual("",Identity.ServerProblem);
+            // 게임 종료 on the gate closes the game without signing in (the real quit is swapped out here).
+            var quit=hud.Quit;bool quitAsked=false;hud.Quit=()=>quitAsked=true;
+            try{hud.ChooseLogin(LoginAction.Quit);}finally{hud.Quit=quit;}
+            Assert.IsTrue(quitAsked);Assert.AreEqual(MenuPage.Login,hud.Page);
             hud.ChooseLogin(LoginAction.Guest);
             Assert.AreEqual(MenuPage.Main,hud.Page);Assert.IsFalse(game.SignedIn);
             Assert.AreEqual(AccountSession.GuestName,((IHudData)game).SavedProfile.Name);

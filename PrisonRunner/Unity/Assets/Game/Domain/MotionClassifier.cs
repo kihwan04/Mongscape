@@ -99,8 +99,9 @@ namespace Muhanok.Domain
         private float ShoulderWidth => Distance(PoseJoint.LeftShoulder, PoseJoint.RightShoulder);
         private float Torso => (float)Math.Sqrt((ShoulderX - HipX) * (ShoulderX - HipX) + (ShoulderY - HipY) * (ShoulderY - HipY));
         private float Distance(int a, int b) => (float)Math.Sqrt((px[a] - px[b]) * (px[a] - px[b]) + (py[a] - py[b]) * (py[a] - py[b]));
-        // Shoulders lead a lean; hips follow a step. The mix responds to both.
-        private float CentreX => style == PlayStyle.UpperBody ? ShoulderX : ShoulderX * .7f + HipX * .3f;
+        // The full body follows where the player stands (mostly the hips): moving into the side zone changes lane,
+        // leaning the shoulders alone does not. The upper body only has the shoulders.
+        private float CentreX => style == PlayStyle.UpperBody ? ShoulderX : ShoulderX * .35f + HipX * .65f;
         private float CurrentScale => style == PlayStyle.UpperBody ? ShoulderWidth : Torso;
         private bool KneesSeen => Seen(PoseJoint.LeftKnee) && Seen(PoseJoint.RightKnee);
         private bool AnklesSeen => Seen(PoseJoint.LeftAnkle) && Seen(PoseJoint.RightAnkle);

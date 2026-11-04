@@ -114,6 +114,7 @@ namespace Muhanok.Presentation
             else if (action == LoginAction.SignUp) ShowPage(MenuPage.SignUp);
             else if (action == LoginAction.Guest) ChooseGuest();
             else if (action == LoginAction.Settings) OpenSettings?.Invoke();
+            else if (action == LoginAction.Quit) Quit?.Invoke();
         }
         // Main menu actions. "게임 시작" goes to the run setup, after a one-time tutorial offer; the login entry signs a member out first.
         public void SelectMenu(MenuAction action)

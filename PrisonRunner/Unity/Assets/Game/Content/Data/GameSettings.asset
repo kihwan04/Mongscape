@@ -61,14 +61,14 @@ MonoBehaviour:
     FilterDerivateCutoff: 1
     LostGraceSeconds: 0.5
     DuckHoldSeconds: 1.5
-    LaneHoldSeconds: 0.1
+    LaneHoldSeconds: 0.15
     ActionVisibility: 0.6
     RefractorySeconds: 0.3
     ReacquireLockSeconds: 0.25
     CalibrationFrames: 20
     CalibrationStillness: 0.12
-    LaneEnter: 0.3
-    LaneExit: 0.17
+    LaneEnter: 0.65
+    LaneExit: 0.38
     CrouchDrop: 0.4
     CrouchConfirmSeconds: 0.2
     LandingGraceSeconds: 0.3
@@ -78,8 +78,8 @@ MonoBehaviour:
     HighKneeLift: 0.22
     HighKneeHoldSeconds: 0.35
     StepLift: 0.06
-    UpperLaneEnter: 0.38
-    UpperLaneExit: 0.22
+    UpperLaneEnter: 0.75
+    UpperLaneExit: 0.42
     UpperCrouchDrop: 0.35
     UpperCrouchConfirmSeconds: 0.12
     UpperHandsAboveNose: 0.2

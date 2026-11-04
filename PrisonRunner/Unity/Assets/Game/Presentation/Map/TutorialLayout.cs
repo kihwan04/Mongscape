@@ -3,7 +3,7 @@ using Muhanok.Domain;
 namespace Muhanok.Presentation.Map
 {
     // Tutorial runs keep the chunk visuals but replace the random layout: every hazard, item, coin and broken rail
-    // is removed and only the lesson obstacle listed by TutorialCourse is placed. Ordinary runs pass straight through.
+    // is removed and only the lesson obstacle (or the lesson's broken rail) listed by TutorialCourse is placed. Ordinary runs pass straight through.
     public sealed class TutorialLayout : ChunkSpawner.IChunkDecorator
     {
         private readonly ChunkSpawner.IChunkDecorator inner;
@@ -20,6 +20,9 @@ namespace Muhanok.Presentation.Map
             else if (hazard == TutorialHazard.JumpRow) Row(chunk.ExerciseObstacles, 0);
             else if (hazard == TutorialHazard.CrouchRow) Row(chunk.ExerciseObstacles, 1);
             else if (hazard == TutorialHazard.StairRow) Row(chunk.Obstacles, 0);
+            else if (hazard == TutorialHazard.RailGap && chunk.RailGaps != null && chunk.RailGaps.Length > TutorialCourse.RailGapIndex
+                && chunk.RailGaps[TutorialCourse.RailGapIndex] != null)
+                chunk.RailGaps[TutorialCourse.RailGapIndex].Configure(TutorialCourse.RailMissingSide);
         }
         public void Release(MuhanokMapChunk chunk) => inner?.Release(chunk);
 
