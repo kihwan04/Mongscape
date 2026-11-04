@@ -115,8 +115,9 @@ namespace Muhanok.Editor
                 for(int segment=0;segment<48;segment++)
                 {
                     float a=segment*.5f,b=(segment+1)*.5f; int n=vertices.Count;
-                    // The cart deck stays whole; a missing rail is chosen per run and shown by the rail pieces.
                     bool cart=type==1||type==2;
+                    // The cart deck is open in the rail-gap windows; each side's deck half is a switchable rail piece (AddRailGaps).
+                    if(cart&&ObstacleLayout.RailGapAt(a+.25f)>=0) continue;
                     float left=cart?-1.05f:-4.9f,right=cart?1.05f:4.9f;
                     vertices.Add(RoutePoint(new Vector3(left,0,a),type)); vertices.Add(RoutePoint(new Vector3(left,0,b),type));
                     vertices.Add(RoutePoint(new Vector3(right,0,b),type)); vertices.Add(RoutePoint(new Vector3(right,0,a),type));

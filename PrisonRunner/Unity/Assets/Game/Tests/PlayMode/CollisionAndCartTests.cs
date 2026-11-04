@@ -97,7 +97,8 @@ namespace Muhanok.Tests
                     Assert.AreEqual(side<0,gap.LeftBreak.activeSelf);Assert.AreEqual(side>0,gap.RightBreak.activeSelf);
                     Assert.IsTrue(gap.Pieces.gameObject.activeInHierarchy);Assert.AreEqual(side!=0,gap.gameObject.activeSelf);
                     foreach(var piece in gap.LeftRail.GetComponentsInChildren<MeshRenderer>(true))
-                        Assert.AreEqual(piece.name=="SingleRail"?"ForgedIron":"PaintedSteel",piece.sharedMaterial.name,"Rail pieces match the baked bridge rails");
+                        Assert.AreEqual(piece.name=="SingleRail"||piece.name=="DeckEdge"?"ForgedIron":piece.name=="RailFastener"?"PaintedSteel":"Timber",
+                            piece.sharedMaterial.name,"Rail pieces match the baked bridge: "+piece.name);
                     if(side!=0){Assert.AreEqual(-side,gap.RequiredLean);brokenGap=gap;continue;}
                     // Riding straight through an intact window is never judged.
                     float z=gap.transform.position.z;

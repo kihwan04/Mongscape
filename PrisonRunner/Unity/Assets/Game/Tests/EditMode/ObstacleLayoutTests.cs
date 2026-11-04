@@ -128,6 +128,13 @@ namespace Muhanok.Tests
                 Assert.AreEqual(new[] { 0, 0 }, Plan(seed, 1, 4, true, true).RailGaps, "Fork chunks keep both rails");
             }
             Assert.IsTrue(left && right && intact);
+            for (int seed = 0; seed < 200; seed++)
+            {
+                var boarding = new ObstacleLayout();
+                boarding.Plan(new Random(seed), 1, 1, Slots(1), Floor(1), .6f, true, false, true);
+                Assert.AreEqual(0, boarding.RailGaps[0], "The window right after boarding stays whole");
+                Assert.AreNotEqual(0, boarding.RailGaps[1], "The boarding chunk still breaks its later window");
+            }
             Assert.AreEqual(0, ObstacleLayout.RailGapAt(8)); Assert.AreEqual(1, ObstacleLayout.RailGapAt(19.5f)); Assert.AreEqual(-1, ObstacleLayout.RailGapAt(12));
         }
 
