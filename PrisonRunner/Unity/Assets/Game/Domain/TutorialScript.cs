@@ -83,9 +83,10 @@ namespace Muhanok.Domain
                 {
                     bool right = TutorialCourse.RailLean == MotionCommand.Right;
                     return keys ? (right ? "D(→)" : "A(←)") + " 키로 레일이 남은 쪽으로 기울이세요."
-                        : "몸을 " + (right ? "오른쪽" : "왼쪽") + (upper ? "으로 기울여" : " 구역으로 옮겨") + " 끊긴 레일을 피하세요.";
+                        : (upper ? "몸을 " : "제자리에서 상체를 ") + (right ? "오른쪽" : "왼쪽") + "으로 기울여 끊긴 레일을 피하세요.";
                 }
-                case TutorialStep.Fork: return keys ? "A 또는 D 키로 갈 길을 고르세요." : upper ? "몸을 왼쪽이나 오른쪽으로 기울여 갈 길을 고르세요." : "왼쪽이나 오른쪽 구역으로 옮겨 갈 길을 고르세요.";
+                // In the cart the full body leans in place; side steps do nothing there.
+                case TutorialStep.Fork: return keys ? "A 또는 D 키로 갈 길을 고르세요." : upper ? "몸을 왼쪽이나 오른쪽으로 기울여 갈 길을 고르세요." : "제자리에서 상체를 왼쪽이나 오른쪽으로 기울여 갈 길을 고르세요.";
                 default: return "기본 동작을 모두 익혔어요!";
             }
         }

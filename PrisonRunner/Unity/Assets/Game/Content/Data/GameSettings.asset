@@ -69,6 +69,8 @@ MonoBehaviour:
     CalibrationStillness: 0.12
     LaneEnter: 0.65
     LaneExit: 0.38
+    CartLeanEnter: 0.25
+    CartLeanExit: 0.14
     CrouchDrop: 0.4
     CrouchConfirmSeconds: 0.2
     LandingGraceSeconds: 0.3

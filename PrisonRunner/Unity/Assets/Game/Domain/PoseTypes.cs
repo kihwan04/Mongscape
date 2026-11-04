@@ -76,7 +76,10 @@ namespace Muhanok.Domain
         public int CalibrationFrames = 20;
         public float CalibrationStillness = .12f;
         // Lanes are real zones: about a third of a stride sideways enters one, so a lean or sway stays in the centre.
+        // On foot only the hips count (a side step); leaning the shoulders alone never changes lane.
         public float LaneEnter = .65f, LaneExit = .38f;
+        // In the cart the feet stay put: the shoulders tilting over the hips (sideways offset / torso, about 15 degrees) lean it.
+        public float CartLeanEnter = .25f, CartLeanExit = .14f;
         public float CrouchDrop = .40f, CrouchConfirmSeconds = .20f, LandingGraceSeconds = .3f;
         // A take-off this soon after a crouch confirms cancels it; a rise this fast (body units/s) is a jump attempt that earns the landing grace.
         public float CrouchJumpCancelSeconds = .35f, JumpAttemptSpeed = .8f;

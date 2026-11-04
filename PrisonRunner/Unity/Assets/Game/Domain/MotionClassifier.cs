@@ -5,17 +5,20 @@ namespace Muhanok.Domain
     // Turns pose frames into game intent for one play style.
     // Lanes follow body position (left zone / centre / right zone) with hysteresis, so two lanes is simply a bigger step
     // and returning to the centre returns the runner. Jump is an edge; crouch and high knee are held states.
+    // Full body: on foot the zone is where the hips stand (side step); in the cart it is how far the shoulders tilt over the hips.
     public sealed class MotionClassifier
     {
         private readonly MotionTuning tuning;
         private readonly float[] px = new float[PoseFrame.Count], py = new float[PoseFrame.Count], vis = new float[PoseFrame.Count];
         private bool smoothed;
         private PlayStyle style = PlayStyle.FullBody;
+        // Riding the cart, and whether the zone must be re-read at once because the measure just changed.
+        private bool cart, cartChanged;
         // Baseline (calibrated standing pose).
         private bool calibrated;
         private int samples;
-        private float bCx, bSy, bHy, bScale, bKneeL, bKneeR, bAnkle, bNose;
-        private float sumCx, sumSy, sumHy, sumScale, sumKneeL, sumKneeR, sumAnkle, sumNose;
+        private float bCx, bSy, bHy, bScale, bKneeL, bKneeR, bAnkle, bNose, bTilt;
+        private float sumCx, sumSy, sumHy, sumScale, sumKneeL, sumKneeR, sumAnkle, sumNose, sumTilt;
         private int ankleSamples, noseSamples, kneeSamples;
         // Tracking state.
         private double lostSince = -1, crouchPendingSince = -1, crouchSince = -10, landingUntil, kneeUntil, lastStep, lastJump = -10, lastLaneChange = -10, pumpUntil;
@@ -41,6 +44,8 @@ namespace Muhanok.Domain
         public PlayStyle Style => style;
         public MotionClassifier(MotionTuning motionTuning) { tuning = motionTuning ?? new MotionTuning(); }
         public void SetStyle(PlayStyle next) { style = next; Recalibrate(); }
+        // Boarding or leaving the cart switches the full body from side steps to leaning (and back).
+        public void SetCart(bool riding) { if (riding == cart) return; cart = riding; cartChanged = true; }
         public void Recalibrate()
         {
             calibrated = false; samples = 0; smoothed = false; Reading.Clear(); airborne = hopping = handsUp = duckOnLoss = false; dropRatio = 0; actionLockUntil = 0; laneCandidate = 0;
@@ -99,9 +104,11 @@ namespace Muhanok.Domain
         private float ShoulderWidth => Distance(PoseJoint.LeftShoulder, PoseJoint.RightShoulder);
         private float Torso => (float)Math.Sqrt((ShoulderX - HipX) * (ShoulderX - HipX) + (ShoulderY - HipY) * (ShoulderY - HipY));
         private float Distance(int a, int b) => (float)Math.Sqrt((px[a] - px[b]) * (px[a] - px[b]) + (py[a] - py[b]) * (py[a] - py[b]));
-        // The full body follows where the player stands (mostly the hips): moving into the side zone changes lane,
-        // leaning the shoulders alone does not. The upper body only has the shoulders.
-        private float CentreX => style == PlayStyle.UpperBody ? ShoulderX : ShoulderX * .35f + HipX * .65f;
+        // The full body follows where the hips stand: stepping into the side zone changes lane, leaning the shoulders
+        // alone does not. The upper body only has the shoulders.
+        private float CentreX => style == PlayStyle.UpperBody ? ShoulderX : HipX;
+        // Sideways offset of the shoulders over the hips (raw, divide by the body scale): the cart lean.
+        private float Tilt => ShoulderX - HipX;
         private float CurrentScale => style == PlayStyle.UpperBody ? ShoulderWidth : Torso;
         private bool KneesSeen => Seen(PoseJoint.LeftKnee) && Seen(PoseJoint.RightKnee);
         private bool AnklesSeen => Seen(PoseJoint.LeftAnkle) && Seen(PoseJoint.RightAnkle);
@@ -118,16 +125,19 @@ namespace Muhanok.Domain
             {
                 float meanX = sumCx / samples, meanY = sumSy / samples, meanScale = sumScale / samples;
                 if (Math.Abs(CentreX - meanX) > tuning.CalibrationStillness * meanScale || Math.Abs(ShoulderY - meanY) > tuning.CalibrationStillness * meanScale) samples = 0;
+                // The full body's centre is the hips only; a shoulder sway must also restart, or it becomes the cart's "upright" lean.
+                else if (style != PlayStyle.UpperBody && Math.Abs(Tilt / scale - sumTilt / samples) > tuning.CalibrationStillness) samples = 0;
             }
-            if (samples == 0) { sumCx = sumSy = sumHy = sumScale = sumKneeL = sumKneeR = sumAnkle = sumNose = 0; ankleSamples = noseSamples = kneeSamples = 0; }
+            if (samples == 0) { sumCx = sumSy = sumHy = sumScale = sumKneeL = sumKneeR = sumAnkle = sumNose = sumTilt = 0; ankleSamples = noseSamples = kneeSamples = 0; }
             samples++;
             sumCx += CentreX; sumSy += ShoulderY; sumScale += scale;
-            if (style != PlayStyle.UpperBody) sumHy += HipY;
+            // Standing straight is rarely exactly upright to the camera; the cart lean is measured from this posture.
+            if (style != PlayStyle.UpperBody) { sumHy += HipY; sumTilt += Tilt / scale; }
             if (KneesSeen && style != PlayStyle.UpperBody) { sumKneeL += KneeDrop(PoseJoint.LeftKnee, PoseJoint.LeftHip); sumKneeR += KneeDrop(PoseJoint.RightKnee, PoseJoint.RightHip); kneeSamples++; }
             if (AnklesSeen && style != PlayStyle.UpperBody) { sumAnkle += AnkleY; ankleSamples++; }
             if (Seen(PoseJoint.Nose)) { sumNose += py[PoseJoint.Nose]; noseSamples++; }
             if (samples < tuning.CalibrationFrames) return;
-            bCx = sumCx / samples; bSy = sumSy / samples; bHy = sumHy / samples; bScale = sumScale / samples;
+            bCx = sumCx / samples; bSy = sumSy / samples; bHy = sumHy / samples; bScale = sumScale / samples; bTilt = sumTilt / samples;
             bKneeL = kneeSamples > 0 ? sumKneeL / kneeSamples : float.NaN; bKneeR = kneeSamples > 0 ? sumKneeR / kneeSamples : float.NaN;
             bAnkle = ankleSamples > 0 ? sumAnkle / ankleSamples : float.NaN; bNose = noseSamples > 0 ? sumNose / noseSamples : float.NaN;
             calibrated = true; Reading.Clear(); Status = PoseStatus.Tracking;
@@ -151,7 +161,9 @@ namespace Muhanok.Domain
         private void TrackFull(float aspect, double now)
         {
             float scale = Scale();
-            float offset = (CentreX - bCx) / scale;
+            // On foot: where the hips stand. In the cart: how far the shoulders tilt over the hips; stepping aside does nothing.
+            float offset = cart ? Tilt / scale - bTilt : (CentreX - bCx) / scale;
+            float enter = cart ? tuning.CartLeanEnter : tuning.LaneEnter, exit = cart ? tuning.CartLeanExit : tuning.LaneExit;
             float drop = (ShoulderY - bSy) / scale, hipRise = (bHy - HipY) / scale, shoulderRise = (bSy - ShoulderY) / scale;
             // Rise speed of the slower of shoulders and hips, in body units per second.
             double dt = now - lastTrackTime;
@@ -161,7 +173,11 @@ namespace Muhanok.Domain
             // A fresh crouch may be a jump wind-up; it keeps the lane until the cancel window has passed.
             bool windUp = now - crouchSince < tuning.CrouchJumpCancelSeconds;
             // A dip moves the shoulders; it must not read as a sideways step.
-            UpdateLane(offset, tuning.LaneEnter, tuning.LaneExit, now, Locked(now) || airborne || Reading.Crouch || windUp || dropRatio > .6f);
+            bool laneLocked = Locked(now) || airborne || Reading.Crouch || windUp || dropRatio > .6f;
+            // Boarding or leaving: read the zone afresh, the other measure's zone means nothing here.
+            // Mid-jump or crouching the body is not settled, so it starts from the centre and the usual hold applies from there.
+            if (cartChanged) { cartChanged = false; Reading.Lane = laneCandidate = !laneLocked && Math.Abs(offset) > enter ? Math.Sign(offset) : 0; }
+            UpdateLane(offset, enter, exit, now, laneLocked);
             bool feetUp = !AnklesSeen || float.IsNaN(bAnkle) || (bAnkle - AnkleY) / scale > tuning.JumpRise * .5f;
             bool up = hipRise > tuning.JumpRise && shoulderRise > tuning.JumpRise * .8f && feetUp;
             // Jump wins over a crouch that only just confirmed: the dip was the take-off. No refractory lock.
@@ -190,11 +206,13 @@ namespace Muhanok.Domain
                 if (sign != 0 && sign != stepSign) { if (stepSign != 0) RegisterStep(now); stepSign = sign; }
             }
             Reading.HighKnee = now < kneeUntil;
-            if (Reading.Lane == 0 && !airborne && !Reading.Crouch && !Reading.HighKnee && Math.Abs(offset) < tuning.LaneExit * .5f) Drift();
+            if (Reading.Lane == 0 && !airborne && !Reading.Crouch && !Reading.HighKnee && Math.Abs(offset) < exit * .5f) Drift();
         }
 
         private void TrackUpper(float aspect, double now)
         {
+            // The upper body leans the same way on foot and in the cart.
+            cartChanged = false;
             // Leaning toward the camera widens the shoulders; the calibrated width keeps the lane scale steady.
             float scale = bScale;
             float offset = (CentreX - bCx) / scale;
@@ -241,7 +259,10 @@ namespace Muhanok.Domain
         private void Drift()
         {
             float d = tuning.BaselineDrift;
-            bCx += (CentreX - bCx) * d * .5f; bSy += (ShoulderY - bSy) * d; bScale += (CurrentScale - bScale) * d;
+            // Only the measure in use follows the player: a long lean on foot must not move the cart's upright.
+            if (style != PlayStyle.UpperBody && cart) bTilt += (Tilt / Scale() - bTilt) * d * .5f;
+            else bCx += (CentreX - bCx) * d * .5f;
+            bSy += (ShoulderY - bSy) * d; bScale += (CurrentScale - bScale) * d;
             if (style != PlayStyle.UpperBody) bHy += (HipY - bHy) * d;
             if (AnklesSeen && !float.IsNaN(bAnkle)) bAnkle += (AnkleY - bAnkle) * d;
             if (Seen(PoseJoint.Nose) && !float.IsNaN(bNose)) bNose += (py[PoseJoint.Nose] - bNose) * d;

@@ -108,13 +108,16 @@ namespace Muhanok.Infrastructure
                 return camera == PoseStatus.Tracking ? classifier.Status : camera;
             }
         }
-        public PoseTracker(PoseGameInput output, PoseCameraOptions camera, MotionTuning tuning, Func<int> lane, Func<bool> riding)
+        // riding: the cart takes absolute lean commands (not inside a fork window).
+        // inCart: the whole cart ride, where the full body leans the shoulders instead of stepping aside.
+        public PoseTracker(PoseGameInput output, PoseCameraOptions camera, MotionTuning tuning, Func<int> lane, Func<bool> riding, Func<bool> inCart = null)
         {
             // Work on copies: settings change them at runtime and must not edit the GameSettings asset.
             options = Copy(camera ?? new PoseCameraOptions()); baseTuning = Copy(tuning ?? new MotionTuning());
             this.tuning = Copy(baseTuning); classifier = new MotionClassifier(this.tuning);
-            commands = new PoseCommandSource(output, lane, riding);
+            commands = new PoseCommandSource(output, lane, riding); this.inCart = inCart;
         }
+        private readonly Func<bool> inCart;
         public void SetStyle(PlayStyle style)
         {
             if (style == Style && (estimator != null || !UsesCamera)) return;
@@ -141,6 +144,7 @@ namespace Muhanok.Infrastructure
             float k = Mathf.Clamp(laneSensitivity, .6f, 1.4f);
             tuning.LaneEnter = baseTuning.LaneEnter / k; tuning.LaneExit = baseTuning.LaneExit / k;
             tuning.UpperLaneEnter = baseTuning.UpperLaneEnter / k; tuning.UpperLaneExit = baseTuning.UpperLaneExit / k;
+            tuning.CartLeanEnter = baseTuning.CartLeanEnter / k; tuning.CartLeanExit = baseTuning.CartLeanExit / k;
             device = device ?? "";
             if (device == options.DeviceName && liteModel == !options.FullLandmarkModel) return;
             options.DeviceName = device; options.FullLandmarkModel = !liteModel;
@@ -167,6 +171,7 @@ namespace Muhanok.Infrastructure
             if (!estimator.TryTakeFrame(incoming)) return;
             smoother.Apply(incoming, tuning);
             LastFrame.CopyFrom(incoming);
+            classifier.SetCart(inCart != null && inCart());
             var reading = classifier.Update(incoming);
             if (classifier.Calibrated && !calibrated) { CalibratedAt = now; LostSinceCalibration = false; }
             else if (!classifier.Calibrated || classifier.Status != PoseStatus.Tracking) LostSinceCalibration |= calibrated;

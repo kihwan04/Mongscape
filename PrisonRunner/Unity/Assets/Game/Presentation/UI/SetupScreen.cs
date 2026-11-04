@@ -89,7 +89,7 @@ namespace Muhanok.Presentation
             return pressed;
         }
         private static string Guide(PlayStyle style) =>
-            style == PlayStyle.FullBody ? "몸 전체가 보이게 서세요. 좌우로 이동, 점프, 숙이기, 무릎 높이 들기."
+            style == PlayStyle.FullBody ? "몸 전체가 보이게 서세요. 옆으로 걸어 좌우 이동(수레에서는 상체 기울이기), 점프, 숙이기, 무릎 높이 들기."
             : style == PlayStyle.UpperBody ? "허리 위가 보이게 서거나 앉으세요. 상체 기울이기, 두 손 들기 = 점프, 숙이기, 팔 크게 흔들기 = 무릎 들기."
             : "";
         private void KeyboardGuide(Rect area)

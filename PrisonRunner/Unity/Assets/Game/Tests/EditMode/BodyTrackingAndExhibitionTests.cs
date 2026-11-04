@@ -10,21 +10,22 @@ namespace Muhanok.Tests
     public sealed class BodyTrackingAndExhibitionTests
     {
         // Synthetic standing body in normalised image coordinates; offsets move parts of it.
-        private sealed class Body { public float Dx, Dy, Shoulder, Hip, KneeL, KneeR, Ankle, WristL = .6f, WristR = .6f; public bool Legs = true; }
+        // Lean tilts the upper body sideways: shoulders, head and arms move, hips and feet stay.
+        private sealed class Body { public float Dx, Dy, Lean, Shoulder, Hip, KneeL, KneeR, Ankle, WristL = .6f, WristR = .6f; public bool Legs = true; }
         private static PoseFrame Frame(Body b, double time)
         {
             var frame = new PoseFrame { HasPose = true, Time = time, Aspect = 4f / 3f };
             void Set(int i, float x, float y, float v = .95f) => frame.Points[i] = new PoseLandmark { X = x + b.Dx, Y = y, Visibility = v };
             for (int i = 0; i < PoseFrame.Count; i++) Set(i, .5f, .5f, .2f);
-            float sy = .35f + b.Dy + b.Shoulder, hy = .62f + b.Dy + b.Hip, legs = b.Legs ? .95f : .1f;
-            Set(0, .5f, .25f + b.Dy + b.Shoulder); Set(11, .44f, sy); Set(12, .56f, sy);
+            float sy = .35f + b.Dy + b.Shoulder, hy = .62f + b.Dy + b.Hip, legs = b.Legs ? .95f : .1f, l = b.Lean;
+            Set(0, .5f + l, .25f + b.Dy + b.Shoulder); Set(11, .44f + l, sy); Set(12, .56f + l, sy);
             Set(23, .46f, hy, legs); Set(24, .54f, hy, legs);
             Set(25, .46f, .78f + b.Dy + b.Hip * .5f - b.KneeL, legs); Set(26, .54f, .78f + b.Dy + b.Hip * .5f - b.KneeR, legs);
             Set(27, .46f, .93f + b.Dy - b.Ankle, legs); Set(28, .54f, .93f + b.Dy - b.Ankle, legs);
-            Set(15, .41f, b.WristL + b.Dy); Set(16, .59f, b.WristR + b.Dy);
+            Set(15, .41f + l, b.WristL + b.Dy); Set(16, .59f + l, b.WristR + b.Dy);
             return frame;
         }
-        private static List<string> Play(PlayStyle style, Func<double, Body> script, double seconds)
+        private static List<string> Play(PlayStyle style, Func<double, Body> script, double seconds, Func<double, bool> cart = null)
         {
             var classifier = new MotionClassifier(new MotionTuning()); classifier.SetStyle(style);
             for (int i = 0; i < 30; i++) classifier.Update(Frame(new Body { Legs = style == PlayStyle.FullBody }, i / 30.0));
@@ -33,6 +34,7 @@ namespace Muhanok.Tests
             for (double t = 0; t < seconds; t += 1 / 30.0)
             {
                 var body = script(t); body.Legs = style == PlayStyle.FullBody;
+                classifier.SetCart(cart != null && cart(t));
                 var r = classifier.Update(Frame(body, 1 + t));
                 if (r.Lane != lane) { events.Add("lane" + r.Lane); lane = r.Lane; }
                 if (r.JumpEdge) events.Add("jump");
@@ -47,6 +49,34 @@ namespace Muhanok.Tests
         {
             CollectionAssert.AreEqual(new[] { "lane-1", "lane0" }, Play(PlayStyle.FullBody, t => new Body { Dx = In(t, .2, .8) ? -.14f : 0 }, 1.5));
             CollectionAssert.AreEqual(new[] { "lane-1", "lane1", "lane0" }, Play(PlayStyle.FullBody, t => new Body { Dx = In(t, .2, .6) ? -.14f : In(t, .6, 1) ? .14f : 0 }, 1.5));
+        }
+        [Test] public void OnFootOnlyASideStepChangesLaneNotALean()
+        {
+            // Shoulders well over to the left (about 20 degrees) with the hips in place: still the centre lane.
+            Assert.IsEmpty(Play(PlayStyle.FullBody, t => new Body { Lean = In(t, .2, .8) ? -.09f : 0 }, 1.5));
+        }
+        [Test] public void InTheCartOnlyALeanTiltsItNotASideStep()
+        {
+            Func<double, bool> riding = t => true;
+            CollectionAssert.AreEqual(new[] { "lane-1", "lane0" }, Play(PlayStyle.FullBody, t => new Body { Lean = In(t, .2, .8) ? -.07f : 0 }, 1.5, riding));
+            CollectionAssert.AreEqual(new[] { "lane1", "lane0" }, Play(PlayStyle.FullBody, t => new Body { Lean = In(t, .2, .8) ? .07f : 0 }, 1.5, riding));
+            // A whole-body step into the side zone keeps the shoulders over the hips: the cart stays upright.
+            Assert.IsEmpty(Play(PlayStyle.FullBody, t => new Body { Dx = In(t, .2, .8) ? -.14f : 0 }, 1.5, riding));
+            // A small sway is not a lean.
+            Assert.IsEmpty(Play(PlayStyle.FullBody, t => new Body { Lean = In(t, .2, .8) ? -.03f : 0 }, 1.5, riding));
+            // Ducking in the cart with a little sideways wobble stays a duck.
+            CollectionAssert.AreEqual(new[] { "crouch", "stand" }, Play(PlayStyle.FullBody, t => { bool duck = In(t, .2, 1.2); return new Body { Shoulder = duck ? .1f : 0, Hip = duck ? .04f : 0, Lean = duck ? .03f : 0 }; }, 2, riding));
+        }
+        [Test] public void BoardingAndLeavingTheCartRereadsTheZone()
+        {
+            // Standing in the left zone on foot, then boarding upright: the cart reads centre at once, and stepping back on foot reads left again.
+            CollectionAssert.AreEqual(new[] { "lane-1", "lane0", "lane-1" }, Play(PlayStyle.FullBody, t => new Body { Dx = t > .2 ? -.14f : 0 }, 2, t => In(t, .7, 1.4)));
+            // Leaning in the cart, then leaving it upright: back on foot the hips are centred.
+            CollectionAssert.AreEqual(new[] { "lane1", "lane0" }, Play(PlayStyle.FullBody, t => new Body { Lean = .07f }, 1.5, t => t < .7));
+        }
+        [Test] public void UpperBodyLeansTheSameOnFootAndInTheCart()
+        {
+            CollectionAssert.AreEqual(new[] { "lane-1", "lane0" }, Play(PlayStyle.UpperBody, t => new Body { Dx = In(t, .2, .8) ? -.10f : 0 }, 1.3, t => true));
         }
         [Test] public void SmallShiftsStayInTheCentreZone()
         {
