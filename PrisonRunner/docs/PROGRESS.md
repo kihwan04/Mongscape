@@ -2,6 +2,21 @@
 
 기준일: **2026-10-29**. 최신 사용자 지시에 따라 **통합 소스·문서를 develop에 병합합니다. 새 릴리스·태그·서버 배포는 하지 않습니다.**
 
+## 난이도 곡선 (2026-11-10, 실플레이 재조정 전)
+
+처음 하는 사람이 바로 잡히지 않도록 확장 경로의 속도와 장애물 확률이 달린 거리에 따라 오릅니다. 150m까지는 시작값을 유지하고, 그 뒤 smoothstep으로 올라 2000m에서 최대가 됩니다(약 3~4분). 바퀴가 바뀔 때 붙던 속도 계단은 없앴습니다. 각 청크는 플레이어 위치가 아니라 자기 시작 거리의 확률을 씁니다.
+
+| 값 | 시작 | 최대 |
+|---|---|---|
+| 걷기 속도 | 6 m/s | 12 m/s |
+| 광차 속도 | 5 m/s | 7 m/s |
+| 줄마다 장애물 | 25% | 90% |
+| 레인 차단물 청크(동물원은 ×0.72) | 25% | 72% |
+| 그중 2레인 차단 | 30% | 85% |
+| 바나나 레인 | 30% | 82% |
+
+튜닝은 `Unity/Assets/Game/Content/Data/GameSettings.asset`의 Run 항목(`DifficultyGraceDistance`, `DifficultyFullDistance`, `SprintSpeed`/`MaxSprintSpeed`, `RestSpeed`/`MaxRestSpeed`, `*Start`/`*Max`)에서 합니다. [설계](superpowers/specs/2026-11-10-difficulty-ramp-design.md).
+
 ## PR #20 로컬 통합
 
 `lilohdong/PrisonRunner-fork`의 `6880a3365fa902dd3e023be116d76f9a4f48d5ed`를 현재 로컬 소스와 통합했습니다. 아래 검사는 로컬 통합 단계에서 수행했으며, 이 소스와 문서를 develop에 병합하는 범위만 승인받았습니다. [기능 계획](FEATURE_PLAN_2026_10_28.md)과 [이번 검수](reports/PR20_LOCAL_MERGE_2026_10_29.md)를 참고하세요.
