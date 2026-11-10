@@ -52,6 +52,20 @@ namespace Muhanok.Domain
         public bool RandomizeLayout = false;
         public bool ExtendedRoutes = true;
         public float ExtendedSpeedRampDistance=160f,ExtendedSpeedStep=.6f;
+        // Difficulty curve: nothing rises before the grace distance, everything reaches its max at the full distance.
+        public float DifficultyGraceDistance = 150f, DifficultyFullDistance = 2000f;
+        public float MaxRestSpeed = 7f;
+        public float ObstacleChanceStart = .25f, ObstacleChanceMax = .9f;
+        public float BlockerChanceStart = .25f, BlockerChanceMax = .72f;
+        public float DoubleBlockerStart = .3f, DoubleBlockerMax = .85f;
+        public float BananaChanceStart = .3f, BananaChanceMax = .82f;
+    }
+
+    // Per-chunk hazard odds: single-lane rows, a lane-blocker chunk, a blocker on both open lanes, a banana per lane.
+    public readonly struct HazardOdds
+    {
+        public readonly float Row, Blocker, DoubleBlocker, Banana;
+        public HazardOdds(float row, float blocker, float doubleBlocker, float banana) { Row = row; Blocker = blocker; DoubleBlocker = doubleBlocker; Banana = banana; }
     }
 
     public sealed class ChaseSystem
@@ -87,6 +101,20 @@ namespace Muhanok.Domain
             => Math.Min(config.MaxSpeed, (riding ? config.CartSpeed : config.BaseSpeed)
                 + Math.Max(0f, distance) / Math.Max(1f, config.SpeedRampDistance));
         public float ObstacleChance(float distance) => Math.Min(.9f, .55f + distance / 2000f);
+        // 0 until the grace distance, then a smoothstep that reaches 1 at the full distance.
+        public float Progress(float distance, RunConfig config)
+        {
+            if (distance >= config.DifficultyFullDistance) return 1f;
+            if (distance <= config.DifficultyGraceDistance) return 0f;
+            float t = (distance - config.DifficultyGraceDistance) / (config.DifficultyFullDistance - config.DifficultyGraceDistance);
+            return t * t * (3f - 2f * t);
+        }
+        public float Ramp(float start, float max, float distance, RunConfig config) => start + (max - start) * Progress(distance, config);
+        public HazardOdds Odds(float distance, RunConfig config) => new HazardOdds(
+            Ramp(config.ObstacleChanceStart, config.ObstacleChanceMax, distance, config),
+            Ramp(config.BlockerChanceStart, config.BlockerChanceMax, distance, config),
+            Ramp(config.DoubleBlockerStart, config.DoubleBlockerMax, distance, config),
+            Ramp(config.BananaChanceStart, config.BananaChanceMax, distance, config));
     }
 
     public static class SafePatternValidator

@@ -47,6 +47,29 @@ namespace Muhanok.Tests
             Assert.AreEqual(expected,director.Speed(distance,config),.001f);
             Assert.AreEqual(expected,director.Speed(distance,config,true),.001f);
         }
+        [TestCase(-50f,0f)] [TestCase(0f,0f)] [TestCase(150f,0f)] [TestCase(1075f,.5f)] [TestCase(2000f,1f)] [TestCase(100000f,1f)]
+        public void DifficultyProgressWaitsThenEasesToFull(float distance,float expected)
+        {
+            Assert.AreEqual(expected,new DifficultyDirector().Progress(distance,new RunConfig()),.001f);
+        }
+        [Test] public void DifficultyProgressRisesMonotonically()
+        {
+            var director=new DifficultyDirector();var config=new RunConfig();float last=0;
+            for(float m=0;m<=2500;m+=25){float p=director.Progress(m,config);Assert.GreaterOrEqual(p,last);last=p;}
+        }
+        [Test] public void DifficultyProgressHandlesAFullDistanceAtOrBeforeTheGrace()
+        {
+            var director=new DifficultyDirector();var config=new RunConfig{DifficultyGraceDistance=300,DifficultyFullDistance=300};
+            Assert.AreEqual(0,director.Progress(299,config));Assert.AreEqual(1,director.Progress(300,config));
+        }
+        [Test] public void HazardOddsGoFromStartToMax()
+        {
+            var director=new DifficultyDirector();var config=new RunConfig();
+            var start=director.Odds(0,config);
+            Assert.AreEqual(.25f,start.Row,.001f);Assert.AreEqual(.25f,start.Blocker,.001f);Assert.AreEqual(.3f,start.DoubleBlocker,.001f);Assert.AreEqual(.3f,start.Banana,.001f);
+            var max=director.Odds(5000,config);
+            Assert.AreEqual(.9f,max.Row,.001f);Assert.AreEqual(.72f,max.Blocker,.001f);Assert.AreEqual(.85f,max.DoubleBlocker,.001f);Assert.AreEqual(.82f,max.Banana,.001f);
+        }
         [Test] public void PauseSlipAndRetryPreserveOrResetSpeedCorrectly()
         {
             var run=Running();run.Score.Advance(480f);Assert.AreEqual(13f,run.CurrentSpeed,.001f);
