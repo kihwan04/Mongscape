@@ -5,6 +5,26 @@ namespace Muhanok.Domain
     public enum QualityPreset { High, Balanced, Low, Custom }
     public enum ShadowSetting { Off, Low, High }
 
+    // The game outputs Full HD. Fullscreen uses 1920x1080 (a smaller display keeps its own size); a window is 1920x1080
+    // at most and leaves room for the taskbar and title bar on a display that is not larger than that.
+    public static class OutputResolution
+    {
+        public const int Width = 1920, Height = 1080;
+        public const float WindowMargin = .9f;
+        public static void Choose(bool fullscreen, int displayWidth, int displayHeight, out int width, out int height)
+        {
+            width = Width; height = Height;
+            if (displayWidth <= 0 || displayHeight <= 0) return;
+            if (fullscreen)
+            {
+                if (displayWidth < Width || displayHeight < Height) { width = displayWidth; height = displayHeight; }
+                return;
+            }
+            double scale = Math.Min(1, Math.Min(WindowMargin * displayWidth / Width, WindowMargin * displayHeight / Height));
+            width = (int)Math.Round(Width * scale); height = (int)Math.Round(Height * scale);
+        }
+    }
+
     // Player/operator options from the settings window. Saved on this PC; applied by the presentation layer.
     [Serializable]
     public sealed class UserSettings

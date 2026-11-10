@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Muhanok.Bootstrap;
+using Muhanok.Domain;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
@@ -29,7 +30,7 @@ namespace Muhanok.Editor
             pipeline.gpuResidentDrawerMode=GPUResidentDrawerMode.InstancedDrawing;
             EditorUtility.SetDirty(pipeline);AssetDatabase.SaveAssetIfDirty(pipeline);
             PlayerSettings.productName = "Mongscape";
-            PlayerSettings.defaultScreenWidth = 1280; PlayerSettings.defaultScreenHeight = 720;
+            PlayerSettings.defaultScreenWidth = OutputResolution.Width; PlayerSettings.defaultScreenHeight = OutputResolution.Height;
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
             string destination = Path.GetFullPath(Path.Combine(UnityEngine.Application.dataPath, "../../Builds/Mongscape/Windows/Mongscape.exe"));
             Directory.CreateDirectory(Path.GetDirectoryName(destination));

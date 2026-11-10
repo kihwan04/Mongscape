@@ -36,11 +36,23 @@ namespace Muhanok.Presentation
             }
         }
 
+        // Last output asked for; Apply also runs for adaptive quality, so the resolution is only requested when it changes.
+        private int requestedWidth, requestedHeight;
+        private bool requestedFullscreen;
+        private void ApplyOutput(bool fullscreen)
+        {
+            var display = Display.main;
+            OutputResolution.Choose(fullscreen, display.systemWidth, display.systemHeight, out int width, out int height);
+            if (width == requestedWidth && height == requestedHeight && fullscreen == requestedFullscreen) return;
+            requestedWidth = width; requestedHeight = height; requestedFullscreen = fullscreen;
+            Screen.SetResolution(width, height, fullscreen ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed);
+        }
+
         public void Apply(UserSettings s)
         {
             UnityEngine.Application.targetFrameRate = s.FrameCap > 0 ? s.FrameCap : -1;
             QualitySettings.vSyncCount = s.VSync ? 1 : 0;
-            if (!UnityEngine.Application.isEditor && Screen.fullScreen != s.Fullscreen) Screen.fullScreen = s.Fullscreen;
+            if (!UnityEngine.Application.isEditor) ApplyOutput(s.Fullscreen);
             if (working != null)
             {
                 // Setting the mode re-validates the asset and URP rebuilds the pipeline with or without the drawer.

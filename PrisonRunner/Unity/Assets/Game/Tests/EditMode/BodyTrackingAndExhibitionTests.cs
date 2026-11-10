@@ -109,6 +109,13 @@ namespace Muhanok.Tests
             int lane = 0; for (double t = 1; t < 2; t += 1 / 30.0) lane = classifier.Update(Frame(new Body { Legs = false }, 1 + t)).Lane;
             Assert.AreEqual(-1, lane, "Straightening a calibrated tilt is a lean the other way");
         }
+        [TestCase(true, 1920, 1080, 1920, 1080)] [TestCase(true, 2560, 1440, 1920, 1080)] [TestCase(true, 1366, 768, 1366, 768)]
+        [TestCase(false, 2560, 1440, 1920, 1080)] [TestCase(false, 1920, 1080, 1728, 972)] [TestCase(true, 0, 0, 1920, 1080)]
+        public void OutputIsFullHdOrFitsASmallerDisplay(bool fullscreen, int displayWidth, int displayHeight, int width, int height)
+        {
+            OutputResolution.Choose(fullscreen, displayWidth, displayHeight, out int w, out int h);
+            Assert.AreEqual(width, w); Assert.AreEqual(height, h);
+        }
         [Test] public void SmallShiftsStayInTheCentreZone()
         {
             // A third of a torso (the old lane line) is a sway, not a move into the side zone.
