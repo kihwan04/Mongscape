@@ -51,7 +51,7 @@ WebCamTexture → PoseImageSampler.compute → BlazePose 검출/랜드마크
 → MotionCommand → InputRouter → 캐릭터
 ```
 
-`Unity/Assets/Game/PoseInference/`가 GPU 추론을 담당합니다. 모델은 `Content/Pose/Resources/MuhanokPose/`에 있고 기본 full 모델과 가벼운 lite 모델을 선택할 수 있습니다. 사람을 놓쳤을 때 검출기를 다시 사용하고 추적 중에는 직전 결과로 다음 영역을 정합니다.
+`Unity/Assets/Game/PoseInference/`가 GPU 추론을 담당합니다. 모델은 `Content/Pose/Resources/MuhanokPose/`에 있고 기본 full 모델과 가벼운 lite 모델을 선택할 수 있습니다. 사람을 놓쳤을 때 검출기를 다시 사용하고 추적 중에는 직전 결과로 다음 영역을 정합니다. 추론은 결과를 받은 프레임에 바로 다음 웹캠 프레임으로 시작하고, 추적 중에는 GPU 결과를 기다리는 동안 다음 프레임 추론을 하나 더 겹쳐 보냅니다(`PoseCameraOptions.PipelineDepth`, 기본 2, 1이면 한 번에 하나). 결과는 찍힌 순서대로 분류기에 전달됩니다.
 
 ## 운동량과 얼굴 프로필
 

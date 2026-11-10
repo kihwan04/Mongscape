@@ -57,6 +57,8 @@ namespace Muhanok.Domain
         public float DetectionThreshold = .55f;
         // Upper bound on pose inferences per second; frees GPU time on integrated graphics.
         public float MaxInferenceRate = 30f;
+        // Landmark passes in flight at once while tracking (1 = one at a time, 2 = overlap the GPU readback wait).
+        public int PipelineDepth = 2;
         public bool ConvertToSrgb = false;
     }
 

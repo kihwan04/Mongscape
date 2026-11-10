@@ -168,7 +168,11 @@ namespace Muhanok.Infrastructure
             estimator.Tick(now);
             // A camera that stops delivering (or the person leaving) after calibration counts as lost tracking.
             if (calibrated && Status != PoseStatus.Tracking) LostSinceCalibration = true;
-            if (!estimator.TryTakeFrame(incoming)) return;
+            // Overlapping inference passes can finish together; every frame is read in capture order.
+            while (estimator.TryTakeFrame(incoming)) Read(now, feedCommands);
+        }
+        private void Read(double now, bool feedCommands)
+        {
             smoother.Apply(incoming, tuning);
             LastFrame.CopyFrom(incoming);
             classifier.SetCart(inCart != null && inCart());
