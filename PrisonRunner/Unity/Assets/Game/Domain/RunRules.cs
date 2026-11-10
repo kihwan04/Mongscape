@@ -99,7 +99,6 @@ namespace Muhanok.Domain
         public float Speed(float distance, RunConfig config, bool riding = false)
             => Math.Min(config.MaxSpeed, (riding ? config.CartSpeed : config.BaseSpeed)
                 + Math.Max(0f, distance) / Math.Max(1f, config.SpeedRampDistance));
-        public float ObstacleChance(float distance) => Math.Min(.9f, .55f + distance / 2000f);
         // 0 until the grace distance, then a smoothstep that reaches 1 at the full distance.
         public float Progress(float distance, RunConfig config)
         {

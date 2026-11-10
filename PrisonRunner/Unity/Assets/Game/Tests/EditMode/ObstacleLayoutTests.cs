@@ -30,10 +30,16 @@ namespace Muhanok.Tests
         }
         private static List<LanePlacement> Floor(int type) =>
             type == 11 ? new List<LanePlacement> { new LanePlacement(-1, 10) } : type == 12 ? new List<LanePlacement> { new LanePlacement(-1, 10), new LanePlacement(1, 17) } : new List<LanePlacement>();
+        // The peak odds the layout used before the difficulty curve, with a chosen single-lane row chance.
+        private static HazardOdds Odds(float row) => new HazardOdds(row, .72f, .85f, .82f);
+        // The shipped start of the difficulty curve.
+        private static readonly HazardOdds StartOdds = new HazardOdds(.25f, .25f, .3f, .3f);
         private static ObstacleLayout Plan(int seed, int type, int sequence, bool extended = true, bool fork = false, float chance = .6f)
+            => Plan(seed, type, sequence, extended, fork, Odds(chance));
+        private static ObstacleLayout Plan(int seed, int type, int sequence, bool extended, bool fork, HazardOdds odds)
         {
             var layout = new ObstacleLayout();
-            layout.Plan(new Random(seed), type, sequence, Slots(type), Floor(type), chance, extended, fork);
+            layout.Plan(new Random(seed), type, sequence, Slots(type), Floor(type), odds, extended, fork);
             return layout;
         }
         private static string Signature(ObstacleLayout layout)
@@ -105,6 +111,26 @@ namespace Muhanok.Tests
                         }
         }
 
+        [Test] public void StartOddsKeepTheSafetyRules()
+        {
+            for (int seed = 0; seed < 500; seed++)
+                for (int type = 0; type < 13; type++)
+                    foreach (bool extended in new[] { false, true })
+                        Assert.IsNull(Plan(seed * 13 + type, type, 1 + seed % 40, extended, false, StartOdds).Violation(), "Seed " + seed + " type " + type + " extended " + extended);
+        }
+
+        [Test] public void StartOddsPlaceFewerBlockersAndBananasThanMaxOdds()
+        {
+            int start = 0, max = 0;
+            for (int seed = 0; seed < 200; seed++)
+            {
+                var easy = Plan(seed, 0, 1, true, false, StartOdds); start += easy.Blockers.Count + easy.Bananas.Count;
+                var hard = Plan(seed, 0, 1, true, false, Odds(.9f)); max += hard.Blockers.Count + hard.Bananas.Count;
+            }
+            Assert.Greater(max, 0);
+            Assert.Less(start, max * .6f, "Start " + start + " vs max " + max);
+        }
+
         [Test] public void WalkingRowsVaryPerRunAndLaneHazardsAppear()
         {
             var combinations = new HashSet<string>(); int lane = 0, gates = 0;
@@ -136,7 +162,7 @@ namespace Muhanok.Tests
             for (int seed = 0; seed < 200; seed++)
             {
                 var boarding = new ObstacleLayout();
-                boarding.Plan(new Random(seed), 1, 1, Slots(1), Floor(1), .6f, true, false, true);
+                boarding.Plan(new Random(seed), 1, 1, Slots(1), Floor(1), Odds(.6f), true, false, true);
                 Assert.AreEqual(0, boarding.RailGaps[0], "The window right after boarding stays whole");
                 Assert.AreNotEqual(0, boarding.RailGaps[1], "The boarding chunk still breaks its later window");
             }
@@ -146,16 +172,16 @@ namespace Muhanok.Tests
         [Test] public void ViolationReportsUnsafePatterns()
         {
             var slots = new List<ObstacleSlot> { new ObstacleSlot(B, -1, 10, false), new ObstacleSlot(B, 0, 10, false), new ObstacleSlot(B, 1, 10, false) };
-            var layout = new ObstacleLayout(); layout.Plan(new Random(1), 0, 1, slots, new List<LanePlacement>(), 1, false, false);
+            var layout = new ObstacleLayout(); layout.Plan(new Random(1), 0, 1, slots, new List<LanePlacement>(), Odds(1), false, false);
             Assert.IsNull(layout.Violation());
             for (int i = 0; i < 3; i++) layout.Slots[i] = true;
             StringAssert.Contains("blocks every lane", layout.Violation());
             var close = new List<ObstacleSlot> { new ObstacleSlot(C, -1, 8, true), new ObstacleSlot(P, -1, 12, true) };
-            layout.Plan(new Random(1), 0, 1, close, new List<LanePlacement>(), 1, false, false);
+            layout.Plan(new Random(1), 0, 1, close, new List<LanePlacement>(), Odds(1), false, false);
             layout.Slots[0] = layout.Slots[1] = true;
             StringAssert.Contains("closer than", layout.Violation());
             var seam = new List<ObstacleSlot> { new ObstacleSlot(B, 0, 23, false) };
-            layout.Plan(new Random(1), 0, 1, seam, new List<LanePlacement>(), 1, false, false);
+            layout.Plan(new Random(1), 0, 1, seam, new List<LanePlacement>(), Odds(1), false, false);
             Assert.IsFalse(layout.Slots[0], "Nothing is placed next to a seam"); layout.Slots[0] = true;
             StringAssert.Contains("seam", layout.Violation());
         }

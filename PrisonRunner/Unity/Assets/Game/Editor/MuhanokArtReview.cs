@@ -62,7 +62,7 @@ namespace Muhanok.Editor
                     {
                         int type=RouteSurface.TypeAt(sequence+n);
                         var chunk=UnityEngine.Object.Instantiate(game.ChunkPrefabs[type],review.transform);
-                        chunk.transform.localPosition=new Vector3(0,RouteSurface.EntryHeight(index)+(n==1?RouteSurface.Rise(index):0),24*n); chunk.Prepare(index+1+n,.85f,new System.Random(723));
+                        chunk.transform.localPosition=new Vector3(0,RouteSurface.EntryHeight(index)+(n==1?RouteSurface.Rise(index):0),24*n); chunk.Prepare(index+1+n,new HazardOdds(.85f,.72f,.85f,.82f),new System.Random(723));
                     }
                     bool outdoor=index>=11,mine=index<4;
                     RenderSettings.fogColor=WorldAtmosphere.Fog(index);

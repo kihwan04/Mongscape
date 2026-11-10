@@ -89,7 +89,7 @@ namespace Muhanok.Tests
             var layouts=new System.Collections.Generic.HashSet<string>();CartRailGap brokenGap=null;
             for(int seed=0;seed<12;seed++)
             {
-                if(seed>0)cart.Prepare(cart.Sequence,1,new System.Random(seed));
+                if(seed>0)cart.Prepare(cart.Sequence,new HazardOdds(1,.72f,.85f,.82f),new System.Random(seed));
                 layouts.Add(string.Join(",",cart.Layout.RailGaps));int broken=0;
                 for(int i=0;i<cart.RailGaps.Length;i++)
                 {
@@ -212,7 +212,7 @@ namespace Muhanok.Tests
             game.Session.Tick(3);item.ResetItem();game.Session.Runner.SetStartZ(target-1);
             game.Session.Runner.Command(MotionCommand.Jump);game.Session.Tick(.15f);game.Session.Runner.SetStartZ(target);
             item.Evaluate(game.Session,target-1);Assert.IsTrue(item.Passed);Assert.IsFalse(game.Session.Runner.Slowing,"A jump must avoid a floor item");
-            zoo.Prepare(9,1,new System.Random(1));Assert.IsFalse(item.Passed);Assert.AreEqual(zoo.Layout.FloorItems[0],item.gameObject.activeSelf,"Reuse follows the new layout");
+            zoo.Prepare(9,new HazardOdds(1,.72f,.85f,.82f),new System.Random(1));Assert.IsFalse(item.Passed);Assert.AreEqual(zoo.Layout.FloorItems[0],item.gameObject.activeSelf,"Reuse follows the new layout");
         }
         [UnityTest] public IEnumerator ActualCartVisualBanksAndSolidObstacleEndsRunOnFirstContact()
         {

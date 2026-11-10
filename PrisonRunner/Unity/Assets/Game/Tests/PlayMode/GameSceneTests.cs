@@ -192,7 +192,7 @@ namespace Muhanok.Tests
             for(int i=0;i<3&&coin.gameObject.activeSelf;i++) { yield return null; coin.Evaluate(run,run.Runner.Z); }
             Assert.IsTrue(coin.Pulled); Assert.AreNotEqual(spot.z,coin.transform.localPosition.z,"The magnet moved the coin");
             // Reusing the chunk from the pool prepares it again: the pulled height and depth must not leak.
-            owner.Prepare(owner.Sequence,0,new System.Random(5));
+            owner.Prepare(owner.Sequence,new HazardOdds(0,.72f,.85f,.82f),new System.Random(5));
             Assert.AreEqual(spot.y,coin.transform.localPosition.y,.0001f); Assert.AreEqual(spot.z,coin.transform.localPosition.z,.0001f);
             Assert.IsFalse(coin.Pulled); Assert.IsTrue(coin.gameObject.activeSelf);
         }

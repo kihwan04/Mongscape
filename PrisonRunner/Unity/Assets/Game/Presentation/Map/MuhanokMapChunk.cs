@@ -85,14 +85,14 @@ namespace Muhanok.Presentation.Map
             if(Mathf.Abs(to-from)>.001f)p+=new Vector3(RouteSurface.LocalX(RouteType,to)-RouteSurface.LocalX(RouteType,from),RouteSurface.LocalHeight(RouteType,to)-RouteSurface.LocalHeight(RouteType,from),to-from);
             socket.localPosition=p;
         }
-        public void Prepare(int sequence, float chance, System.Random random)
+        public void Prepare(int sequence, HazardOdds odds, System.Random random)
         {
             DescribeSlots();
             var plan=RouteSurface.ActivePlan;
             bool fork=plan!=null&&(plan.IsForkChunk(sequence)||plan.IsForkTrackChunk(sequence));
             // The first cart chunk after walking is where the cart is boarded.
             bool boarding=sequence<=0||plan!=null&&!ObstacleLayout.IsCart(plan.TypeAt(sequence-1));
-            Layout.Plan(random,RouteType,sequence,slots,floorSlots,chance,plan!=null&&plan.Extended,fork,boarding);
+            Layout.Plan(random,RouteType,sequence,slots,floorSlots,odds,plan!=null&&plan.Extended,fork,boarding);
             if(Gates!=null) foreach(var gate in Gates) gate.ResetGate();
             if(SlideGates!=null)foreach(var gate in SlideGates)gate.ResetGate();
             if(FloorItems!=null)for(int i=0;i<FloorItems.Length;i++){FloorItems[i].ResetItem();FloorItems[i].gameObject.SetActive(Layout.FloorItems[i]);}

@@ -115,7 +115,8 @@ namespace Muhanok.Presentation.Map
                 int type = RouteSurface.TypeAt(sequence);
                 var chunk = pool.Rent(type);
                 chunk.PlaceOnRoute(sequence);
-                chunk.Prepare(sequence, session.Difficulty.ObstacleChance(session.Score.Distance), random);
+                // Odds for where this chunk starts, not where the runner is: chunks are spawned up to 96 m ahead.
+                chunk.Prepare(sequence, session.Difficulty.Odds(sequence * RouteSurface.Length, session.Config), random);
                 chunk.gameObject.SetActive(true); active.Add(new ActiveChunk(type, chunk));
                 Decorator?.Decorate(chunk, sequence, type, random);
                 nextPosition = chunk.Exit.position; sequence++;

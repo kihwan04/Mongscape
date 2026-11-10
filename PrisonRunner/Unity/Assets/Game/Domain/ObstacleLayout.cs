@@ -25,6 +25,8 @@ namespace Muhanok.Domain
     public sealed class ObstacleLayout
     {
         public const float SeamClearance = 4f, ActionSpacing = 6f, CentreZ = 12f, ExerciseChance = .5f, RailGapHalfLength = 1.5f;
+        // The zoo walk keeps fewer lane blockers than the other walks (it was .52 against .72).
+        public const float ZooBlockerScale = .52f / .72f;
         public static readonly float[] RailGapZ = { 8f, 18f };
         // The run opens with one full row whose action (jump or duck) is random but whose spot is fixed: the runner starts
         // at z 2, so the authored jump row at z 7 left about half a second to react. This is the duck row's spot, ~17 m ahead.
@@ -59,7 +61,7 @@ namespace Muhanok.Domain
         private static bool InsideSeams(float z) => z >= SeamClearance - .001f && z <= RouteSurface.Length - SeamClearance + .001f;
 
         public void Plan(Random random, int type, int sequence, IReadOnlyList<ObstacleSlot> authored, IReadOnlyList<LanePlacement> floorItems,
-            float chance, bool extended, bool fork, bool boarding = false)
+            HazardOdds odds, bool extended, bool fork, bool boarding = false)
         {
             slots = authored; floor = floorItems;
             Slots.Clear(); FloorItems.Clear(); Blockers.Clear(); Bananas.Clear(); Animal = false; SafeLane = 0; openingFrom = float.NaN;
@@ -76,9 +78,9 @@ namespace Muhanok.Domain
                 return;
             }
             SafeLane = random.Next(3) - 1;
-            if (extended && LaneBlockType(type) && random.NextDouble() < (type == 12 ? .52 : .72))
+            if (extended && LaneBlockType(type) && random.NextDouble() < (type == 12 ? odds.Blocker * ZooBlockerScale : odds.Blocker))
             {
-                bool both = random.NextDouble() < .85; int first = (SafeLane + 2) % 3 - 1;
+                bool both = random.NextDouble() < odds.DoubleBlocker; int first = (SafeLane + 2) % 3 - 1;
                 for (int lane = -1; lane <= 1; lane++)
                     if (lane != SafeLane && (both || lane == first)) Blockers.Add(new LanePlacement(lane, CentreZ));
             }
@@ -96,7 +98,7 @@ namespace Muhanok.Domain
                 Rows(false);
                 for (int i = 0; i < rows.Count; i++)
                 {
-                    if (random.NextDouble() >= chance) continue;
+                    if (random.NextDouble() >= odds.Row) continue;
                     int pick = random.Next(3), seen = 0, slot = -1;
                     for (int s = 0; s < slots.Count; s++) if (!slots[s].FullRow && Same(slots[s].Z, rows[i]) && seen++ <= pick) slot = s;
                     // One lane per row, so the validator always finds an open lane.
@@ -112,7 +114,7 @@ namespace Muhanok.Domain
             foreach (float z in new[] { SeamClearance, RouteSurface.Length - SeamClearance })
             {
                 if (Conflicts(z, HazardAction.Dodge)) continue;
-                for (int lane = -1; lane <= 1; lane++) if (lane != SafeLane && random.NextDouble() < .82) Bananas.Add(new LanePlacement(lane, z));
+                for (int lane = -1; lane <= 1; lane++) if (lane != SafeLane && random.NextDouble() < odds.Banana) Bananas.Add(new LanePlacement(lane, z));
             }
         }
         private void PlanRails(Random random, bool boarding)

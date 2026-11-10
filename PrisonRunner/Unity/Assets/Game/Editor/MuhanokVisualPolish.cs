@@ -30,7 +30,7 @@ namespace Muhanok.Editor
             {
                 var chunk=AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Game/Content/Prefabs/"+MuhanokContentBuilder.ChunkIds[type]+".prefab").GetComponent<Muhanok.Presentation.Map.MuhanokMapChunk>();
                 if(chunk.RailGaps.Length!=2)throw new InvalidOperationException("Dedicated cart rail gaps missing");
-                chunk.Prepare(type,1,new System.Random(1));
+                chunk.Prepare(type,new Muhanok.Domain.HazardOdds(1,.72f,.85f,.82f),new System.Random(1));
                 foreach(var obstacle in chunk.Obstacles)if(obstacle.gameObject.activeSelf)throw new InvalidOperationException("Walking obstacle on cart track");
             }
             Debug.Log("MUHANOK_V9_PASS: single suspended cart track / four half-rail gaps / cart grip animation / motion-matched exercise rows / two-banana pursuit");
