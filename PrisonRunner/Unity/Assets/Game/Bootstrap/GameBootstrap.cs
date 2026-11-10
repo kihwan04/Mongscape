@@ -161,7 +161,8 @@ namespace Muhanok.Bootstrap
             userSettings = UserSettingsStore.Load(settingsDefaults);
             graphics = new GraphicsSettingsApplier();
             overlay = gameObject.AddComponent<PerformanceOverlay>();
-            overlay.PoseLine = () => Pose.UsesCamera ? Pose.Diagnostics : "";
+            // Pose diagnostics are a developer-mode tool; regular play never shows them.
+            overlay.PoseLine = () => Pose.UsesCamera && userSettings.DeveloperMode ? Pose.Diagnostics : "";
             overlay.QualityLine = () => "화질 " + userSettings.Preset + " · 렌더 " + Mathf.RoundToInt((effectiveGraphics?.RenderScale ?? userSettings.RenderScale) * 100) + "% · 그림자 " + (effectiveGraphics?.Shadows ?? userSettings.Shadows) + (userSettings.AutoPerformance ? " · 자동 " + adaptive.Level : "") + (userSettings.FrameCap > 0 ? " · 상한 " + userSettings.FrameCap : "");
             var window = new GameObject("SettingsWindow"); window.transform.SetParent(transform, false);
             settingsWindow = window.AddComponent<SettingsWindow>();
@@ -599,7 +600,7 @@ namespace Muhanok.Bootstrap
         PoseFrame IHudData.PoseFrame => Pose.LastFrame;
         PoseStatus IHudData.PoseStatus => Pose.Status;
         string IHudData.PoseMessage => Pose.Message;
-        string IHudData.PoseDiagnostics => userSettings != null && userSettings.PoseDiagnostics ? Pose.Diagnostics : "";
+        string IHudData.PoseDiagnostics => userSettings != null && userSettings.DeveloperMode && userSettings.PoseDiagnostics ? Pose.Diagnostics : "";
         MotionReading IHudData.Motion => Pose.Reading;
         float IHudData.SecondsSinceJump => (float)(Time.realtimeSinceStartupAsDouble - Pose.LastJumpTime);
         float IHudData.CalibrationProgress => Pose.CalibrationProgress;

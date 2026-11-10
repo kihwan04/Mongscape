@@ -150,6 +150,9 @@ namespace Muhanok.Presentation
             root.Query<DropdownField>().ForEach(f => { if (f.userData is Func<int> read) f.index = read(); });
             root.Query<Slider>().ForEach(f => { if (f.userData is Func<float> read) f.SetValueWithoutNotify(read()); });
             root.Query<Toggle>().ForEach(f => { if (f.userData is Func<bool> read) f.SetValueWithoutNotify(read()); });
+            // The pose diagnostics switch only exists in developer mode.
+            var diagnostics = root.Q<Toggle>("pose-diagnostics");
+            if (diagnostics != null) diagnostics.style.display = host.Settings.DeveloperMode ? DisplayStyle.Flex : DisplayStyle.None;
             var camera = root.Q<DropdownField>("camera-device");
             if (camera != null)
             {

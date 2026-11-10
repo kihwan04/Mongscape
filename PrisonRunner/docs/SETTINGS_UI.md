@@ -30,7 +30,7 @@
 - 화면: `auto-performance`, `quality-preset`, `render-scale`, `frame-cap`, `vsync`, `shadow-quality`, `ambient-occlusion`, `detail-distance`, `gpu-resident-drawer`, `fullscreen`
 - 소리: `music-volume`, `effects-volume`
 - 몸동작: `camera-device`, `refresh-cameras`, `phone-camera-guide`, `phone-guide`, `hand-menus`, `lite-model`, `lane-sensitivity`, `camera-preview`(웹캠 영상이 들어가는 칸), `pose-status`, `recalibrate-button`
-- 표시: `performance-overlay`, `pose-diagnostics`, `ingame-camera`(플레이 중 우측 하단 웹캠 화면)
+- 표시: `performance-overlay`, `pose-diagnostics`(개발자 모드에서만 보임), `ingame-camera`(플레이 중 우측 하단 웹캠 화면)
 
 요소가 없으면 Console에 경고만 나오고 나머지는 동작합니다. 선택된 탭에는 코드가 `settings-tab--selected` 클래스를 붙입니다.
 
