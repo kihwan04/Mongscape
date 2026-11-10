@@ -66,7 +66,7 @@ namespace Muhanok.Tests
         {
             var director=new DifficultyDirector();var config=new RunConfig();
             var start=director.Odds(0,config);
-            Assert.AreEqual(.25f,start.Row,.001f);Assert.AreEqual(.25f,start.Blocker,.001f);Assert.AreEqual(.3f,start.DoubleBlocker,.001f);Assert.AreEqual(.3f,start.Banana,.001f);
+            Assert.AreEqual(.25f,start.Row,.001f);Assert.AreEqual(.72f,start.Blocker,.001f);Assert.AreEqual(.3f,start.DoubleBlocker,.001f);Assert.AreEqual(.3f,start.Banana,.001f);
             var max=director.Odds(5000,config);
             Assert.AreEqual(.9f,max.Row,.001f);Assert.AreEqual(.72f,max.Blocker,.001f);Assert.AreEqual(.85f,max.DoubleBlocker,.001f);Assert.AreEqual(.82f,max.Banana,.001f);
         }

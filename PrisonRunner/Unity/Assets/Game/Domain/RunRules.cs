@@ -55,7 +55,8 @@ namespace Muhanok.Domain
         public float DifficultyGraceDistance = 150f, DifficultyFullDistance = 2000f;
         public float MaxRestSpeed = 7f;
         public float ObstacleChanceStart = .25f, ObstacleChanceMax = .9f;
-        public float BlockerChanceStart = .25f, BlockerChanceMax = .72f;
+        // Kept equal: a failed blocker roll gives the chunk full-width rows or an animal instead, so lowering it adds hazards.
+        public float BlockerChanceStart = .72f, BlockerChanceMax = .72f;
         public float DoubleBlockerStart = .3f, DoubleBlockerMax = .85f;
         public float BananaChanceStart = .3f, BananaChanceMax = .82f;
     }

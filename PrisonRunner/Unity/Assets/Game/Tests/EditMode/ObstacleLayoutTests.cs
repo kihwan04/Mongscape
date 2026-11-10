@@ -33,7 +33,7 @@ namespace Muhanok.Tests
         // The peak odds the layout used before the difficulty curve, with a chosen single-lane row chance.
         private static HazardOdds Odds(float row) => new HazardOdds(row, .72f, .85f, .82f);
         // The shipped start of the difficulty curve.
-        private static readonly HazardOdds StartOdds = new HazardOdds(.25f, .25f, .3f, .3f);
+        private static readonly HazardOdds StartOdds = new HazardOdds(.25f, .72f, .3f, .3f);
         private static ObstacleLayout Plan(int seed, int type, int sequence, bool extended = true, bool fork = false, float chance = .6f)
             => Plan(seed, type, sequence, extended, fork, Odds(chance));
         private static ObstacleLayout Plan(int seed, int type, int sequence, bool extended, bool fork, HazardOdds odds)
@@ -129,6 +129,25 @@ namespace Muhanok.Tests
             }
             Assert.Greater(max, 0);
             Assert.Less(start, max * .6f, "Start " + start + " vs max " + max);
+        }
+
+        // An easier start must remove hazards, not swap lane blockers for full-width actions (jump/duck rows, zoo animals).
+        [Test] public void CurveStartNeverAddsFullWidthActions()
+        {
+            var director = new DifficultyDirector(); var config = new RunConfig();
+            HazardOdds start = director.Odds(0, config), max = director.Odds(100000, config);
+            foreach (int type in new[] { 0, 4, 5, 12 })
+            {
+                int easy = 0, hard = 0;
+                for (int seed = 0; seed < 300; seed++) { easy += FullWidth(Plan(seed, type, 1, true, false, start), type); hard += FullWidth(Plan(seed, type, 1, true, false, max), type); }
+                Assert.LessOrEqual(easy, hard, "Type " + type + ": start " + easy + " vs max " + hard);
+            }
+        }
+        private static int FullWidth(ObstacleLayout layout, int type)
+        {
+            int count = layout.Animal ? 1 : 0; var slots = Slots(type);
+            for (int i = 0; i < slots.Count; i++) if (layout.Slots[i] && slots[i].FullRow && !slots[i].Terrain) count++;
+            return count;
         }
 
         [Test] public void WalkingRowsVaryPerRunAndLaneHazardsAppear()

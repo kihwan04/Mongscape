@@ -47,7 +47,7 @@ MonoBehaviour:
     MaxRestSpeed: 7
     ObstacleChanceStart: 0.25
     ObstacleChanceMax: 0.9
-    BlockerChanceStart: 0.25
+    BlockerChanceStart: 0.72
     BlockerChanceMax: 0.72
     DoubleBlockerStart: 0.3
     DoubleBlockerMax: 0.85

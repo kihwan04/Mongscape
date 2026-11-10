@@ -29,11 +29,12 @@
 | 걷기 속도 | `SprintSpeed` → `MaxSprintSpeed` | 6 | 12 |
 | 광차 속도 | `RestSpeed` → `MaxRestSpeed`(신규) | 5 | 7 |
 | 줄마다 장애물 | `ObstacleChanceStart` → `ObstacleChanceMax` | .25 | .9 |
-| 레인 차단물 청크 | `BlockerChanceStart` → `BlockerChanceMax` | .25 | .72 |
+| 레인 차단물 청크 | `BlockerChanceStart` → `BlockerChanceMax` | .72 | .72 (고정) |
 | 그중 2레인 | `DoubleBlockerStart` → `DoubleBlockerMax` | .3 | .85 |
 | 바나나 레인 | `BananaChanceStart` → `BananaChanceMax` | .3 | .82 |
 
 - 동물원 청크의 차단물 확률은 지금 비율을 유지한다(차단물 확률 × .52/.72).
+- 차단물 청크 확률은 고정한다(최종 검토 반영). 차단물 판정에 실패한 청크는 점프/숙이기 줄이나 동물(동물원)을 받으므로, 이 값을 낮추면 전체 줄 동작이 오히려 늘어난다. 초반 완화는 2레인 차단·바나나·단일 레인 장애물로 한다.
 - 전신 동작 줄 `ExerciseChance`(.5)는 운동량이라 그대로 둔다.
 
 ### 코드 변경
