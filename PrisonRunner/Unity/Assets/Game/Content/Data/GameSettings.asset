@@ -33,17 +33,26 @@ MonoBehaviour:
     SpeedRampDistance: 120
     InputBufferSeconds: 0.2
     IntervalMode: 1
-    SprintSpeed: 8
+    SprintSpeed: 6
     SprintSpeedStep: 0.75
     MaxSprintSpeed: 12
-    RestSpeed: 6
+    RestSpeed: 5
     SprintSeconds: 40
     RestSeconds: 20
     SpeedChangeRate: 2.5
     RandomizeLayout: 1
     ExtendedRoutes: 1
-    ExtendedSpeedRampDistance: 160
-    ExtendedSpeedStep: 0.6
+    DifficultyGraceDistance: 150
+    DifficultyFullDistance: 2000
+    MaxRestSpeed: 7
+    ObstacleChanceStart: 0.25
+    ObstacleChanceMax: 0.9
+    BlockerChanceStart: 0.25
+    BlockerChanceMax: 0.72
+    DoubleBlockerStart: 0.3
+    DoubleBlockerMax: 0.85
+    BananaChanceStart: 0.3
+    BananaChanceMax: 0.82
   Camera:
     DeviceName: 
     Width: 640
