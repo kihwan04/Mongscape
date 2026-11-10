@@ -118,14 +118,18 @@ namespace Muhanok.Tests
         }
         [Test] public void ExtendedChallengeBuildsWithinALapAndKeepsRestAndPauseRules()
         {
-            var config=new RunConfig{IntervalMode=true,ExtendedRoutes=true,SprintSpeed=8,MaxSprintSpeed=12,RestSpeed=6};
+            var config=new RunConfig{IntervalMode=true,ExtendedRoutes=true,SprintSpeed=6,MaxSprintSpeed=12,RestSpeed=5,MaxRestSpeed=7};
             var plan=new RoutePlan(config,1);RouteSurface.UsePlan(plan);
             try
             {
-                var run=new RunSession(config);Assert.AreEqual(8,run.TargetSpeed);
-                run.Score.Advance(160);Assert.AreEqual(8.6f,run.TargetSpeed,.001f);
-                run.Score.Advance(10000);Assert.AreEqual(12,run.TargetSpeed);
-                run.Runner.SetStartZ(30);Assert.AreEqual(6,run.TargetSpeed,"The cart keeps a predictable rest speed");
+                var fresh=new RunSession(config);fresh.Runner.SetStartZ(30);Assert.AreEqual(5,fresh.TargetSpeed,.001f,"The cart starts at its slowest rest speed");
+                var lap=new RunSession(config);lap.Score.Advance(500);float edge=RoutePlan.ExtendedLapChunks*RouteSurface.Length;
+                lap.Runner.SetStartZ(edge-1);float lapEnd=lap.TargetSpeed;lap.Runner.SetStartZ(edge+1);
+                Assert.AreEqual(lapEnd,lap.TargetSpeed,.01f,"No speed step where a new lap starts");
+                var run=new RunSession(config);Assert.AreEqual(6,run.TargetSpeed,.001f);
+                run.Score.Advance(1075);Assert.AreEqual(9f,run.TargetSpeed,.001f);
+                run.Score.Advance(10000);Assert.AreEqual(12,run.TargetSpeed,.001f);
+                run.Runner.SetStartZ(30);Assert.AreEqual(7,run.TargetSpeed,.001f,"The cart rest speed ramps with the run");
                 run.Paused=true;float before=run.Score.Distance;run.Tick(10);Assert.AreEqual(before,run.Score.Distance);
             }
             finally{RouteSurface.UsePlan(null);}

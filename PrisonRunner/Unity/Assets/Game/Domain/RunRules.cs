@@ -51,7 +51,6 @@ namespace Muhanok.Domain
         public float SprintSeconds = 40f, RestSeconds = 20f, SpeedChangeRate = 2.5f;
         public bool RandomizeLayout = false;
         public bool ExtendedRoutes = true;
-        public float ExtendedSpeedRampDistance=160f,ExtendedSpeedStep=.6f;
         // Difficulty curve: nothing rises before the grace distance, everything reaches its max at the full distance.
         public float DifficultyGraceDistance = 150f, DifficultyFullDistance = 2000f;
         public float MaxRestSpeed = 7f;
@@ -260,9 +259,12 @@ namespace Muhanok.Domain
         public RunSession(RunConfig config) { Config = config; Score = new ScoreSystem(Workout); Runner = new RunnerController(config); smoothSpeed = TargetSpeed; }
         private float IntervalSpeed()
         {
+            // The extended route follows the difficulty curve; the authored interval route keeps its per-lap step.
+            if (Config.ExtendedRoutes)
+                return Runner.Riding ? Difficulty.Ramp(Config.RestSpeed, Config.MaxRestSpeed, Score.Distance, Config)
+                    : Difficulty.Ramp(Config.SprintSpeed, Config.MaxSprintSpeed, Score.Distance, Config);
             if (Runner.Riding) return Config.RestSpeed;
-            float progression=Config.ExtendedRoutes?Math.Max(0,Score.Distance)/Math.Max(1,Config.ExtendedSpeedRampDistance)*Math.Max(0,Config.ExtendedSpeedStep):0;
-            return Math.Min(Config.MaxSprintSpeed, Config.SprintSpeed + Config.SprintSpeedStep * IntervalCycle+progression);
+            return Math.Min(Config.MaxSprintSpeed, Config.SprintSpeed + Config.SprintSpeedStep * IntervalCycle);
         }
         public void Tick(float dt)
         {
