@@ -167,6 +167,28 @@ namespace Muhanok.Tests
         {
             Assert.IsEmpty(Play(PlayStyle.FullBody, t => new Body { Dx = In(t, .5, .55) ? -.16f : 0 }, 1.2));
         }
+        // Time of the first lane change while the body follows the script (30 fps), or -1.
+        private static double FirstLaneChange(MotionTuning tuning, Func<double, Body> script, double seconds)
+        {
+            var classifier = new MotionClassifier(tuning); classifier.SetStyle(PlayStyle.FullBody);
+            for (int i = 0; i < 30; i++) classifier.Update(Frame(new Body(), i / 30.0));
+            for (double t = 0; t < seconds; t += 1 / 30.0) if (classifier.Update(Frame(script(t), 1 + t)).Lane != 0) return t;
+            return -1;
+        }
+        [Test] public void AMovingSideStepIsReadAheadOfTheBody()
+        {
+            // A side step over 0.3 s into the left zone.
+            Func<double, Body> step = t => new Body { Dx = -.14f * (float)Math.Max(0, Math.Min(1, (t - .2) / .3)) };
+            double predicted = FirstLaneChange(new MotionTuning(), step, 1.5);
+            double plain = FirstLaneChange(new MotionTuning { LanePredictSeconds = 0 }, step, 1.5);
+            Assert.Greater(predicted, 0); Assert.Greater(plain, 0);
+            Assert.Less(predicted, plain - .02, "Reading the lane ahead must change it sooner");
+        }
+        [Test] public void AFastStepThatStopsShortOfTheZoneKeepsTheCentre()
+        {
+            // About 0.6 torso lengths aside (the zone starts at 0.65) in 0.1 s, then standing there.
+            Assert.IsEmpty(Play(PlayStyle.FullBody, t => new Body { Dx = .12f * (float)Math.Max(0, Math.Min(1, (t - .2) / .1)) }, 1.5));
+        }
         [Test] public void SettingsPresetsChangeGraphicsOnlyAndClampKeepsValuesSafe()
         {
             var settings = new UserSettings { MusicVolume = .2f, LaneSensitivity = 1.2f };

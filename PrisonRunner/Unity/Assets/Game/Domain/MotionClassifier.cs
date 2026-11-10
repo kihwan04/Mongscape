@@ -49,7 +49,7 @@ namespace Muhanok.Domain
         public void Recalibrate()
         {
             calibrated = false; samples = 0; smoothed = false; Reading.Clear(); airborne = hopping = handsUp = duckOnLoss = false; dropRatio = 0; actionLockUntil = 0; laneCandidate = 0;
-            crouchPendingSince = -1; crouchSince = -10; lastTrackTime = -1; kneeUntil = pumpUntil = 0; stepSign = pumpSign = 0; StepsPerMinute = 0;
+            crouchPendingSince = -1; crouchSince = -10; lastTrackTime = -1; laneLastTime = -1; kneeUntil = pumpUntil = 0; stepSign = pumpSign = 0; StepsPerMinute = 0;
             Status = PoseStatus.Calibrating;
         }
 
@@ -59,6 +59,7 @@ namespace Muhanok.Domain
             double now = frame.Time;
             if (!frame.HasPose || !Smooth(frame) || !RequiredVisible())
             {
+                laneLastTime = -1;
                 if (lostSince < 0) { lostSince = now; duckOnLoss = calibrated && Status == PoseStatus.Tracking && dropRatio > .5f; }
                 double lost = now - lostSince;
                 if (calibrated && lost <= tuning.LostGraceSeconds && !duckOnLoss) return Reading;
@@ -145,8 +146,21 @@ namespace Muhanok.Domain
 
         private float Scale() => Clamp(CurrentScale, bScale * .6f, bScale * 1.6f);
 
+        // Sideways speed of the lane offset (body units per second), for reading the lane slightly ahead.
+        private float laneSpeed, laneLastOffset;
+        private double laneLastTime = -1;
+        private float LaneLead(float offset, double now)
+        {
+            double dt = now - laneLastTime;
+            if (laneLastTime < 0 || dt <= 0 || dt > .25) laneSpeed = 0;
+            else laneSpeed += ((float)((offset - laneLastOffset) / dt) - laneSpeed) * .5f;
+            laneLastTime = now; laneLastOffset = offset;
+            return Clamp(laneSpeed * tuning.LanePredictSeconds, -tuning.LanePredictMax, tuning.LanePredictMax);
+        }
+
         private void UpdateLane(float offset, float enter, float exit, double now, bool locked)
         {
+            offset += LaneLead(offset, now);
             int lane = Reading.Lane;
             if (lane == 0) { if (offset < -enter) lane = -1; else if (offset > enter) lane = 1; }
             else if (lane < 0) { if (offset > -exit) lane = offset > enter ? 1 : 0; }
@@ -176,7 +190,7 @@ namespace Muhanok.Domain
             bool laneLocked = Locked(now) || airborne || Reading.Crouch || windUp || dropRatio > .6f;
             // Boarding or leaving: read the zone afresh, the other measure's zone means nothing here.
             // Mid-jump or crouching the body is not settled, so it starts from the centre and the usual hold applies from there.
-            if (cartChanged) { cartChanged = false; Reading.Lane = laneCandidate = !laneLocked && Math.Abs(offset) > enter ? Math.Sign(offset) : 0; }
+            if (cartChanged) { cartChanged = false; laneLastTime = -1; Reading.Lane = laneCandidate = !laneLocked && Math.Abs(offset) > enter ? Math.Sign(offset) : 0; }
             UpdateLane(offset, enter, exit, now, laneLocked);
             bool feetUp = !AnklesSeen || float.IsNaN(bAnkle) || (bAnkle - AnkleY) / scale > tuning.JumpRise * .5f;
             bool up = hipRise > tuning.JumpRise && shoulderRise > tuning.JumpRise * .8f && feetUp;

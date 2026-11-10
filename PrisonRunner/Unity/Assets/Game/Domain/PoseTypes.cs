@@ -80,6 +80,9 @@ namespace Muhanok.Domain
         // Lanes are real zones: about a third of a stride sideways enters one, so a lean or sway stays in the centre.
         // On foot only the hips count (a side step); leaning the shoulders alone never changes lane.
         public float LaneEnter = .65f, LaneExit = .38f;
+        // The lane reads where the body will be this far ahead (seconds), from its sideways speed, to hide camera and
+        // inference delay. The lead is capped (body units) so jitter or a sudden stop cannot cross a zone on its own.
+        public float LanePredictSeconds = .08f, LanePredictMax = .2f;
         // In the cart the feet stay put: the shoulders tilting over the hips (sideways offset / torso, about 15 degrees) lean it.
         public float CartLeanEnter = .25f, CartLeanExit = .14f;
         public float CrouchDrop = .40f, CrouchConfirmSeconds = .20f, LandingGraceSeconds = .3f;
