@@ -144,6 +144,7 @@ namespace Muhanok.Infrastructure
             float k = Mathf.Clamp(laneSensitivity, .6f, 1.4f);
             tuning.LaneEnter = baseTuning.LaneEnter / k; tuning.LaneExit = baseTuning.LaneExit / k;
             tuning.UpperLaneEnter = baseTuning.UpperLaneEnter / k; tuning.UpperLaneExit = baseTuning.UpperLaneExit / k;
+            tuning.UpperLeanEnterDegrees = baseTuning.UpperLeanEnterDegrees / k;
             tuning.CartLeanEnter = baseTuning.CartLeanEnter / k; tuning.CartLeanExit = baseTuning.CartLeanExit / k;
             device = device ?? "";
             if (device == options.DeviceName && liteModel == !options.FullLandmarkModel) return;

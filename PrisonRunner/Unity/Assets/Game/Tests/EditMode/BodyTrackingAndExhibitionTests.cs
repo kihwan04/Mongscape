@@ -11,14 +11,15 @@ namespace Muhanok.Tests
     {
         // Synthetic standing body in normalised image coordinates; offsets move parts of it.
         // Lean tilts the upper body sideways: shoulders, head and arms move, hips and feet stay.
-        private sealed class Body { public float Dx, Dy, Lean, Shoulder, Hip, KneeL, KneeR, Ankle, WristL = .6f, WristR = .6f; public bool Legs = true; }
+        // Roll tilts the shoulder line: the +X shoulder drops by Roll and the other one rises by Roll, the centre stays.
+        private sealed class Body { public float Dx, Dy, Lean, Roll, Shoulder, Hip, KneeL, KneeR, Ankle, WristL = .6f, WristR = .6f; public bool Legs = true; }
         private static PoseFrame Frame(Body b, double time)
         {
             var frame = new PoseFrame { HasPose = true, Time = time, Aspect = 4f / 3f };
             void Set(int i, float x, float y, float v = .95f) => frame.Points[i] = new PoseLandmark { X = x + b.Dx, Y = y, Visibility = v };
             for (int i = 0; i < PoseFrame.Count; i++) Set(i, .5f, .5f, .2f);
             float sy = .35f + b.Dy + b.Shoulder, hy = .62f + b.Dy + b.Hip, legs = b.Legs ? .95f : .1f, l = b.Lean;
-            Set(0, .5f + l, .25f + b.Dy + b.Shoulder); Set(11, .44f + l, sy); Set(12, .56f + l, sy);
+            Set(0, .5f + l, .25f + b.Dy + b.Shoulder); Set(11, .44f + l, sy - b.Roll); Set(12, .56f + l, sy + b.Roll);
             Set(23, .46f, hy, legs); Set(24, .54f, hy, legs);
             Set(25, .46f, .78f + b.Dy + b.Hip * .5f - b.KneeL, legs); Set(26, .54f, .78f + b.Dy + b.Hip * .5f - b.KneeR, legs);
             Set(27, .46f, .93f + b.Dy - b.Ankle, legs); Set(28, .54f, .93f + b.Dy - b.Ankle, legs);
@@ -77,6 +78,36 @@ namespace Muhanok.Tests
         [Test] public void UpperBodyLeansTheSameOnFootAndInTheCart()
         {
             CollectionAssert.AreEqual(new[] { "lane-1", "lane0" }, Play(PlayStyle.UpperBody, t => new Body { Dx = In(t, .2, .8) ? -.10f : 0 }, 1.3, t => true));
+        }
+        // Half the height change between the shoulders for a shoulder line tilted this many degrees (shoulders .16 apart in aspect units).
+        private static float Roll(double degrees) => (float)(.12 * 4 / 3 * Math.Tan(degrees * Math.PI / 180) / 2);
+        [Test] public void UpperBodyTiltingTheShouldersChangesLaneOnFootAndInTheCart()
+        {
+            CollectionAssert.AreEqual(new[] { "lane1", "lane0" }, Play(PlayStyle.UpperBody, t => new Body { Roll = In(t, .2, .8) ? Roll(15) : 0 }, 1.3));
+            CollectionAssert.AreEqual(new[] { "lane-1", "lane0" }, Play(PlayStyle.UpperBody, t => new Body { Roll = In(t, .2, .8) ? -Roll(15) : 0 }, 1.3, t => true));
+        }
+        [Test] public void UpperBodySmallShoulderTiltStaysInTheCentre()
+        {
+            Assert.IsEmpty(Play(PlayStyle.UpperBody, t => new Body { Roll = In(t, .2, .8) ? Roll(8) : 0 }, 1.3));
+        }
+        [Test] public void UpperBodyShoulderTiltWhileRaisingOneHandIsNotALean()
+        {
+            Assert.IsEmpty(Play(PlayStyle.UpperBody, t => new Body { Roll = In(t, .2, .8) ? Roll(15) : 0, WristL = In(t, .15, .85) ? .2f : .6f }, 1.3));
+        }
+        [Test] public void UpperBodyShoulderTiltFromBigArmPumpsIsNotALean()
+        {
+            // The shoulder on the side of the raised arm lifts with each pump.
+            var events = Play(PlayStyle.UpperBody, t => { int s = (int)(t / .3) % 2; bool on = In(t, .2, 1.8); return new Body { WristL = on ? (s == 0 ? .4f : .62f) : .6f, WristR = on ? (s == 1 ? .4f : .62f) : .6f, Roll = on ? (s == 0 ? Roll(15) : -Roll(15)) : 0 }; }, 2.0);
+            Assert.IsFalse(events.Exists(e => e.StartsWith("lane")), string.Join(",", events));
+        }
+        [Test] public void UpperBodyCalibratedShoulderTiltIsTheCentre()
+        {
+            var classifier = new MotionClassifier(new MotionTuning()); classifier.SetStyle(PlayStyle.UpperBody);
+            for (int i = 0; i < 30; i++) classifier.Update(Frame(new Body { Legs = false, Roll = Roll(15) }, i / 30.0));
+            Assert.AreEqual(PoseStatus.Tracking, classifier.Status);
+            for (double t = 0; t < 1; t += 1 / 30.0) Assert.AreEqual(0, classifier.Update(Frame(new Body { Legs = false, Roll = Roll(15) }, 1 + t)).Lane, "The calibrated posture is upright");
+            int lane = 0; for (double t = 1; t < 2; t += 1 / 30.0) lane = classifier.Update(Frame(new Body { Legs = false }, 1 + t)).Lane;
+            Assert.AreEqual(-1, lane, "Straightening a calibrated tilt is a lean the other way");
         }
         [Test] public void SmallShiftsStayInTheCentreZone()
         {

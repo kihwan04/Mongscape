@@ -94,6 +94,7 @@ MonoBehaviour:
     UpperCrouchDrop: 0.35
     UpperCrouchConfirmSeconds: 0.12
     UpperHandsAboveNose: 0.2
+    UpperLeanEnterDegrees: 12
     ArmPumpAmplitude: 0.6
     ArmSwingAmplitude: 0.3
     LostSeconds: 2.5

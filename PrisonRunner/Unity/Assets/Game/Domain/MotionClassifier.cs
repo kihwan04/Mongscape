@@ -17,8 +17,8 @@ namespace Muhanok.Domain
         // Baseline (calibrated standing pose).
         private bool calibrated;
         private int samples;
-        private float bCx, bSy, bHy, bScale, bKneeL, bKneeR, bAnkle, bNose, bTilt;
-        private float sumCx, sumSy, sumHy, sumScale, sumKneeL, sumKneeR, sumAnkle, sumNose, sumTilt;
+        private float bCx, bSy, bHy, bScale, bKneeL, bKneeR, bAnkle, bNose, bTilt, bRoll;
+        private float sumCx, sumSy, sumHy, sumScale, sumKneeL, sumKneeR, sumAnkle, sumNose, sumTilt, sumRoll;
         private int ankleSamples, noseSamples, kneeSamples;
         // Tracking state.
         private double lostSince = -1, crouchPendingSince = -1, crouchSince = -10, landingUntil, kneeUntil, lastStep, lastJump = -10, lastLaneChange = -10, pumpUntil;
@@ -111,6 +111,17 @@ namespace Muhanok.Domain
         // Sideways offset of the shoulders over the hips (raw, divide by the body scale): the cart lean.
         private float Tilt => ShoulderX - HipX;
         private float CurrentScale => style == PlayStyle.UpperBody ? ShoulderWidth : Torso;
+        // Shoulder line tilt in degrees, positive when the shoulder further along +X is lower (a lean toward +X).
+        // The slope does not depend on which shoulder is which, so a mirrored camera reads the same.
+        private float Roll
+        {
+            get
+            {
+                float dx = px[PoseJoint.RightShoulder] - px[PoseJoint.LeftShoulder];
+                if (Math.Abs(dx) < 1e-4f) return 0f;
+                return (float)(Math.Atan((py[PoseJoint.RightShoulder] - py[PoseJoint.LeftShoulder]) / dx) * 180 / Math.PI);
+            }
+        }
         private bool KneesSeen => Seen(PoseJoint.LeftKnee) && Seen(PoseJoint.RightKnee);
         private bool AnklesSeen => Seen(PoseJoint.LeftAnkle) && Seen(PoseJoint.RightAnkle);
         private float AnkleY => (py[PoseJoint.LeftAnkle] + py[PoseJoint.RightAnkle]) * .5f;
@@ -128,17 +139,19 @@ namespace Muhanok.Domain
                 if (Math.Abs(CentreX - meanX) > tuning.CalibrationStillness * meanScale || Math.Abs(ShoulderY - meanY) > tuning.CalibrationStillness * meanScale) samples = 0;
                 // The full body's centre is the hips only; a shoulder sway must also restart, or it becomes the cart's "upright" lean.
                 else if (style != PlayStyle.UpperBody && Math.Abs(Tilt / scale - sumTilt / samples) > tuning.CalibrationStillness) samples = 0;
+                // The upper body's lean is also the shoulder tilt: a rocking shoulder line restarts too.
+                else if (style == PlayStyle.UpperBody && Math.Abs(Roll - sumRoll / samples) > tuning.UpperLeanEnterDegrees * .5f) samples = 0;
             }
-            if (samples == 0) { sumCx = sumSy = sumHy = sumScale = sumKneeL = sumKneeR = sumAnkle = sumNose = sumTilt = 0; ankleSamples = noseSamples = kneeSamples = 0; }
+            if (samples == 0) { sumCx = sumSy = sumHy = sumScale = sumKneeL = sumKneeR = sumAnkle = sumNose = sumTilt = sumRoll = 0; ankleSamples = noseSamples = kneeSamples = 0; }
             samples++;
             sumCx += CentreX; sumSy += ShoulderY; sumScale += scale;
             // Standing straight is rarely exactly upright to the camera; the cart lean is measured from this posture.
-            if (style != PlayStyle.UpperBody) { sumHy += HipY; sumTilt += Tilt / scale; }
+            if (style != PlayStyle.UpperBody) { sumHy += HipY; sumTilt += Tilt / scale; } else sumRoll += Roll;
             if (KneesSeen && style != PlayStyle.UpperBody) { sumKneeL += KneeDrop(PoseJoint.LeftKnee, PoseJoint.LeftHip); sumKneeR += KneeDrop(PoseJoint.RightKnee, PoseJoint.RightHip); kneeSamples++; }
             if (AnklesSeen && style != PlayStyle.UpperBody) { sumAnkle += AnkleY; ankleSamples++; }
             if (Seen(PoseJoint.Nose)) { sumNose += py[PoseJoint.Nose]; noseSamples++; }
             if (samples < tuning.CalibrationFrames) return;
-            bCx = sumCx / samples; bSy = sumSy / samples; bHy = sumHy / samples; bScale = sumScale / samples; bTilt = sumTilt / samples;
+            bCx = sumCx / samples; bSy = sumSy / samples; bHy = sumHy / samples; bScale = sumScale / samples; bTilt = sumTilt / samples; bRoll = sumRoll / samples;
             bKneeL = kneeSamples > 0 ? sumKneeL / kneeSamples : float.NaN; bKneeR = kneeSamples > 0 ? sumKneeR / kneeSamples : float.NaN;
             bAnkle = ankleSamples > 0 ? sumAnkle / ankleSamples : float.NaN; bNose = noseSamples > 0 ? sumNose / noseSamples : float.NaN;
             calibrated = true; Reading.Clear(); Status = PoseStatus.Tracking;
@@ -236,8 +249,14 @@ namespace Muhanok.Domain
             dropRatio = Math.Max(drop / tuning.UpperCrouchDrop, noseDrop / (tuning.UpperCrouchDrop * 1.3f));
             bool ducking = Reading.Crouch || crouchPendingSince >= 0 || dropRatio > .5f;
             if (ducking) Lock(now, tuning.RefractorySeconds);
-            UpdateLane(offset, tuning.UpperLaneEnter, tuning.UpperLaneExit, now, Locked(now));
             bool wristsSeen = ActionSeen(PoseJoint.LeftWrist) && ActionSeen(PoseJoint.RightWrist);
+            // A sideways lean tilts the shoulder line too, and the tilt needs far less movement than shifting the shoulders
+            // across. Raising a hand or a big arm pump lifts one shoulder, so the tilt is ignored then.
+            bool handRising = ActionSeen(PoseJoint.LeftWrist) && py[PoseJoint.LeftWrist] < ShoulderY || ActionSeen(PoseJoint.RightWrist) && py[PoseJoint.RightWrist] < ShoulderY;
+            bool bigPump = wristsSeen && Math.Abs(py[PoseJoint.LeftWrist] - py[PoseJoint.RightWrist]) / scale > tuning.ArmPumpAmplitude;
+            float tilt = handRising || bigPump ? 0f : (Roll - bRoll) * tuning.UpperLaneEnter / Math.Max(.1f, tuning.UpperLeanEnterDegrees);
+            float lean = Math.Abs(tilt) > Math.Abs(offset) ? tilt : offset;
+            UpdateLane(lean, tuning.UpperLaneEnter, tuning.UpperLaneExit, now, Locked(now));
             // Hands must rise above the calibrated head height; the live nose drops when ducking and would fake a jump.
             float head = !float.IsNaN(bNose) ? bNose : bSy - bScale;
             bool hands = wristsSeen && py[PoseJoint.LeftWrist] < head - tuning.UpperHandsAboveNose * scale && py[PoseJoint.RightWrist] < head - tuning.UpperHandsAboveNose * scale;
@@ -257,7 +276,7 @@ namespace Muhanok.Domain
                 }
             }
             Reading.HighKnee = now < kneeUntil;
-            if (Reading.Lane == 0 && !handsUp && !Reading.Crouch && Math.Abs(offset) < tuning.UpperLaneExit * .5f) Drift();
+            if (Reading.Lane == 0 && !handsUp && !Reading.Crouch && Math.Abs(lean) < tuning.UpperLaneExit * .5f) Drift();
         }
 
         // A crouch released within cancelSeconds of confirming ends without the refractory lock, so the jump it led into can count.
@@ -276,6 +295,7 @@ namespace Muhanok.Domain
             // Only the measure in use follows the player: a long lean on foot must not move the cart's upright.
             if (style != PlayStyle.UpperBody && cart) bTilt += (Tilt / Scale() - bTilt) * d * .5f;
             else bCx += (CentreX - bCx) * d * .5f;
+            if (style == PlayStyle.UpperBody) bRoll += (Roll - bRoll) * d * .5f;
             bSy += (ShoulderY - bSy) * d; bScale += (CurrentScale - bScale) * d;
             if (style != PlayStyle.UpperBody) bHy += (HipY - bHy) * d;
             if (AnklesSeen && !float.IsNaN(bAnkle)) bAnkle += (AnkleY - bAnkle) * d;
