@@ -27,6 +27,8 @@ namespace Muhanok.Domain
         public const float SeamClearance = 4f, ActionSpacing = 6f, CentreZ = 12f, ExerciseChance = .5f, RailGapHalfLength = 1.5f;
         // The zoo walk keeps fewer lane blockers than the other walks (it was .52 against .72).
         public const float ZooBlockerScale = .52f / .72f;
+        // A zoo chunk without blockers shows its authored duck row instead of an animal this often (animals are all jumps).
+        public const float ZooDuckChance = 1f / 3f;
         public static readonly float[] RailGapZ = { 8f, 18f };
         // The run opens with one full row whose action (jump or duck) is random but whose spot is fixed: the runner starts
         // at z 2, so the authored jump row at z 7 left about half a second to react. This is the duck row's spot, ~17 m ahead.
@@ -84,7 +86,7 @@ namespace Muhanok.Domain
                 for (int lane = -1; lane <= 1; lane++)
                     if (lane != SafeLane && (both || lane == first)) Blockers.Add(new LanePlacement(lane, CentreZ));
             }
-            else if (type == 12) Animal = true;
+            else if (type == 12) { if (random.NextDouble() >= ZooDuckChance || !SetActionRow(HazardAction.Crouch)) Animal = true; }
             else
             {
                 Rows(true); int on = 0;
@@ -141,6 +143,13 @@ namespace Muhanok.Domain
         {
             foreach (var slot in slots) if (slot.FullRow && Same(slot.Z, z)) return slot.Action;
             return HazardAction.Dodge;
+        }
+        // Switches on the first authored full row with this action; false when the chunk has none.
+        private bool SetActionRow(HazardAction action)
+        {
+            Rows(true);
+            foreach (float z in rows) if (RowAction(z) == action) { SetRow(z); return true; }
+            return false;
         }
         private void SetRow(float z) { for (int i = 0; i < slots.Count; i++) if (slots[i].FullRow && !slots[i].Terrain && Same(slots[i].Z, z)) Slots[i] = true; }
         private bool HasTerrain() { foreach (var slot in slots) if (slot.Terrain) return true; return false; }

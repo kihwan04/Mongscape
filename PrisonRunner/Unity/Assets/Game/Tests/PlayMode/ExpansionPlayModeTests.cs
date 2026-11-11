@@ -76,18 +76,26 @@ namespace Muhanok.Tests
                 Assert.AreEqual(RouteSurface.ActivePlan.ChoiceAt(item.Chunk.Sequence),item.Chunk.ForkView.HighlightedBranch);
             Assert.AreEqual(created,game.Map.CreatedCount);
         }
+        // Zoo chunks hold either an animal or (ZooDuckChance) the duck row, so walk the zoo branch until one shows.
+        private static IEnumerable ZooChunks(GameBootstrap game,int branch)
+        {
+            for(float z=480;z<=960;z+=48)
+            {
+                Seek(game,z,branch);
+                foreach(var active in game.Map.Active)if(active.Type==12)yield return active.Chunk;
+            }
+        }
         [UnityTest] public IEnumerator ZooAnimalRowsRequireAndAcceptARealJump()
         {
-            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();int branch=ZooBranch(game);Seek(game,480,branch);
+            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();int branch=ZooBranch(game);
             int animals=0;
-            foreach(var active in game.Map.Active)
+            foreach(MuhanokMapChunk chunk in ZooChunks(game,branch))
             {
-                if(active.Type!=12)continue;
-                foreach(var animal in active.Chunk.GetComponentsInChildren<ZooHazard>())
+                foreach(var animal in chunk.GetComponentsInChildren<ZooHazard>())
                 {
                     animals++;Assert.AreEqual(3,animal.Hazards.Length);
-                    foreach(var obstacle in active.Chunk.Obstacles)Assert.IsFalse(obstacle.gameObject.activeSelf);
-                    foreach(var obstacle in active.Chunk.ExerciseObstacles)Assert.IsFalse(obstacle.gameObject.activeSelf);
+                    foreach(var obstacle in chunk.Obstacles)Assert.IsFalse(obstacle.gameObject.activeSelf);
+                    foreach(var obstacle in chunk.ExerciseObstacles)Assert.IsFalse(obstacle.gameObject.activeSelf);
                     foreach(var hazard in animal.Hazards){Assert.AreEqual(ObstacleKind.Crate,hazard.Kind);Assert.IsTrue(hazard.FullExerciseRow);}
                     var z=animal.Hazards[1].transform.position.z;game.Session.Reset();game.Session.Runner.SetStartZ(z);
                     game.Session.Runner.Command(MotionCommand.Jump);game.Session.Runner.Tick(.2f,0);
@@ -101,6 +109,28 @@ namespace Muhanok.Tests
                 if(animals>0)break;
             }
             Assert.Greater(animals,0);
+        }
+        [UnityTest] public IEnumerator ZooDuckRowIsALogThatNeedsACrouch()
+        {
+            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();int branch=ZooBranch(game);
+            ObstacleController[] row=null;
+            foreach(MuhanokMapChunk chunk in ZooChunks(game,branch))
+            {
+                int on=0;foreach(var obstacle in chunk.ExerciseObstacles)if(obstacle.gameObject.activeSelf)on++;
+                if(on==0)continue;
+                Assert.AreEqual(0,chunk.GetComponentsInChildren<ZooHazard>().Length,"A duck row replaces the animal");
+                row=System.Array.FindAll(chunk.ExerciseObstacles,o=>o.gameObject.activeSelf);break;
+            }
+            Assert.IsNotNull(row,"No zoo duck row on the seeded zoo branch");Assert.AreEqual(3,row.Length);
+            foreach(var hazard in row){Assert.AreEqual(ObstacleKind.Pipe,hazard.Kind);Assert.IsNotNull(hazard.transform.Find("Log"));Assert.IsTrue(hazard.FullExerciseRow);}
+            float z=row[1].transform.position.z;game.Session.Reset();game.Session.Runner.SetStartZ(z);
+            game.Session.Runner.Command(MotionCommand.Crouch);game.Session.Runner.Tick(.1f,0);
+            foreach(var hazard in row){hazard.ResetPass();hazard.Evaluate(game.Session,z-1);}
+            Assert.AreEqual(GameFlowState.Running,game.Session.Flow.State,"A crouch must pass the log");
+            game.Session.Reset();game.Session.Runner.SetStartZ(z);
+            game.Session.Runner.Command(MotionCommand.Jump);game.Session.Runner.Tick(.2f,0);
+            foreach(var hazard in row){hazard.ResetPass();hazard.Evaluate(game.Session,z-1);}
+            Assert.AreEqual(GameFlowState.Caught,game.Session.Flow.State,"A jump must not pass the log");
         }
         private static int ZooBranch(GameBootstrap game)
         {

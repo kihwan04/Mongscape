@@ -111,6 +111,24 @@ namespace Muhanok.Tests
                         }
         }
 
+        // Zoo animals are all jumps, so a zoo chunk without blockers sometimes shows its authored duck row instead.
+        [Test] public void ZooChunksMixDuckRowsWithAnimals()
+        {
+            int animals = 0, ducks = 0, slots = Slots(12).Count;
+            for (int seed = 0; seed < 600; seed++)
+            {
+                var layout = Plan(seed, 12, 1 + seed % 40);
+                if (layout.Blocked) continue;
+                int on = 0; for (int i = 0; i < slots; i++) if (layout.Slots[i]) on++;
+                if (layout.Animal) { animals++; Assert.AreEqual(0, on, "An animal chunk keeps its rows off"); continue; }
+                ducks++; Assert.AreEqual(3, on, "Seed " + seed);
+                for (int i = 0; i < slots; i++) if (layout.Slots[i]) Assert.AreEqual(HazardAction.Crouch, Slots(12)[i].Action);
+                Assert.IsNull(layout.Violation());
+            }
+            float share = ducks / (float)(ducks + animals);
+            Assert.That(share, Is.InRange(ObstacleLayout.ZooDuckChance - .08f, ObstacleLayout.ZooDuckChance + .08f), ducks + " ducks, " + animals + " animals");
+        }
+
         [Test] public void StartOddsKeepTheSafetyRules()
         {
             for (int seed = 0; seed < 500; seed++)
