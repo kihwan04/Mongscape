@@ -30,6 +30,12 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" -w /work python:3.12-
 
 `secrets/db_admin_password`, `secrets/db_app_password`가 생성됩니다. 값은 출력하지 않고 기존 파일은 덮어쓰지 않습니다. 비밀번호 폴더는 Git/ZIP/이미지에서 제외합니다. Linux에서는 폴더를 0700, 파일을 읽기 전용으로 두어 Compose가 비관리자 컨테이너 사용자에게 해당 파일을 마운트할 수 있도록 합니다.
 
+**권한을 바꾸지 마세요: 폴더 `secrets`는 0700, 파일은 0444입니다.** Compose 비밀 파일은 서버의 권한을 그대로 컨테이너에 넘깁니다. 파일을 `chmod 400`(root만 읽기)으로 바꾸면 비관리자로 실행되는 API(uid 10001)와 DB 초기화 스크립트(`postgres` 사용자)가 비밀번호를 읽지 못합니다. 파일 보호는 root만 들어갈 수 있는 0700 폴더가 맡습니다.
+
+```sh
+chmod 700 secrets && chmod 444 secrets/*
+```
+
 DB의 `postgres` 관리자와 API의 `mongscape` 계정을 분리합니다. 앱 계정은 SUPERUSER/CREATEDB/CREATEROLE 권한이 없고 자기 DB의 테이블을 사용합니다. DB 포트 5432는 외부에 공개하지 않습니다.
 
 ## 2. 서버 PC에서 먼저 실행
@@ -64,6 +70,19 @@ curl --fail https://faces.your-domain.com/health
 ```
 
 Caddy가 HTTPS 인증서 발급/갱신과 API 전달을 담당합니다. Compose 기동 성공 뒤에도 외부 HTTPS health로 DNS·인증서를 따로 확인합니다. API/Caddy는 얼굴 이미지나 토큰을 요청 로그에 기록하지 않습니다.
+
+### 기동 실패 확인
+
+`ps`로 실패한 서비스를 찾고 `logs <서비스>`로 원인을 봅니다. `caddy`가 `not started`이면 대개 `identity`가 정상이 아니어서 기다리는 것입니다.
+
+| 증상 | 원인 | 조치 |
+| --- | --- | --- |
+| identity 로그 `Identity database connection/setup failed: PermissionError` | 비밀 파일 권한이 0400 등 | `chmod 444 secrets/*` 뒤 `up -d --force-recreate --wait` |
+| postgres 로그 `User "mongscape" has no password assigned` 또는 `init-postgres: ... not readable` | DB를 처음 만들 때 비밀 파일을 읽지 못함. 초기화 스크립트는 새 volume에서 한 번만 실행 | **데이터가 없는 새 DB일 때만** `down -v`로 volume을 지우고 다시 `up`. 데이터가 있으면 지우지 말고 `docker compose exec postgres psql -U postgres -d mongscape`에서 `ALTER ROLE mongscape PASSWORD '...'`로 맞춤 |
+| 서버 파일 권한만 고친 뒤 `up`이 바로 unhealthy | 설정이 바뀌지 않아 기존 컨테이너를 재사용함 | `up -d --force-recreate --wait` |
+| Caddy 로그 `timeout`/`connection refused` | 80/443이 막혔거나 다른 웹서버(Apache 등)가 80을 사용 | 방화벽(`ufw`, 호스팅 콘솔)과 `systemctl disable --now apache2` 확인 |
+
+`/health`의 `liveness:false`는 정상입니다. 서버 생존 여부가 아니라 얼굴 위조 방지(liveness detection) 기능이 없다는 표시입니다. 생존 여부는 `ok`로 봅니다.
 
 ## 4. 게임 PC 연결
 
