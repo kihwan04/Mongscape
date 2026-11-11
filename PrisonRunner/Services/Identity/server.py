@@ -8,8 +8,15 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 BASE = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE / '.runtime'))
 MAX_BODY = 4 * 1024 * 1024
+MAX_SIDE = 1920
+# OpenCV refuses larger images from the header, before allocating pixels: a tiny JPEG can declare
+# 14000x14000 and decode to 0.6 GB. Read on the first decode, so setting it at import is enough.
+os.environ.setdefault('OPENCV_IO_MAX_IMAGE_PIXELS', str(MAX_SIDE * MAX_SIDE))
 from storage import NAME_MAX,ApiError,ConfigError,SchemaError,Store,clean_name,name_key
-LIMIT_WINDOW=60; FACE_LIMIT=15; NAME_CHECK_LIMIT=60 # attempts per window, shared by every PC
+# Attempts per minute. Each client IP has its own budget, so one sender cannot lock out every PC;
+# the server-wide caps bound face inference CPU. PCs behind one NAT share their IP budget.
+LIMIT_WINDOW=60; FACE_LIMIT=15; FACE_LIMIT_ALL=60; NAME_CHECK_LIMIT=60; NAME_CHECK_LIMIT_ALL=240
+LEADERBOARD_LIMIT=120; RUNS_LIMIT=20 # per client IP / per account
 ITEM_PRICES={0:30,1:60,2:100} # ItemKind: magnet, coin x2, shield; same as client ItemCatalog
 MODES=range(3) # PlayStyle: 0 full body, 1 upper body, 2 keyboard
 DEFAULT_WEIGHT=65; WEIGHT_MIN,WEIGHT_MAX=10,350; LEADERBOARD_SIZE=50; CONSENT_VERSION='account-v2' # weight range = the game's WorkoutEstimate
@@ -30,9 +37,12 @@ class Faces:
     def extract(self, encoded):
         try:
             raw=base64.b64decode(encoded,validate=True)
-            img=self.cv.imdecode(self.np.frombuffer(raw,self.np.uint8),self.cv.IMREAD_COLOR)
         except Exception: raise ApiError('카메라 이미지가 잘못되었습니다.')
-        if img is None or max(img.shape[:2])>1920: raise ApiError('카메라 이미지 크기를 확인하세요.')
+        # The game sends JPEG only; refusing other formats also blocks PNG decompression bombs.
+        if not raw.startswith(b'\xff\xd8\xff'): raise ApiError('카메라 이미지는 JPEG만 받습니다.')
+        try: img=self.cv.imdecode(self.np.frombuffer(raw,self.np.uint8),self.cv.IMREAD_COLOR)
+        except Exception: img=None # over OPENCV_IO_MAX_IMAGE_PIXELS or corrupt
+        if img is None or max(img.shape[:2])>MAX_SIDE: raise ApiError('카메라 이미지 크기를 확인하세요.')
         self.detector.setInputSize((img.shape[1],img.shape[0])); _,faces=self.detector.detect(img)
         if faces is None or len(faces)!=1: raise ApiError('화면에 한 사람의 얼굴만 보이게 해 주세요.')
         f=faces[0]
@@ -64,7 +74,10 @@ class Faces:
 class App:
     def __init__(self, store, faces): self.store,self.faces=store,faces; self.attempts={}
     def limit(self,key,maximum):
-        now=time.monotonic(); recent=[t for t in self.attempts.get(key,[]) if now-t<LIMIT_WINDOW]
+        now=time.monotonic()
+        if len(self.attempts)>4096: # keys include client IPs; forget the idle ones
+            self.attempts={k:v for k,v in self.attempts.items() if v and now-v[-1]<LIMIT_WINDOW}
+        recent=[t for t in self.attempts.get(key,[]) if now-t<LIMIT_WINDOW]
         if len(recent)>=maximum: self.attempts[key]=recent; raise ApiError('잠시 기다린 후 다시 시도하세요.',429)
         self.attempts[key]=recent+[now]
     def nickname(self,value,owner=None):
@@ -82,14 +95,14 @@ class App:
             if type(data['tutorial_done']) is not bool: raise ApiError('잘못된 값: tutorial_done')
             values['tutorial_done']=data['tutorial_done']
         return values
-    def handle(self,path,data,token=''):
+    def handle(self,path,data,token='',client=''):
         if path=='/name-check':
-            self.limit('name-check',NAME_CHECK_LIMIT)
+            self.limit(('name-check',client),NAME_CHECK_LIMIT); self.limit(('name-check',),NAME_CHECK_LIMIT_ALL)
             try: self.nickname(data.get('name'))
             except ApiError as e: return dict(ok=True,available=False,message=e.message)
             return dict(ok=True,available=True,message='사용할 수 있는 닉네임입니다.')
         if path in ('/enroll','/login'):
-            self.limit('face',FACE_LIMIT)
+            self.limit(('face',client),FACE_LIMIT); self.limit(('face',),FACE_LIMIT_ALL)
             if path=='/enroll':
                 if data.get('consent') is not True: raise ApiError('얼굴 저장 동의가 필요합니다.')
                 name=self.nickname(data.get('name')); settings=self.settings(data); settings.pop('tutorial_done',None)
@@ -105,7 +118,8 @@ class App:
             if not pid: raise ApiError('등록된 얼굴을 찾지 못했습니다. 먼저 얼굴을 등록하세요.',401)
             # The face crop only travels back in this response; the DB keeps features, never photos.
             session=self.store.issue(pid); return self.store.profile(pid,session,avatar)
-        if path=='/leaderboard': return self.leaderboard(data,token)
+        if path=='/leaderboard':
+            self.limit(('leaderboard',client),LEADERBOARD_LIMIT); return self.leaderboard(data,token)
         pid=self.store.authorize(token)
         if path=='/profile': return dict(ok=True,profile=self.store.account(pid))
         if path=='/profile/update':
@@ -119,6 +133,7 @@ class App:
             with self.store.db: self.store.db.execute('DELETE FROM sessions WHERE token_hash=?',(hashlib.sha256(token.encode()).hexdigest(),))
             return dict(ok=True)
         if path=='/runs':
+            self.limit(('runs',pid),RUNS_LIMIT)
             distance=number(data,'distance',0,10000000); score=number(data,'score',0,2147483647); kcal=number(data,'kcal',0,100000); goal=number(data,'goal',1,5000)
             activities=data.get('activities',[])
             if not isinstance(activities,list) or len(activities)!=5 or any(type(v) not in (float,int) or not math.isfinite(v) or v<0 for v in activities): raise ApiError('동작별 기록 오류')
@@ -176,6 +191,11 @@ class Handler(BaseHTTPRequestHandler):
     def setup(self):
         super().setup()
         self.connection.settimeout(15)
+    def client(self):
+        # Caddy drops any X-Forwarded-For a client sends and puts the address it saw; the last entry is
+        # that address. Only Caddy and the host loopback can reach the API, so the header is not spoofable.
+        forwarded=self.headers.get('X-Forwarded-For','')
+        return forwarded.rsplit(',',1)[-1].strip() if forwarded else self.client_address[0]
     def log_message(self,*args): pass # Images, tokens and identities never go into request logs.
     def answer(self,status,payload):
         body=json.dumps(payload,ensure_ascii=False).encode()
@@ -200,7 +220,7 @@ class Handler(BaseHTTPRequestHandler):
             except Exception: raise ApiError('JSON 오류')
             if not isinstance(data,dict): raise ApiError('JSON 객체 필요')
             token=self.headers.get('Authorization','').removeprefix('Bearer ')
-            self.answer(200,self.server.app.handle(self.path,data,token))
+            self.answer(200,self.server.app.handle(self.path,data,token,self.client()))
         except ApiError as e: self.answer(e.status,dict(ok=False,message=e.message))
         except Exception as e:
             print('Identity error:',type(e).__name__,file=sys.stderr,flush=True)
