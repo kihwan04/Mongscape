@@ -1,5 +1,6 @@
 using Muhanok.Domain;
 using Muhanok.Presentation.Map;
+using UnityEditor;
 using UnityEngine;
 
 namespace Muhanok.Editor
@@ -63,6 +64,60 @@ namespace Muhanok.Editor
                 var c=new Vector3(Mathf.Cos(angle)*.65f,.10f,Mathf.Sin(angle)*.65f);
                 Beam("FoldedPeel",banana,a,b,.16f,peel);Beam("PeelTip",banana,b,c,.15f,peel);
             }
+        }
+        // Duck row of the zoo-looking chunks (Yard and zoo walk): a log on wooden posts instead of the industrial pipe.
+        public const string ZooDuckId="OBS_ZooLowLog";
+        // Rebuilds only the zoo duck visual and the exercise rows of the zoo-looking chunks, without re-running the whole art pass.
+        [MenuItem("Mongscape/Apply Zoo Duck Obstacle")]
+        public static void ApplyZooDuck()
+        {
+            // Prepare() would reset every shared material to its first-pass values, so only load what this needs.
+            box=MeshAsset("BevelBox",()=>MuhanokArtGeometry.BevelBox()); sphere=MeshAsset("FacetedSphere",()=>MuhanokArtGeometry.FacetedSphere());
+            black=Kept("Charcoal",new Color(.023f,.026f,.035f),.08f,.33f);
+            ZooLowLog();
+            for(int type=11;type<MuhanokContentBuilder.ChunkIds.Length;type++)
+            {
+                string path=Root+"/Prefabs/"+MuhanokContentBuilder.ChunkIds[type]+".prefab";
+                var root=PrefabUtility.LoadPrefabContents(path);
+                try { MuhanokGameplayUpgrade.Configure(root,type); PrefabUtility.SaveAsPrefabAsset(root,path); }
+                finally { PrefabUtility.UnloadPrefabContents(root); }
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("MONGSCAPE_ZOO_DUCK_PASS: "+ZooDuckId+" on the Yard and zoo duck rows");
+        }
+        // One lane: the log (underside 1.33 m) spans the lane so three lanes read as one log; posts and sign rise above
+        // the 1.8 m jump peak so it never looks jumpable. Same ZooLog materials as the fallen jump log, but overhead.
+        // An existing material as later passes left it; created with these values only when missing.
+        private static Material Kept(string name,Color color,float metallic,float smooth,string texture=null)
+        { var found=AssetDatabase.LoadAssetAtPath<Material>(Art+"/Materials/"+name+".mat"); return found!=null?found:Mat(name,color,metallic,smooth,texture); }
+        private static void ZooLowLog()
+        {
+            string path=Root+"/Prefabs/"+ZooDuckId+".prefab";
+            if(AssetDatabase.LoadAssetAtPath<GameObject>(path)==null)
+            { var empty=new GameObject(ZooDuckId); empty.AddComponent<ObstacleController>(); PrefabUtility.SaveAsPrefabAsset(empty,path); Object.DestroyImmediate(empty); }
+            var root=EditPrefab(ZooDuckId); root.GetComponent<ObstacleController>().Kind=ObstacleKind.Pipe;
+            var bark=Kept("ZooLogBark",new Color(.26f,.13f,.055f),0,.18f,"wood");
+            var heart=Kept("ZooLogHeart",new Color(.62f,.38f,.17f),0,.25f,"wood");
+            var caution=Kept("ZooCaution",new Color(1,.74f,.08f),0,.3f);
+            var vine=Kept("ZooVine",new Color(.18f,.42f,.14f),0,.2f);
+            var t=root.transform;
+            Beam("Log",t,new Vector3(-1.1f,1.5f,0),new Vector3(1.1f,1.5f,0),.34f,bark);
+            for(int side=-1;side<=1;side+=2)
+            {
+                // On the lane edge, so neighbouring lanes share one post instead of standing two side by side.
+                Shape("Post",t,new Vector3(side*1.1f,1.05f,0),new Vector3(.22f,2.1f,.22f),bark);
+                Shape("PostTop",t,new Vector3(side*1.1f,2.12f,0),new Vector3(.26f,.08f,.26f),heart,true);
+            }
+            Shape("SignBoard",t,new Vector3(0,1.9f,0),new Vector3(1.1f,.38f,.06f),caution);
+            for(int i=-2;i<=2;i++) { var stripe=Shape("SignStripe",t,new Vector3(i*.2f,1.9f,-.035f),new Vector3(.08f,.36f,.012f),black); stripe.transform.localRotation=Quaternion.Euler(0,0,-35); }
+            for(int side=-1;side<=1;side+=2) Beam("SignRope",t,new Vector3(side*.42f,1.67f,0),new Vector3(side*.42f,1.71f,0),.03f,heart);
+            // Hanging strands end by 1.0 m, still above the 0.85 m crouch camera.
+            foreach(var (x,length) in new[]{(-.62f,.3f),(-.18f,.2f),(.25f,.33f),(.68f,.24f)})
+            {
+                Shape("Vine",t,new Vector3(x,1.33f-length*.5f,-.1f),new Vector3(.035f,length,.035f),vine);
+                Shape("VineLeaves",t,new Vector3(x,1.33f-length,-.1f),new Vector3(.13f,.1f,.09f),vine,true);
+            }
+            Save(root,path);
         }
         private static void AddZooHazards(GameObject root,int type)
         {

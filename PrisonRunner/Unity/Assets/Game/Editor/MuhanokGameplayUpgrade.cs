@@ -44,7 +44,7 @@ namespace Muhanok.Editor
             for(int row=0;row<rows;row++)for(int lane=-1;lane<=1;lane++)
             {
                 float z=type==7?3f:7f+row*12f;
-                string id=row==0?"OBS_Crate_Low":"OBS_LowPipe";
+                string id=row==0?"OBS_Crate_Low":type>=11?MuhanokArtUpgrade.ZooDuckId:"OBS_LowPipe";
                 var source=AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs+id+".prefab");
                 if(source==null)throw new InvalidOperationException("Missing exercise visual: "+id);
                 var socket=new GameObject("Exercise_"+row+"_"+lane).transform;socket.SetParent(group,false);

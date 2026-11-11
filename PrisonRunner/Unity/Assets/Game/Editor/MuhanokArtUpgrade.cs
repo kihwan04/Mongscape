@@ -28,7 +28,7 @@ namespace Muhanok.Editor
             if (!UnityEngine.Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             foreach (string folder in new[] { "Materials", "Meshes", "Textures", "Prefabs" }) Directory.CreateDirectory(Art+"/"+folder);
             AssetDatabase.Refresh(); Prepare(); IndexModels(); AnimateCharacters();
-            Character(false); Character(true); Cart(); Pickaxe(); Bulb(); Hands(); Hazards();
+            Character(false); Character(true); Cart(); Pickaxe(); Bulb(); Hands(); Hazards(); ZooLowLog();
             for (int i=0;i<MuhanokContentBuilder.ChunkIds.Length;i++) UpgradeChunk(i);
             UpgradeScene(); AssetDatabase.SaveAssets(); AssetDatabase.Refresh();
             MuhanokBuildTools.ValidateContent();
