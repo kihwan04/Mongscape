@@ -84,6 +84,36 @@ Caddy가 HTTPS 인증서 발급/갱신과 API 전달을 담당합니다. Compose
 
 `/health`의 `liveness:false`는 정상입니다. 서버 생존 여부가 아니라 얼굴 위조 방지(liveness detection) 기능이 없다는 표시입니다. 생존 여부는 `ok`로 봅니다.
 
+### 서버 보안 기본 설정 (처음 한 번)
+
+Docker 서비스와 별개로 서버 자체를 지킵니다. Ubuntu 기준입니다.
+
+1. **SSH는 키로만 로그인.** 내 PC에서 키를 만들고(`ssh-keygen -t ed25519`) 서버에 등록한 뒤(`~/.ssh/authorized_keys`), **새 창에서 키 로그인이 되는 것을 확인한 다음에** 비밀번호 로그인을 끕니다. 순서를 바꾸면 서버에 들어갈 수 없게 됩니다.
+
+   ```sh
+   printf '%s\n' 'PasswordAuthentication no' 'KbdInteractiveAuthentication no' 'PermitRootLogin prohibit-password' > /etc/ssh/sshd_config.d/10-mongscape.conf
+   sshd -t && systemctl reload ssh
+   ```
+
+2. **방화벽.** 22·80·443만 엽니다. 22를 먼저 허용합니다. Docker가 공개한 포트는 ufw 규칙을 거치지 않으므로 compose 파일에서 DB(5432)를 공개하지 않고 API(8765)는 `127.0.0.1`에만 둡니다.
+
+   ```sh
+   ufw allow 22/tcp && ufw allow 80/tcp && ufw allow 443/tcp && ufw --force enable
+   ```
+
+3. **자동 보안 업데이트와 무차별 대입 차단.**
+
+   ```sh
+   apt update && apt install -y unattended-upgrades fail2ban && systemctl enable --now fail2ban
+   ```
+
+4. **쓰지 않는 웹서버 제거와 파일 권한.** 호스팅 기본 Apache가 있으면 지웁니다. Windows에서 만든 압축을 풀면 폴더가 777이 될 수 있으므로 쓰기 권한을 정리합니다.
+
+   ```sh
+   apt purge -y 'apache2*' && apt autoremove -y
+   chmod -R go-w /opt/Identity
+   ```
+
 ## 4. 게임 PC 연결
 
 2026-10-26 원격 연결을 지원하는 Windows 클라이언트 ZIP을 전부 풉니다. PostgreSQL 변경은 서버 내부이므로 같은 EXE와 게임 API를 사용합니다. 2026-10-25의 localhost 고정 실행본은 원격 설정을 지원하지 않습니다.
@@ -133,7 +163,14 @@ docker compose exec -T postgres pg_dump -U postgres -d mongscape -Fc -f /tmp/mon
 docker compose cp postgres:/tmp/mongscape.dump ./mongscape-backup.dump
 ```
 
-백업은 개인 얼굴 정보와 기록을 포함하므로 별도로 보관하고 Git/ZIP에서 제외합니다. 복구는 백업을 새 DB에 복원해 검증한 뒤 진행합니다.
+매일 자동 백업은 `backup.sh`를 cron에 등록합니다. 기본 위치는 `/root/mongscape-backups`(권한 0700)이고 14일이 지난 백업은 지웁니다(`MONGSCAPE_BACKUP_DAYS`로 변경).
+
+```sh
+chmod +x backup.sh && ./backup.sh                       # 한 번 실행해 확인
+( crontab -l 2>/dev/null; echo '30 4 * * * /opt/Identity/backup.sh >> /var/log/mongscape-backup.log 2>&1' ) | crontab -
+```
+
+같은 서버의 백업만으로는 디스크 장애·서버 해지에 대비할 수 없으므로 주기적으로 다른 곳에 복사합니다(예: 내 PC에서 `scp root@서버:/root/mongscape-backups/*.dump .`). 백업은 개인 얼굴 정보와 기록을 포함하므로 별도로 보관하고 Git/ZIP에서 제외합니다. 복구는 백업을 새 DB에 복원해 검증한 뒤 진행합니다.
 
 비밀번호 초기화 스크립트는 새 DB volume의 최초 초기화 때만 실행됩니다. 이미 초기화한 DB에서 비밀번호 파일만 바꿔도 DB 암호가 자동 변경되지는 않습니다.
 
@@ -194,7 +231,8 @@ HTTPS 구성이면 `up`에 3장과 같은 `--env-file .env -f compose.yaml -f co
 - `/runs`: 같은 기록 ID를 다시 보내면 저장·적립 없이 현재 잔액을 돌려줍니다. 기록 삽입과 코인 적립은 한 트랜잭션입니다. `mode`를 보내지 않은 이전 클라이언트의 기록도 저장하지만(모드 NULL) 랭킹에는 들어가지 않습니다.
 - `/leaderboard`: 해당 모드의 `score_version=2` 기록 중 회원마다 최고 점수 1개로 상위 50명을 만듭니다. 동점이면 먼저 세운 기록이 앞섭니다. `today:true`는 한국 시간(KST) 0시 이후 기록만 봅니다. `name`은 현재 닉네임입니다. `me`는 유효한 토큰이 있고 해당 모드 기록이 있을 때만 들어가며, 만료된 토큰은 오류 없이 무시합니다.
 - `/stats`: `today_kcal`은 KST 0시 이후, `total_kcal`은 전체 기록의 칼로리 합계입니다. `best_score`는 `score_version=2` 기록만 보며 없으면 0입니다.
-- 시도 제한(서버 전체): `/enroll`·`/login` 합산 1분 15회, `/name-check` 1분 60회.
+- 시도 제한(1분): 접속 IP마다 `/enroll`·`/login` 합산 15회, `/name-check` 60회, `/leaderboard` 120회이고 서버 전체로도 얼굴 60회·닉네임 240회를 넘지 않습니다. `/runs`는 계정마다 20회입니다. IP는 Caddy가 넣는 `X-Forwarded-For`의 마지막 값입니다(Caddy는 클라이언트가 보낸 값을 버립니다). 같은 공유기(NAT) 뒤의 PC들은 한 IP의 횟수를 나눠 씁니다.
+- 얼굴 이미지는 JPEG만 받습니다(게임은 `EncodeToJPG`). 긴 변 1920px, 픽셀 1920×1920을 넘으면 디코딩 전에 거절합니다(`OPENCV_IO_MAX_IMAGE_PIXELS`).
 
 **코인 신뢰 한계**: 한 판에 얻은 코인 수(`coins`)는 게임 클라이언트가 보내며, 서버는 범위(0~5000)와 기록 ID 중복만 검사합니다. 조작된 클라이언트는 코인을 부풀릴 수 있습니다. 전시용으로 허용한 범위이며 실제 재화·보상에는 쓰지 않습니다. 점수·거리·칼로리도 같은 한계가 있습니다.
 
@@ -215,6 +253,6 @@ HTTPS 구성이면 `up`에 3장과 같은 `--env-file .env -f compose.yaml -f co
 
 ## 확인 범위
 
-API는 현재 단일 프로세스에서 요청을 순서대로 처리하며 얼굴 등록/로그인은 서버 전체 분당 15회, 닉네임 확인은 분당 60회 제한입니다. PostgreSQL을 도입했다고 얼굴 추론 병렬 처리까지 구현한 것은 아닙니다. 현재 계정 v2 검사 27/27과 남은 범위는 [통합 검수](../../docs/reports/PR20_LOCAL_MERGE_2026_10_29.md)를 확인하세요. `docs/reports/PR20_LOCAL_MERGE_2026_10_29.md`는 이전 서버 검증 기록입니다. 얼굴 로그인은 전시 프로필용이고 검증된 사진 위조 방지 기능은 없습니다.
+API는 현재 단일 프로세스에서 요청을 순서대로 처리합니다. 그래서 Caddy가 요청 본문을 끝까지 받은 뒤에 API로 넘기고(`request_buffers`), 헤더 10초·본문 30초 안에 오지 않는 연결을 끊습니다. 느리게 보내는 연결 하나가 API 전체를 붙잡지 못하게 하기 위해서입니다. 시도 제한은 8장을 봅니다. PostgreSQL을 도입했다고 얼굴 추론 병렬 처리까지 구현한 것은 아닙니다. 현재 계정 v2 검사 27/27과 남은 범위는 [통합 검수](../../docs/reports/PR20_LOCAL_MERGE_2026_10_29.md)를 확인하세요. `docs/reports/PR20_LOCAL_MERGE_2026_10_29.md`는 이전 서버 검증 기록입니다. 얼굴 로그인은 전시 프로필용이고 검증된 사진 위조 방지 기능은 없습니다.
 
 공식 문서: [PostgreSQL Docker 이미지](https://hub.docker.com/_/postgres), [Psycopg 트랜잭션](https://www.psycopg.org/psycopg3/docs/basic/transactions.html), [Docker Compose](https://docs.docker.com/compose/gettingstarted/), [Caddy HTTPS](https://caddyserver.com/docs/automatic-https).

@@ -70,3 +70,4 @@ identity-server.json
 Services/Identity/*.sqlite3*
 Services/Identity/secrets/
 Services/Identity/*.dump
+Services/*.tar.gz
