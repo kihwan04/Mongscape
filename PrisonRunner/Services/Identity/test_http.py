@@ -61,6 +61,13 @@ class HttpTests(PostgresCase):
         self.assertEqual(self.request('/history','{}',host='attacker.test',token=self.token)[0],403)
         self.assertEqual(self.request('/history','{}',headers={'Origin':'https://faces.test'},token=self.token)[0],403)
 
+    def test_rate_limit_follows_the_proxy_client_address(self):
+        check=lambda client:self.request('/name-check',json.dumps(dict(name='free')),headers={'X-Forwarded-For':client})[0]
+        self.assertEqual([check('198.51.100.7') for _ in range(60)],[200]*60)
+        self.assertEqual(check('198.51.100.7'),429)
+        self.assertEqual(check('203.0.113.9'),200) # another player keeps their own budget
+        self.assertEqual(check('203.0.113.9, 198.51.100.7'),429) # only the last (proxy-observed) entry counts
+
     def test_payload_limits_types_and_authentication(self):
         self.assertEqual(self.request('/history','{}')[0],401)
         self.assertEqual(self.request('/history','{}',headers={'Content-Type':'text/plain'})[0],415)

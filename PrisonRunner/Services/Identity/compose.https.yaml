@@ -11,6 +11,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       identity:
         condition: service_healthy

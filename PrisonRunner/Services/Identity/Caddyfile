@@ -1,11 +1,27 @@
+{
+	servers {
+		# Close clients that send headers or a body too slowly instead of holding a connection open.
+		timeouts {
+			read_header 10s
+			read_body 30s
+		}
+	}
+}
+
 {$IDENTITY_DOMAIN} {
-    request_body {
-        max_size 4MB
-    }
-    reverse_proxy identity:8765 {
-        transport http {
-            dial_timeout 5s
-            response_header_timeout 25s
-        }
-    }
+	request_body {
+		max_size 4MB
+	}
+	# Do not advertise the proxy or the API runtime and versions.
+	header -Via
+	reverse_proxy identity:8765 {
+		# The API answers one request at a time. Read the whole body (at most max_size) first, so a
+		# client trickling its upload ties up only Caddy, never the API.
+		request_buffers 4MB
+		header_down -Server
+		transport http {
+			dial_timeout 5s
+			response_header_timeout 25s
+		}
+	}
 }

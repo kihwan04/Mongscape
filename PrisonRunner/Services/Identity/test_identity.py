@@ -106,7 +106,20 @@ class IdentityTests(PostgresCase):
    result=check(name);self.assertTrue(result['ok']);self.assertFalse(result['available'],name);self.assertTrue(result['message'])
   for _ in range(60-15):check('free')
   self.assertEqual(self.status('/name-check',dict(name='free')),429)
-  self.assertNotIn('face',self.app.attempts) # separate budget from face enroll/login
+  self.assertFalse(any(key[0]=='face' for key in self.app.attempts)) # separate budget from face enroll/login
+  self.assertTrue(self.app.handle('/name-check',dict(name='free'),client='10.0.0.2')['available']) # other IPs keep their budget
+ def test_limits_are_per_client_with_server_cap(self):
+  for i in range(15):self.app.limit(('face','10.0.0.1'),15)
+  with self.assertRaises(ApiError) as caught:self.app.handle('/login',dict(images=[]),client='10.0.0.1')
+  self.assertEqual(caught.exception.status,429)
+  with self.assertRaises(ApiError) as caught:self.app.handle('/login',dict(images=[]),client='10.0.0.2')
+  self.assertEqual(caught.exception.status,400) # reached face checks: not locked out by 10.0.0.1
+  self.app.attempts[('face',)]=[time.monotonic()]*60 # server-wide cap bounds inference CPU
+  with self.assertRaises(ApiError) as caught:self.app.handle('/login',dict(images=[]),client='10.0.0.3')
+  self.assertEqual(caught.exception.status,429)
+  _,token=self.member('Runner')
+  for _ in range(20):self.app.handle('/runs',run(),token)
+  self.assertEqual(self.status('/runs',run(),token),429)
  def test_profile_and_update(self):
   pid,token=self.member('Alpha');self.member('Beta')
   self.assertEqual(self.status('/profile',{}),401);self.assertEqual(self.status('/profile/update',dict(name='Gamma'),'bad'),401)
@@ -184,6 +197,14 @@ class IdentityTests(PostgresCase):
   with self.assertRaises(ApiError):self.faces.samples(dict(images=[blank]*3))
   with self.assertRaises(ApiError):self.faces.samples(dict(images=['not jpeg']*3))
   with self.assertRaises(ApiError):self.faces.samples(dict(images=[]))
+ def test_non_jpeg_and_oversized_images_rejected(self):
+  _,png=self.cv.imencode('.png',self.image)
+  with self.assertRaisesRegex(ApiError,'JPEG'):self.faces.extract(base64.b64encode(png).decode())
+  _,huge=self.cv.imencode('.jpg',self.np.zeros((2400,2400,3),self.np.uint8))
+  with self.assertRaises(ApiError):self.faces.extract(base64.b64encode(huge).decode())
+  try:decoded=self.cv.imdecode(huge,self.cv.IMREAD_COLOR)
+  except self.cv.error:decoded=None
+  self.assertIsNone(decoded) # refused from the header by OPENCV_IO_MAX_IMAGE_PIXELS, before allocating pixels
  def test_fresh_db_is_v2_and_newer_schema_refused(self):
   self.assertEqual(self.store.version(),2);self.assertTrue({'profiles_name_key','runs_mode_score'}<=self.store.indexes())
   self.assertEqual(migrate_account.migrate(database_url=self.url),[])
