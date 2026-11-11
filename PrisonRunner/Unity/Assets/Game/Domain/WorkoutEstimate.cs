@@ -26,7 +26,6 @@ namespace Muhanok.Domain
         public double SecondsFor(int activity)=>activitySeconds[Math.Max(0,Math.Min(4,activity))];
         public double KcalFor(int activity)=>Kcal(Met,WeightKg,SecondsFor(activity));
         public static double Kcal(double met,double weightKg,double seconds)=>Math.Max(0,met)*3.5*Math.Max(0,weightKg)/200*Math.Max(0,seconds)/60;
-        public static readonly string[] ActivityNames={"달리기·팔 흔들기","점프·두 손 들기","숙이기","하이니","좌우 이동·기울이기"};
         // Allocate one time slice to one activity. All use the play-style MET assumption, not invented per-joint measurements.
         public void TickActivity(double seconds,bool playing,bool tracked,bool active,int activity)
         {

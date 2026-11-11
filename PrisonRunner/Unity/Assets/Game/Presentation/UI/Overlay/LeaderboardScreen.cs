@@ -11,6 +11,7 @@ namespace Muhanok.Presentation
     internal sealed class LeaderboardScreen
     {
         static readonly CultureInfo Num = CultureInfo.InvariantCulture;
+        const string NoFoodText = "소모한 칼로리가 없어요";
         // card slots left to right: 2nd, 1st, 3rd
         static readonly int[] SlotRank = { 1, 0, 2 };
         static readonly float[] SlotHeight = { 138, 158, 128 };
@@ -115,10 +116,13 @@ namespace Muhanok.Presentation
                 return;
             }
             skin.Text(new Rect(38,220,164,26),"목표 "+session.Workout.GoalKcal.ToString("F0",Num)+" kcal",15,Palette.Sand,TextAnchor.MiddleLeft,false,true);
-            for(int i=0;i<5;i++)
+            // This run's kcal as familiar foods instead of the per-motion breakdown.
+            var foods=FoodEquivalent.For(session.Workout.EstimatedKcal);
+            if(foods.Count==0){skin.Text(new Rect(38,258,164,22),NoFoodText,14,Palette.Sand,TextAnchor.MiddleLeft,false);return;}
+            for(int i=0;i<foods.Count;i++)
             {
-                skin.Text(new Rect(38,258+i*46,164,22),WorkoutEstimate.ActivityNames[i],14,Palette.Sand,TextAnchor.MiddleLeft,false);
-                skin.Text(new Rect(38,278+i*46,164,22),session.Workout.KcalFor(i).ToString("F1",Num)+" kcal",16,Palette.Cream,TextAnchor.MiddleLeft,false,true);
+                skin.Text(new Rect(38,258+i*46,164,22),foods[i].Food.Name,14,Palette.Sand,TextAnchor.MiddleLeft,false);
+                skin.Text(new Rect(38,278+i*46,164,22),foods[i].CountText,16,Palette.Cream,TextAnchor.MiddleLeft,false,true);
             }
         }
 
