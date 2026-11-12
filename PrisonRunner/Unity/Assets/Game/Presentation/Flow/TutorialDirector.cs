@@ -114,7 +114,7 @@ namespace Muhanok.Presentation
             Waiting = !Resumed && d <= SlowDistance;
             session.SpeedScale = Resumed || d > SlowDistance ? 1 : d <= HoldDistance ? CreepScale : Mathf.Lerp(CreepScale, 1, Mathf.InverseLerp(HoldDistance, SlowDistance, d));
             Message = d <= SlowDistance ? TutorialScript.Instruction(Script.Current, Script.Style) : null;
-            cue = Waiting ? ActionCuePresenter.Find(session, map) : null;
+            cue = Waiting ? ActionCuePresenter.Find(session, map, Script.Style) : null;
         }
         private void Next(float now)
         {

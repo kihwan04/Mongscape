@@ -7,7 +7,7 @@ namespace Muhanok.Domain
     // What a step waits for: a calibrated body, a lesson obstacle (or broken rail) passed cleanly, or a lean at the cart fork.
     public enum TutorialPass { Calibrated, ObstaclePassed, ForkChosen, None }
     // The one obstacle each lesson chunk keeps; every random hazard, item and coin is removed.
-    public enum TutorialHazard { None, LaneBlock, JumpRow, CrouchRow, StairRow, RailGap }
+    public enum TutorialHazard { None, LaneBlock, JumpRow, CrouchRow, StairChunk, RailGap }
 
     // Lessons for one play style: 보정 → 좌우 이동 → 점프 → 숙이기 → 하이니 → 끊긴 레일 → 갈림길 기울이기 → 완료.
     // A step the style or route lacks is left out (keyboard play needs no calibration; a route without forks has no lean).
@@ -113,7 +113,7 @@ namespace Muhanok.Domain
         public static float ForkDecisionZ => ForkLapStart * RouteSurface.Length + CartFork.Decision;
         public static RoutePlan Plan(RunConfig config) => RoutePlan.Tutorial(config, Seed, WarmupLap);
         public static TutorialHazard HazardAt(int sequence) => sequence == LaneChunk ? TutorialHazard.LaneBlock : sequence == JumpChunk ? TutorialHazard.JumpRow
-            : sequence == CrouchChunk ? TutorialHazard.CrouchRow : sequence == StairChunk ? TutorialHazard.StairRow
+            : sequence == CrouchChunk ? TutorialHazard.CrouchRow : sequence == StairChunk ? TutorialHazard.StairChunk
             : sequence == RailChunk ? TutorialHazard.RailGap : TutorialHazard.None;
         public static int ChunkOf(TutorialStep step) => step == TutorialStep.Lane ? LaneChunk : step == TutorialStep.Jump ? JumpChunk
             : step == TutorialStep.Crouch ? CrouchChunk : step == TutorialStep.HighKnee ? StairChunk : step == TutorialStep.Rail ? RailChunk : -1;

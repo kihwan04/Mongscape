@@ -25,6 +25,12 @@ namespace Muhanok.Presentation
         public bool ShowStrike { get; private set; }
         public float StrikeFraction { get; private set; }
         public bool ShowStrikeCleared { get; private set; }
+        // Stair chunk: a small "무릎!" gauge (fills as the next step is not yet due) and a thin progress bar along the climb.
+        public bool ShowStair { get; private set; }
+        public float KneeGauge { get; private set; }
+        public bool KneeWarning { get; private set; }
+        public float StairProgress { get; private set; }
+        public const float KneeWarnUrgency = .7f;
         private int previousStrikes;
         private float strikeClearedUntil;
         // Camera styles keep the webcam corner on screen unless the player turned it off in settings.
@@ -93,6 +99,10 @@ namespace Muhanok.Presentation
             StrikeFraction = ShowStrike ? Mathf.Clamp01(session.StrikeClearRemaining / Mathf.Max(.01f, session.Config.StrikeClearSeconds)) : 0;
             if (running && previousStrikes == 1 && session.SlipStrikes == 0) strikeClearedUntil = now + 1.5f;
             previousStrikes = session.SlipStrikes;
+            ShowStair = running && session.InStair;
+            KneeGauge = ShowStair ? 1f - Mathf.Clamp01(session.KneeUrgency) : 0f;
+            KneeWarning = ShowStair && session.KneeUrgency > KneeWarnUrgency;
+            StairProgress = ShowStair ? Mathf.Clamp01(session.StairProgress) : 0f;
             ShowStrikeCleared = running && now < strikeClearedUntil && !ShowStrike;
             if (session.Score.Coins != coins) { coins = session.Score.Coins; Coins = coins.ToString(); }
             CoinBoost = session.Items.IsActive(ItemKind.DoubleScore);
@@ -151,7 +161,7 @@ namespace Muhanok.Presentation
             if (now >= nextScan)
             {
                 nextScan = now + CueInterval; CueScans++;
-                actionCue = ActionCuePresenter.Find(session, map);
+                actionCue = ActionCuePresenter.Find(session, map, style);
             }
             bool fork = RouteSurface.ActivePlan?.ForkWindow(session.Runner.Z) ?? false;
             NoticeKind = SelectNotice(ShowPoseRecovery, actionCue != null, fork, now < policeUntil, now < comboUntil, now < sectionUntil);

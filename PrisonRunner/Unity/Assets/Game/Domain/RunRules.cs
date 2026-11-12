@@ -152,6 +152,8 @@ namespace Muhanok.Domain
         public float Z { get; private set; }
         public bool Crouching => crouchLeft > 0f;
         public float SinceKneeStep => clock - lastKneeStep;
+        // Counts every accepted KneeStep (feedback such as footsteps and camera bob listens for changes).
+        public int KneeSteps { get; private set; }
         public bool KneeStepping => SinceKneeStep < config.KneeStepGap;
         public bool Stumbling => stumbleLeft > 0f;
         public bool Riding => RouteSurface.IsCart(Z);
@@ -185,7 +187,7 @@ namespace Muhanok.Domain
                 if (Y <= .001f && verticalSpeed <= 0f) crouchLeft = config.CrouchSeconds;
                 else crouchBuffer = config.InputBufferSeconds;
             }
-            if (command == MotionCommand.KneeStep && !Riding) lastKneeStep = clock;
+            if (command == MotionCommand.KneeStep && !Riding) { lastKneeStep = clock; KneeSteps++; }
         }
         public void Stumble() { stumbleLeft = config.StumbleSeconds; }
         public void Slip() { slowLeft = config.SlipSeconds; }
@@ -226,7 +228,7 @@ namespace Muhanok.Domain
             crouchLeft = 0f;
             verticalSpeed = (float)Math.Sqrt(2f * config.Gravity * config.JumpHeight);
         }
-        public void Reset() { Lane = 0; X = Y = 0f; Z = 2f; laneFrom = verticalSpeed = crouchLeft = stumbleLeft = slowLeft = jumpBuffer = crouchBuffer = 0f; laneTime = 1f; clock = 0f; lastKneeStep = NoKneeStep; }
+        public void Reset() { Lane = 0; X = Y = 0f; Z = 2f; laneFrom = verticalSpeed = crouchLeft = stumbleLeft = slowLeft = jumpBuffer = crouchBuffer = 0f; laneTime = 1f; clock = 0f; lastKneeStep = NoKneeStep; KneeSteps = 0; }
     }
 
     public sealed class RunSession

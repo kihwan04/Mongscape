@@ -52,6 +52,7 @@ namespace Muhanok.Presentation
             {
                 if (Model.ShowSiren) DrawSiren();
                 if (Model.ShowStrike || Model.ShowStrikeCleared) DrawStrike();
+                if (Model.ShowStair) DrawStair();
                 // The small corner needs live video; the recovery panel also shows when the camera fails, to say why. No webcam at all: nothing.
                 if (Model.ShowCamera && data != null && data.CameraDetected && (Model.ShowPoseRecovery || PosePreview.Live(data)))
                     PosePreview.Draw(skin, Model.ShowPoseRecovery ? RecoveryCameraArea : CameraArea, data, Model.ShowPoseRecovery);
@@ -102,6 +103,24 @@ namespace Muhanok.Presentation
                 GUI.color = new Color(.4f, 1, .6f);
                 GUI.Label(area, "경고 해제", skin.Centered(16, FontStyle.Bold));
             }
+            GUI.color = Color.white;
+        }
+        // Small knee gauge under the strike slot: blinks in the warning colour when the next step is nearly late, with the climb progress below.
+        private void DrawStair()
+        {
+            var area = new Rect(577, 144, 126, 46);
+            skin.Card(area, Palette.A(Palette.Ground, .9f));
+            bool warn = Model.KneeWarning, blink = !warn || Mathf.Repeat(Time.unscaledTime, .3f) < .18f;
+            GUI.color = warn ? Palette.Warn : Palette.Gold;
+            GUI.Label(new Rect(579, 146, 122, 20), "무릎!", skin.Centered(15, FontStyle.Bold));
+            GUI.color = new Color(.65f, .69f, .74f, .5f);
+            GUI.DrawTexture(new Rect(587, 168, 106, 7), Texture2D.whiteTexture);
+            GUI.color = blink ? (warn ? Palette.Warn : new Color(.4f, 1, .6f)) : new Color(1, 1, 1, .15f);
+            GUI.DrawTexture(new Rect(587, 168, 106 * Model.KneeGauge, 7), Texture2D.whiteTexture);
+            GUI.color = new Color(.65f, .69f, .74f, .4f);
+            GUI.DrawTexture(new Rect(587, 180, 106, 3), Texture2D.whiteTexture);
+            GUI.color = Palette.Cream;
+            GUI.DrawTexture(new Rect(587, 180, 106 * Model.StairProgress, 3), Texture2D.whiteTexture);
             GUI.color = Color.white;
         }
         private void DrawFork()

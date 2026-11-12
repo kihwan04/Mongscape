@@ -37,6 +37,8 @@ namespace Muhanok.Bootstrap
         private InputRouter router;
         private HUDPresenter hud;
         private GameAudio audioPlayer;
+        private readonly StairCameraFx stairFx = new StairCameraFx();
+        public StairCameraFx StairFx => stairFx;
         private float caughtTime, runFade, runStartedAt = -10, caughtAt = -10;
         private ParticleSystem dust, hit;
         private bool previousStumble;
@@ -272,7 +274,7 @@ namespace Muhanok.Bootstrap
             RouteSurface.UsePlan(TutorialCourse.Plan(Session.Config));
             Session.Reset(); Session.Runner.SetStartZ(z); keyboard.Clear(); poseInput.Clear(); Pose.ResetCommands();
             Map.Reset(); Map.Tick(z); Map.AnimateGates(z);
-            guardDistance=15; previousStumble=false; Hero.Apply(Session.Runner); CameraRig.Takeover(Hero.Head);
+            stairFx.Reset(); guardDistance=15; previousStumble=false; Hero.Apply(Session.Runner); CameraRig.Takeover(Hero.Head);
         }
         // A member's profile remembers the finished tutorial; then back to the main menu.
         private void FinishTutorial()
@@ -439,7 +441,12 @@ namespace Muhanok.Bootstrap
             {
                 if(Session.Flow.State==GameFlowState.Caught&&Session.Reason!=CaptureReason.BrokenRail)CameraRig.FollowCapture(Hero.transform.position,Time.unscaledDeltaTime,Capture.ProneBlend);
                 else if(Session.Runner.Riding)CameraRig.FollowCart(Hero.Head,Time.deltaTime,-Session.Runner.CartLean*12);
-                else CameraRig.Follow(Hero.Head,Session.Runner.Crouching,Time.deltaTime,Session.Runner.Slowing?Mathf.Sin(Time.time*12)*2:0);
+                else
+                {
+                    stairFx.Tick(Time.deltaTime,StairCameraFx.OnStairChunk(Session.Runner),Session.Runner.KneeSteps);
+                    if(stairFx.Stepped&&audioPlayer!=null)audioPlayer.Footstep();
+                    CameraRig.Follow(Hero.Head,Session.Runner.Crouching,Time.deltaTime,Session.Runner.Slowing?Mathf.Sin(Time.time*12)*2:0,stairFx.Pitch,stairFx.Bob);
+                }
             }
         }
         private void StateChanged(GameFlowState state)

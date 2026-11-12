@@ -81,7 +81,7 @@ namespace Muhanok.Tests
             plan.UpdateChoice(TutorialCourse.ForkDecisionZ, -1); Assert.IsTrue(plan.ForkLocked(TutorialCourse.ForkDecisionZ));
             Assert.AreEqual(-1, plan.ChoiceAt(TutorialCourse.ForkLapStart + CartFork.ConnectorChunk));
             Assert.AreEqual(TutorialHazard.LaneBlock, TutorialCourse.HazardAt(TutorialCourse.LaneChunk));
-            Assert.AreEqual(TutorialHazard.StairRow, TutorialCourse.HazardAt(TutorialCourse.StairChunk)); Assert.AreEqual(7, plan.TypeAt(TutorialCourse.StairChunk));
+            Assert.AreEqual(TutorialHazard.StairChunk, TutorialCourse.HazardAt(TutorialCourse.StairChunk)); Assert.AreEqual(7, plan.TypeAt(TutorialCourse.StairChunk));
             Assert.AreEqual(TutorialHazard.None, TutorialCourse.HazardAt(0));
             Assert.AreEqual(TutorialHazard.RailGap, TutorialCourse.HazardAt(TutorialCourse.RailChunk)); Assert.AreEqual(1, plan.TypeAt(TutorialCourse.RailChunk), "The broken rail is on a cart chunk");
             Assert.AreEqual(1, TutorialCourse.Plan(new RunConfig { ExtendedRoutes = false }).TypeAt(TutorialCourse.RailChunk), "also on the authored lap");

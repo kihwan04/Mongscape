@@ -11,7 +11,7 @@ namespace Muhanok.Presentation
         private const int Rate = 44100;
         private RunSession session;
         private AudioSource music, siren, effects;
-        private AudioClip coin, jump, hit, item, shield, beep, go;
+        private AudioClip coin, jump, hit, item, shield, beep, go, step;
         private float musicVolume = .35f, effectsVolume = .7f;
         // Read on the audio thread.
         private volatile float tempo = 96f, energy = .3f, level;
@@ -32,6 +32,7 @@ namespace Muhanok.Presentation
             beep = Tone(.15f, f => 660, .4f);
             go = Tone(.35f, f => 990, .45f);
             hit = Noise(.4f);
+            step = Tone(.09f, f => 150 - f * 80, .6f);
         }
         private AudioSource Source(string id, bool loop)
         {
@@ -40,6 +41,8 @@ namespace Muhanok.Presentation
         }
         public void SetVolumes(float musicLevel, float effectsLevel) { musicVolume = Mathf.Clamp01(musicLevel); effectsVolume = Mathf.Clamp01(effectsLevel); }
         public void Countdown(bool final) { if (effects != null) effects.PlayOneShot(final ? go : beep, effectsVolume); }
+        // A short thump for a KneeStep on the stairs (the bootstrap calls it with the camera effect), at the effects volume.
+        public void Footstep() { if (effects != null && step != null) effects.PlayOneShot(step, effectsVolume * .8f); }
         public void Bonk(){if(effects!=null)effects.PlayOneShot(beep,effectsVolume*.65f);}
 
         private void Update()

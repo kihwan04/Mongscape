@@ -7,7 +7,7 @@ namespace Muhanok.Presentation
     // Picks the instruction for the nearest obstacle the runner must answer next.
     public static class ActionCuePresenter
     {
-        public static string Find(RunSession session, ChunkSpawner map)
+        public static string Find(RunSession session, ChunkSpawner map, PlayStyle style = PlayStyle.FullBody)
         {
             if (map == null || session.Paused) return null;
             float nearest = float.MaxValue; string cue = null;
@@ -27,6 +27,7 @@ namespace Muhanok.Presentation
                 }
                 else
                 {
+                    ConsiderStair(session, active.Chunk.Sequence, style, ref nearest, ref cue);
                     Consider(session, active.Chunk.Obstacles, ref nearest, ref cue);
                     Consider(session, active.Chunk.ExerciseObstacles, ref nearest, ref cue);
                     Consider(session, active.Chunk.DynamicObstacles, ref nearest, ref cue);
@@ -34,6 +35,17 @@ namespace Muhanok.Presentation
             }
             return cue;
         }
+        // A stair chunk ahead (or the runner still at its foot, before the first judged step) asks for alternating knees.
+        private static void ConsiderStair(RunSession session, int sequence, PlayStyle style, ref float nearest, ref string cue)
+        {
+            if (!RouteSurface.IsStair(RouteSurface.TypeAt(sequence))) return;
+            float start = sequence * RouteSurface.Length, z = session.Runner.Z;
+            if (z >= start + StairJudge.From + 1f) return;
+            float d = Mathf.Max(0f, start - z);
+            if (d > Mathf.Max(9f, session.TargetSpeed * 1.35f) || d >= nearest) return;
+            nearest = d; cue = StairCue(style);
+        }
+        public static string StairCue(PlayStyle style) => style == PlayStyle.Keyboard ? "W 연타!" : style == PlayStyle.UpperBody ? "팔 번갈아!" : "무릎 번갈아!";
         private static void Consider(RunSession session, System.Collections.Generic.IList<ObstacleController> hazards, ref float nearest, ref string cue)
         {
             if (hazards == null) return;
