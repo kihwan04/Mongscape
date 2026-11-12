@@ -11,6 +11,7 @@
 | 몸동작 모델 | `Unity/Assets/Game/Content/Pose/Resources/MuhanokPose/` | BlazePose 검출/full/lite 모델과 샘플링 셰이더 참조 |
 | 얼굴 모델 | `Services/Identity/models/` | YuNet/SFace manifest·라이선스, 다운로드 SHA-256 |
 | 얼굴 특징값 | 등록 동의 뒤 연결된 서버 DB에 저장. 얼굴 사진은 서버에 저장하지 않고 로그인 응답으로만 전달 | 개인 데이터이므로 Git/배포 ZIP에 넣지 않음 |
+| 계단 청크 (광산/동물원) | 자체 Blender 절차 생성 `MineStair`/`ZooStair` (24m, 높이 0→+3m 스무스스텝, 청크당 메시 1·재질 4·삼각형 약 7~8k). 생성 스크립트 [make_mine_stair.py](../References/Blender/scripts/make_mine_stair.py), [make_zoo_stair.py](../References/Blender/scripts/make_zoo_stair.py), 공용 `stair_common.py`, 검증 `check_stair_fbx.py`. 원본 `References/Blender/MineStair.blend`·`ZooStair.blend`, FBX `Unity/Assets/External/Staging/Blender/` (아직 씬 미적용, 시각 메시만 - 충돌 제외) | 진입 y=0/출구 y=+3 경계, `RouteSurface.LocalHeight` 곡선과 디딤면 일치, 3레인 6.6m 폭, 인접 청크 벽·천장 높이 |
 | 소리 | 실행 중 코드로 합성 | 실제 스피커와 프리셋별 동작 확인 |
 
 화면의 경찰은 자체 모델입니다. 과거 후보 상품의 취득 확인과 실제 파일 임포트를 혼동하지 않습니다. 새로운 구매나 다운로드를 수행한 목록이 아닙니다.
