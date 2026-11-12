@@ -365,14 +365,14 @@ namespace Muhanok.Tests
             var run = new RunSession(new RunConfig());
             run.Flow.Transition(GameFlowState.TitleIdle); run.Flow.Transition(GameFlowState.LoadingIntro); run.Flow.Transition(GameFlowState.Running);
             run.Items.Activate(ItemKind.Shield);
-            Assert.IsFalse(run.Slip(true)); Assert.AreEqual(1, run.ShieldSaves); Assert.IsFalse(run.Items.IsActive(ItemKind.Shield));
-            Assert.IsFalse(run.Runner.Slowing); Assert.AreEqual(0, run.BananaHits); Assert.AreEqual(0, run.Chase.Pressure);
+            Assert.IsFalse(run.Slip(SlipSource.Banana)); Assert.AreEqual(1, run.ShieldSaves); Assert.IsFalse(run.Items.IsActive(ItemKind.Shield));
+            Assert.IsFalse(run.Runner.Slowing); Assert.AreEqual(0, run.SlipStrikes); Assert.AreEqual(0, run.Chase.Pressure);
             // Without the shield the next two peels count, and the second starts the pursuit as before.
-            Assert.IsTrue(run.Slip(true)); Assert.IsTrue(run.Runner.Slowing); Assert.AreEqual(1, run.BananaHits);
-            Assert.IsTrue(run.Slip(true)); Assert.IsTrue(run.BananaPursuit);
+            Assert.IsTrue(run.Slip(SlipSource.Banana)); Assert.IsTrue(run.Runner.Slowing); Assert.AreEqual(1, run.SlipStrikes);
+            Assert.IsTrue(run.Slip(SlipSource.Banana)); Assert.IsTrue(run.SlipPursuit);
             run.Reset(); Assert.AreEqual(GameFlowState.Running, run.Flow.State);
             run.Items.Activate(ItemKind.Shield);
-            run.Slip(true); run.Slip(true); Assert.AreEqual(1, run.BananaHits); Assert.IsFalse(run.BananaPursuit, "The shielded first peel must not count towards the pursuit.");
+            run.Slip(SlipSource.Banana); run.Slip(SlipSource.Banana); Assert.AreEqual(1, run.SlipStrikes); Assert.IsFalse(run.SlipPursuit, "The shielded first peel must not count towards the pursuit.");
             run.Items.Activate(ItemKind.Shield);
             Assert.IsTrue(run.Fail(CaptureReason.BrokenRail)); Assert.AreEqual(GameFlowState.Caught, run.Flow.State); Assert.AreEqual(CaptureReason.BrokenRail, run.Reason);
             Assert.IsTrue(run.Items.IsActive(ItemKind.Shield), "A broken rail ignores the shield and leaves it unused.");

@@ -123,18 +123,50 @@ namespace Muhanok.Tests
         }
         [Test] public void SecondBananaStartsDelayedPursuitAndPauseAndRetryResetIt()
         {
-            var run=Running();Assert.IsTrue(run.Slip(true));run.Tick(3);
-            Assert.AreEqual(1,run.BananaHits);Assert.IsFalse(run.Runner.Slowing);Assert.Greater(run.Chase.Pressure,.4f);
-            run.Runner.SetStartZ(80);Assert.IsTrue(run.Slip(true));run.Tick(.6f);
-            Assert.AreEqual(GameFlowState.Running,run.Flow.State);Assert.IsTrue(run.BananaPursuit);Assert.IsTrue(run.Runner.Slowing);
+            var run=Running();Assert.IsTrue(run.Slip(SlipSource.Banana));run.Tick(3);
+            Assert.AreEqual(1,run.SlipStrikes);Assert.IsFalse(run.Runner.Slowing);Assert.Greater(run.Chase.Pressure,.4f);
+            run.Runner.SetStartZ(80);Assert.IsTrue(run.Slip(SlipSource.Banana));run.Tick(.6f);
+            Assert.AreEqual(GameFlowState.Running,run.Flow.State);Assert.IsTrue(run.SlipPursuit);Assert.IsTrue(run.Runner.Slowing);
             run.Paused=true;run.Tick(10);Assert.AreEqual(GameFlowState.Running,run.Flow.State);
-            run.Paused=false;run.Tick(.61f);Assert.AreEqual(GameFlowState.Caught,run.Flow.State);Assert.AreEqual(CaptureReason.BananaPursuit,run.Reason);
-            run.Reset();Assert.AreEqual(0,run.BananaHits);Assert.IsFalse(run.BananaPursuit);Assert.AreEqual(0,run.Chase.Pressure);
+            run.Paused=false;run.Tick(.61f);Assert.AreEqual(GameFlowState.Caught,run.Flow.State);Assert.AreEqual(CaptureReason.SlipPursuit,run.Reason);
+            run.Reset();Assert.AreEqual(0,run.SlipStrikes);Assert.IsFalse(run.SlipPursuit);Assert.AreEqual(0,run.Chase.Pressure);
+        }
+        [Test] public void SingleStrikeClearsAfterEightSecondsAndRemovesItsPressure()
+        {
+            var run=Running();Assert.IsTrue(run.Slip(SlipSource.Banana));
+            Assert.AreEqual(.45f,run.Chase.Pressure,.001f);Assert.AreEqual(run.Config.StrikeClearSeconds,run.StrikeClearRemaining,.01f);
+            run.Tick(7.5f);Assert.AreEqual(1,run.SlipStrikes);Assert.AreEqual(.45f,run.Chase.Pressure,.001f);Assert.AreEqual(.5f,run.StrikeClearRemaining,.05f);
+            run.Tick(.6f);Assert.AreEqual(0,run.SlipStrikes);Assert.AreEqual(0,run.Chase.Pressure,.001f);Assert.AreEqual(0,run.StrikeClearRemaining);
+        }
+        [Test] public void SecondStrikeWithinTheWindowStartsPursuitAndCatches()
+        {
+            var run=Running();run.Slip(SlipSource.Banana);run.Tick(7);run.Runner.SetStartZ(80);
+            run.Slip(SlipSource.Banana);Assert.IsTrue(run.SlipPursuit);run.Tick(2);
+            Assert.AreEqual(GameFlowState.Caught,run.Flow.State);Assert.AreEqual(CaptureReason.SlipPursuit,run.Reason);
+        }
+        [Test] public void StrikeAfterClearingCountsAsAFirstStrikeAgain()
+        {
+            var run=Running();run.Slip(SlipSource.Banana);run.Tick(8.5f);Assert.AreEqual(0,run.SlipStrikes);
+            run.Tick(3);run.Runner.SetStartZ(80);run.Slip(SlipSource.Banana);
+            Assert.AreEqual(1,run.SlipStrikes);Assert.IsFalse(run.SlipPursuit);Assert.AreEqual(GameFlowState.Running,run.Flow.State);
+            run.Tick(.1f);Assert.AreEqual(GameFlowState.Running,run.Flow.State);
+        }
+        [Test] public void KneeMissCountsLikeABananaAndFloorSlipsDoNot()
+        {
+            var run=Running();run.Slip(SlipSource.Floor);Assert.AreEqual(0,run.SlipStrikes);
+            Assert.IsTrue(run.Slip(SlipSource.KneeMiss));Assert.AreEqual(1,run.SlipStrikes);Assert.AreEqual(.45f,run.Chase.Pressure,.001f);
+            run.Slip(SlipSource.Banana);Assert.AreEqual(2,run.SlipStrikes);Assert.IsTrue(run.SlipPursuit);
+            run.Reset();run.Slip(SlipSource.Banana);run.Slip(SlipSource.KneeMiss);Assert.IsTrue(run.SlipPursuit);
+        }
+        [Test] public void ShieldAbsorbsAKneeMissWithoutAStrike()
+        {
+            var run=Running();run.Items.Activate(ItemKind.Shield);
+            Assert.IsFalse(run.Slip(SlipSource.KneeMiss));Assert.AreEqual(0,run.SlipStrikes);Assert.AreEqual(1,run.ShieldSaves);
         }
         [Test] public void RepeatedPuddlesDoNotCountAsBananas()
         {
             var run=Running();for(int i=0;i<3;i++){run.Slip();run.Tick(.1f);}
-            Assert.AreEqual(0,run.BananaHits);Assert.IsFalse(run.BananaPursuit);Assert.AreEqual(GameFlowState.Running,run.Flow.State);
+            Assert.AreEqual(0,run.SlipStrikes);Assert.IsFalse(run.SlipPursuit);Assert.AreEqual(GameFlowState.Running,run.Flow.State);
         }
         [Test] public void CartLeanSwitchesAcrossCenterWithoutLeavingSingleTrack()
         {

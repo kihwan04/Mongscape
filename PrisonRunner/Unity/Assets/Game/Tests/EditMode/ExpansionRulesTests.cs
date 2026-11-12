@@ -15,7 +15,7 @@ namespace Muhanok.Tests
             Assert.AreEqual(CartFork.Offset(132,branch),plan.SelectedForkOffset(132));
             Assert.AreEqual(branch*CartFork.Spacing,plan.SelectedForkOffset(192));
             Assert.AreEqual(branch*CartFork.Spacing,plan.SelectedForkOffset(216));
-            Assert.AreEqual(branch*CartFork.Spacing,plan.SelectedForkOffset(1152));
+            Assert.AreEqual(branch*CartFork.Spacing,plan.SelectedForkOffset(RoutePlan.ExtendedLapChunks*RouteSurface.Length));
             try
             {
                 RouteSurface.UsePlan(plan);
@@ -37,18 +37,45 @@ namespace Muhanok.Tests
             p.UpdateChoice(CartFork.Decision-.01f,lane); Assert.IsFalse(p.ForkLocked(CartFork.Decision-.01f));
             p.UpdateChoice(CartFork.Decision,lane); Assert.IsTrue(p.ForkLocked(CartFork.Decision));
             Assert.AreEqual(lane,p.ChoiceAt(6));
-            int count=0;for(int i=CartFork.DestinationChunk;i<48;i++)if(p.TypeAt(i)==4||p.TypeAt(i)==5)count++;
+            int count=0;for(int i=CartFork.DestinationChunk;i<RoutePlan.ExtendedLapChunks;i++)if(p.TypeAt(i)==4||p.TypeAt(i)==5)count++;
             int destination=p.DestinationAt(6);
-            Assert.AreEqual(destination==0?24:0,count);
+            Assert.AreEqual(destination==0?14:0,count);
             Assert.AreEqual(destination<0?12:destination>0?0:7,p.TypeAt(CartFork.DestinationChunk),"The three destinations must enter three actual biomes");
-            for(int i=0;i<95;i++)Assert.AreEqual(RouteSurface.EntryHeight(p.TypeAt(i))+RouteSurface.Rise(p.TypeAt(i)),RouteSurface.EntryHeight(p.TypeAt(i+1)),.001f);
-            Assert.AreEqual(0,p.CycleAt(47)); Assert.AreEqual(1,p.CycleAt(48));
+            for(int i=0;i<2*RoutePlan.ExtendedLapChunks-1;i++)Assert.AreEqual(RouteSurface.EntryHeight(p.TypeAt(i))+RouteSurface.Rise(p.TypeAt(i)),RouteSurface.EntryHeight(p.TypeAt(i+1)),.001f);
+            Assert.AreEqual(0,p.CycleAt(RoutePlan.ExtendedLapChunks-1)); Assert.AreEqual(1,p.CycleAt(RoutePlan.ExtendedLapChunks));
             p.UpdateChoice(150,-lane);Assert.AreEqual(lane,p.ChoiceAt(8),"Commitment must be stable");
+        }
+        [Test] public void EveryExtendedBranchLapIsThirtyTwoChunksWithTheFixedPrisonLayout()
+        {
+            Assert.AreEqual(32,RoutePlan.ExtendedLapChunks);
+            for(int lane=-1;lane<=1;lane++)
+            {
+                var p=new RoutePlan(new RunConfig(),3);p.UpdateChoice(CartFork.Decision,lane);
+                int destination=p.DestinationAt(6);
+                Assert.AreEqual(0,p.CycleAt(31));Assert.AreEqual(1,p.CycleAt(32));
+                if(destination==0)
+                {
+                    var expected=new System.Collections.Generic.List<int>{0,1,2,1,2,1,3,7};
+                    for(int i=0;i<14;i++)expected.Add(4+i%2);
+                    expected.Add(6);expected.Add(11);for(int i=0;i<7;i++)expected.Add(12);expected.Add(3);
+                    Assert.AreEqual(32,expected.Count);
+                    for(int i=0;i<32;i++)Assert.AreEqual(expected[i],p.TypeAt(i),"prison chunk "+i);
+                }
+                else
+                {
+                    Assert.AreEqual(destination<0?3:0,p.TypeAt(31));
+                    for(int i=CartFork.DestinationChunk;i<31;i++)Assert.AreEqual(destination<0?12:0,p.TypeAt(i));
+                }
+            }
+        }
+        [Test] public void ForkChunksStayInsideTheShortenedLap()
+        {
+            Assert.AreEqual(4,CartFork.FirstChunk);Assert.AreEqual(5,CartFork.LastChunk);Assert.AreEqual(6,CartFork.ConnectorChunk);Assert.AreEqual(7,CartFork.DestinationChunk);
         }
         [Test] public void SecondLapCanChooseIndependently()
         {
-            var p=new RoutePlan(new RunConfig(),1);p.UpdateChoice(144,-1);p.UpdateChoice(1152+144,1);
-            Assert.AreEqual(-1,p.ChoiceAt(10));Assert.AreEqual(1,p.ChoiceAt(58));
+            var p=new RoutePlan(new RunConfig(),1);p.UpdateChoice(144,-1);p.UpdateChoice(RoutePlan.ExtendedLapChunks*RouteSurface.Length+144,1);
+            Assert.AreEqual(-1,p.ChoiceAt(10));Assert.AreEqual(1,p.ChoiceAt(RoutePlan.ExtendedLapChunks+10));
         }
         [TestCase(-1)] [TestCase(0)] [TestCase(1)]
         public void ChosenRailRejectsEverySideCommandAndDisembarksWithoutLateralJump(int branch)
