@@ -1,4 +1,4 @@
-"""Zoo stair chunk (route chunk, entry z=0 floor y=0, exit z=24 floor y=+3).
+"""Zoo stair chunk (route chunk, entry z=0 floor y=0, exit z=24 floor y=+4.5).
 
 Run: blender --background --factory-startup --python make_zoo_stair.py [-- <preview_dir>]
 Deterministic (fixed seed). Outputs ZooStair.blend, ZooStair.fbx and an optional preview PNG.
@@ -99,6 +99,8 @@ for s in (-1, 1):
 
 obj = b.build_object("ZooStair", clamp=(OUT, 0.0, 24.0))
 sc.stats(obj)
+_ri = [H(i * DEPTH + DEPTH / 2 + DEPTH) - H(i * DEPTH + DEPTH / 2) for i in range(STEPS - 1)]
+print("  riser min %.3f max %.3f m (rise %.1f m)" % (min(_ri), max(_ri), sc.RISE))
 print("  steps=%d depth=%.2f m, max tread-to-curve error %.3f m" % (
     STEPS, DEPTH, max(abs(H(i * DEPTH + DEPTH / 2) - H(i * DEPTH)) for i in range(STEPS))))
 

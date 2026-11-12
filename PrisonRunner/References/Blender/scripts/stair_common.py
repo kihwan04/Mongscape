@@ -9,11 +9,11 @@ import bpy, bmesh
 from mathutils import Vector
 
 LENGTH = 24.0
-RISE = 3.0
+RISE = 4.5
 
 
 def height(z):
-    """Game route height curve (RouteSurface.LocalHeight, type 7): smoothstep 0..3 over 24 m."""
+    """Game route height curve (RouteSurface.LocalHeight, type 7): smoothstep 0..RISE over 24 m."""
     t = max(0.0, min(1.0, z / LENGTH))
     return RISE * t * t * (3 - 2 * t)
 
