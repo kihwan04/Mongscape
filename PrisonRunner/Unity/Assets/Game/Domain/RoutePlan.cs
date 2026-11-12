@@ -11,6 +11,8 @@ namespace Muhanok.Domain
         public static readonly int[] AuthoredLap = { 0, 1, 2, 3, 7, 4, 5, 6, 11, 12 };
         private readonly List<int> types = new List<int>(64);
         private readonly List<int> cycles = new List<int>(64);
+        // bases[i] = summed rise of chunks 0..i-1 (entry height of chunk i); always one longer than types.
+        private readonly List<float> bases = new List<float>(65) { 0f };
         private readonly Random random;
         private readonly RunConfig config;
         private readonly bool interval;
@@ -90,6 +92,7 @@ namespace Muhanok.Domain
             // No destination is exposed before commitment; all three directions are shuffled each lap.
             int[] lap = ExtendedLap(destinations[c][lane + 1]);
             for (int i = CartFork.ConnectorChunk; i < lap.Length; i++) types[start + i] = lap[i];
+            RebuildBases(start + CartFork.ConnectorChunk);
         }
         public int DestinationAt(int sequence)
         {
@@ -126,6 +129,12 @@ namespace Muhanok.Domain
         // Tutorial: a fixed warm-up lap without a fork, followed by the ordinary laps.
         public static RoutePlan Tutorial(RunConfig tuning, int seed, int[] warmup) => new RoutePlan(tuning, seed, warmup ?? AuthoredLap);
         public static RoutePlan Authored() => new RoutePlan(null, 0);
+        public float BaseHeight(int sequence) { Ensure(sequence); return bases[Math.Max(0, sequence)]; }
+        private void RebuildBases(int from)
+        {
+            if (bases.Count > from + 1) bases.RemoveRange(from + 1, bases.Count - from - 1);
+            for (int i = from; i < types.Count; i++) bases.Add(bases[i] + RouteSurface.Rise(types[i]));
+        }
         public int TypeAt(int sequence) { Ensure(sequence); return types[Math.Max(0, sequence)]; }
         public int CycleAt(int sequence) { Ensure(sequence); return cycles[Math.Max(0, sequence)]; }
         private void Ensure(int sequence) { while (Math.Max(0, sequence) >= types.Count) AppendLap(); }
@@ -135,6 +144,7 @@ namespace Muhanok.Domain
             for (int i = 2; i > 0; i--) { int j = random.Next(i + 1); int swap = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = swap; }
             destinations.Add(shuffled);
             starts.Add(types.Count); foreach (int type in lap) { types.Add(type); cycles.Add(cycle); } cycle++;
+            RebuildBases(bases.Count - 1);
         }
         private void AppendLap()
         {

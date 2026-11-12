@@ -62,7 +62,7 @@ namespace Muhanok.Editor
                     {
                         int type=RouteSurface.TypeAt(sequence+n);
                         var chunk=UnityEngine.Object.Instantiate(game.ChunkPrefabs[type],review.transform);
-                        chunk.transform.localPosition=new Vector3(0,RouteSurface.EntryHeight(index)+(n==1?RouteSurface.Rise(index):0),24*n); chunk.Prepare(index+1+n,new HazardOdds(.85f,.72f,.85f,.82f),new System.Random(723));
+                        chunk.transform.localPosition=new Vector3(0,RouteSurface.BaseHeight(sequence+n)-RouteSurface.BaseHeight(sequence),24*n); chunk.Prepare(index+1+n,new HazardOdds(.85f,.72f,.85f,.82f),new System.Random(723));
                     }
                     bool outdoor=index>=11,mine=index<4;
                     RenderSettings.fogColor=WorldAtmosphere.Fog(index);
@@ -72,7 +72,7 @@ namespace Muhanok.Editor
                     var fill=GameObject.Find("Soft Fill").GetComponent<Light>(); fill.intensity=outdoor?.45f:.9f; fill.color=outdoor?new Color(.42f,.57f,1):new Color(.92f,.88f,.80f); fill.shadows=outdoor?LightShadows.Soft:LightShadows.None;
                 }
                 float z=boundary?20:2.5f;
-                var position=new Vector3(RouteSurface.LocalX(index,z),RouteSurface.EntryHeight(index)+RouteSurface.LocalHeight(index,z)+1.65f,z);
+                var position=new Vector3(RouteSurface.LocalX(index,z),RouteSurface.LocalHeight(index,z)+1.65f,z);
                 var tangent=new Vector3(RouteSurface.LocalX(index,z+.25f)-RouteSurface.LocalX(index,z),RouteSurface.LocalHeight(index,z+.25f)-RouteSurface.LocalHeight(index,z),.25f);
                 game.OutputCamera.transform.SetPositionAndRotation(position,Quaternion.LookRotation(tangent));
                 var atmosphere=game.OutputCamera.GetComponent<WorldAtmosphere>(); if(atmosphere.Moon!=null) atmosphere.Moon.gameObject.SetActive(index>=11);

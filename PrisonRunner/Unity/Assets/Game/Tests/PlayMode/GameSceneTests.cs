@@ -81,7 +81,7 @@ namespace Muhanok.Tests
                 {
                     var chunk = active[i].Chunk; Assert.AreEqual(24, chunk.Exit.position.z - chunk.Entry.position.z, .001f);
                     if (i > 0) Assert.Less(Vector3.Distance(active[i - 1].Chunk.Exit.position,chunk.Entry.position),.001f);
-                    Assert.AreEqual(RouteSurface.EntryHeight(active[i].Type),chunk.Entry.position.y,.001f);
+                    Assert.AreEqual(RouteSurface.BaseHeight(chunk.Sequence),chunk.Entry.position.y,.001f);
                     for (int row = 0; row < 2; row++)
                     {
                         int count = 0; for (int lane = 0; lane < 3; lane++) if (chunk.Obstacles[row * 3 + lane].gameObject.activeSelf) count++;

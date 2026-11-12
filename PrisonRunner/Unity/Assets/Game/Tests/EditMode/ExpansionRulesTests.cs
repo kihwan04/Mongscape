@@ -41,7 +41,7 @@ namespace Muhanok.Tests
             int destination=p.DestinationAt(6);
             Assert.AreEqual(destination==0?14:0,count);
             Assert.AreEqual(destination<0?12:destination>0?0:7,p.TypeAt(CartFork.DestinationChunk),"The three destinations must enter three actual biomes");
-            for(int i=0;i<2*RoutePlan.ExtendedLapChunks-1;i++)Assert.AreEqual(RouteSurface.EntryHeight(p.TypeAt(i))+RouteSurface.Rise(p.TypeAt(i)),RouteSurface.EntryHeight(p.TypeAt(i+1)),.001f);
+            for(int i=0;i<2*RoutePlan.ExtendedLapChunks-1;i++)Assert.AreEqual(p.BaseHeight(i)+RouteSurface.Rise(p.TypeAt(i)),p.BaseHeight(i+1),.001f);
             Assert.AreEqual(0,p.CycleAt(RoutePlan.ExtendedLapChunks-1)); Assert.AreEqual(1,p.CycleAt(RoutePlan.ExtendedLapChunks));
             p.UpdateChoice(150,-lane);Assert.AreEqual(lane,p.ChoiceAt(8),"Commitment must be stable");
         }

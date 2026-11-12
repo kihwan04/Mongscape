@@ -33,13 +33,23 @@ namespace Muhanok.Domain
             while(end-sequence<64&&CartType(TypeAt(end+1))==cart)end++;
             return Math.Max(0,(end+1)*Length-z);
         }
-        public static float EntryHeight(int type)=>type>=4&&type<=6||type>=8&&type<=11?3f:0f;
+        // Rise of one stair chunk (prison 7, mine 13, zoo 14). Chunk heights accumulate and never return to zero.
+        public const float StairRise=4.5f;
+        public static float BaseHeight(int sequence)
+        {
+            sequence=Math.Max(0,sequence);
+            if(plan!=null)return plan.BaseHeight(sequence);
+            float lap=0; foreach(int t in route)lap+=Rise(t);
+            int full=sequence/route.Length; float height=lap*full;
+            for(int i=0;i<sequence%route.Length;i++)height+=Rise(route[i]);
+            return height;
+        }
         public static string AreaAt(float distance)
         {
             int type=TypeAt((int)Math.Floor(Math.Max(0,distance)/Length));
             return type==1||type==2?"광산 수레":type<4?"광산":type==7?"계단":type>=11?"사육장":"감옥 복도";
         }
-        public static float Rise(int type)=>type==7?3f:type==11?-3f:0f;
+        public static float Rise(int type)=>type==7||type==13||type==14?StairRise:type==11?-3f:0f;
         public static float LocalHeight(int type,float z)
         {
             float t=Math.Max(0,Math.Min(1,z/Length));
@@ -55,7 +65,7 @@ namespace Muhanok.Domain
         {
             int sequence=Math.Max(0,(int)Math.Floor(distance/Length)); int type=TypeAt(sequence);
             float z=distance-sequence*Length;
-            x=(plan!=null&&plan.IsForkTrackChunk(sequence)?0:LocalX(type,z))+(plan!=null?plan.SelectedForkOffset(distance):0); y=EntryHeight(type)+LocalHeight(type,z);
+            x=(plan!=null&&plan.IsForkTrackChunk(sequence)?0:LocalX(type,z))+(plan!=null?plan.SelectedForkOffset(distance):0); y=BaseHeight(sequence)+LocalHeight(type,z);
         }
     }
 }

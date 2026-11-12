@@ -360,7 +360,7 @@ namespace Muhanok.Tests
             for (int i = 0; i < 80; i++)
             {
                 int a = plan.TypeAt(i), b = plan.TypeAt(i + 1);
-                Assert.AreEqual(RouteSurface.EntryHeight(a) + RouteSurface.Rise(a), RouteSurface.EntryHeight(b), .001f, "Height break between " + a + " and " + b);
+                Assert.AreEqual(plan.BaseHeight(i) + RouteSurface.Rise(a), plan.BaseHeight(i + 1), .001f, "Height break between " + a + " and " + b);
                 int same = 0; for (int j = i; j < i + 6; j++) if (plan.TypeAt(j) == a) same++;
                 Assert.LessOrEqual(same, 3, "More copies of type " + a + " than the chunk pool keeps warm");
             }

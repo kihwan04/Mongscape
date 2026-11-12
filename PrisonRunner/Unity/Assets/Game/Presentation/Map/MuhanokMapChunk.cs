@@ -32,7 +32,7 @@ namespace Muhanok.Presentation.Map
             }
             Entry.localPosition = entry; Exit.localPosition = exit;
             RouteSurface.Sample(sequence * Length, out float x, out _);
-            transform.position += new Vector3(x, RouteSurface.EntryHeight(RouteType), sequence * Length) - Entry.position;
+            transform.position += new Vector3(x, RouteSurface.BaseHeight(sequence), sequence * Length) - Entry.position;
         }
         public void UpdateCartRoute()
         {
