@@ -213,7 +213,7 @@ namespace Muhanok.Tests
                     {
                         blocks++;Assert.AreEqual(ObstacleKind.Barrier,block.Hazard.Kind);Assert.GreaterOrEqual(block.Hazard.CollisionHalfWidth,1.1f);
                         RouteSurface.Sample(block.transform.position.z,out float x,out _);mask|=1<<(Mathf.RoundToInt((block.transform.position.x-x)/2.2f)+1);
-                        Assert.IsFalse(SafePatternValidator.Avoided(block.Hazard.Kind,2,true,true));
+                        Assert.IsFalse(SafePatternValidator.Avoided(block.Hazard.Kind,2,true));
                     }
                     foreach(var item in chunk.DynamicFloorItems)
                     {
@@ -276,7 +276,7 @@ namespace Muhanok.Tests
             Assert.IsFalse(game.PursuitCue.Visible);Assert.AreEqual(1,game.Capture.ProneBlend,.001f);
             var head=game.Hero.RigAnimator.GetBoneTransform(HumanBodyBones.Head);var badge=game.Hero.transform.Find("PlayerFaceBadge");
             Assert.IsTrue(badge.GetComponent<Renderer>().enabled);Assert.Less(Vector3.Distance(head.position,badge.position),.8f);
-            Assert.Less(head.position.y,1.5f,"Head must lower with the prone body");
+            Assert.Less(head.position.y-game.Hero.transform.position.y,1.5f,"Head must lower with the prone body");
             game.Capture.Tick(5);game.Session.Flow.Transition(GameFlowState.Result);game.Retry();yield return null;
             Assert.IsTrue(game.Hero.RigAnimator.enabled);Assert.Greater(Vector3.Dot(game.Hero.Visual.up,Vector3.up),.99f);Assert.IsFalse(game.PursuitCue.Visible);
         }

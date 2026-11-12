@@ -102,6 +102,7 @@ namespace Muhanok.Presentation.Map
                 list.Add(RouteEnvelopeView.Attach(chunk));
             }
             if(sequence==0)return;
+            if(chunk.Layout.Stair)return;
             if (cart)
             {
                 if (RouteSurface.ActivePlan != null && RouteSurface.ActivePlan.IsForkTrackChunk(sequence))
@@ -175,7 +176,7 @@ namespace Muhanok.Presentation.Map
         public ObstacleController PlaceLaneBlock(MuhanokMapChunk chunk, int lane, float z)
         {
             if (!placed.TryGetValue(chunk, out var list)) return null;
-            int theme = chunk.RouteType == 12 ? 2 : chunk.RouteType <= 3 ? 0 : 1;
+            int theme = chunk.RouteType == 12 ? 2 : RouteSurface.IsMine(chunk.RouteType) ? 0 : 1;
             var block = blockers[theme].Count > 0 ? blockers[theme].Pop() : BuildBlock(theme);
             block.transform.position = LanePoint(lane, z, 0); block.transform.SetParent(chunk.transform, true);
             block.Hazard.ResetPass(); block.gameObject.SetActive(true);

@@ -13,8 +13,9 @@ namespace Muhanok.Tests
         private static readonly ObstacleKind[][] lanes =
         {
             new[] { C, P, B, P, P, P }, new[] { P, B, K, L, C, P }, new[] { B, K, L, C, P, B }, new[] { C, C, C, P, P, P },
-            new[] { B, B, B, B, B, B }, new[] { B, B, B, B, B, B }, new[] { B, B, B, P, P, P }, new[] { ObstacleKind.Stair, ObstacleKind.Stair, ObstacleKind.Stair, P, P, P },
-            new[] { K, L, C, P, B, K }, new[] { L, C, P, B, K, L }, new[] { C, P, B, K, L, C }, new[] { C, C, C, B, B, B }, new[] { C, C, C, B, B, B }
+            new[] { B, B, B, B, B, B }, new[] { B, B, B, B, B, B }, new[] { B, B, B, P, P, P }, new[] { B, B, B, B, B, B },
+            new[] { K, L, C, P, B, K }, new[] { L, C, P, B, K, L }, new[] { C, P, B, K, L, C }, new[] { C, C, C, B, B, B }, new[] { C, C, C, B, B, B },
+            new[] { B, B, B, B, B, B }, new[] { B, B, B, B, B, B }
         };
         private static List<ObstacleSlot> Slots(int type)
         {
@@ -22,10 +23,11 @@ namespace Muhanok.Tests
             if (type == 1 || type == 2) { for (int i = 0; i < 6; i++) slots.Add(new ObstacleSlot(lanes[type][i], i % 3 - 1, 7 + i / 3 * 12, false)); return slots; }
             for (int i = 0; i < 6; i++)
             {
-                float z = type >= 4 && type <= 6 && i < 3 ? 23 : type == 7 && i < 3 ? 12 : 7 + i / 3 * 12;
-                slots.Add(new ObstacleSlot(lanes[type][i], i % 3 - 1, z, false, type == 7));
+                float z = type >= 4 && type <= 6 && i < 3 ? 23 : 7 + i / 3 * 12;
+                slots.Add(new ObstacleSlot(lanes[type][i], i % 3 - 1, z, false));
             }
-            for (int i = 0; i < (type == 7 ? 3 : 6); i++) slots.Add(new ObstacleSlot(i < 3 ? C : P, i % 3 - 1, type == 7 ? 3 : i < 3 ? 7 : 19, true));
+            // Stair chunks (7, 13, 14) have no exercise rows.
+            for (int i = 0; i < (RouteSurface.IsStair(type) ? 0 : 6); i++) slots.Add(new ObstacleSlot(i < 3 ? C : P, i % 3 - 1, i < 3 ? 7 : 19, true));
             return slots;
         }
         private static List<LanePlacement> Floor(int type) =>
@@ -59,7 +61,7 @@ namespace Muhanok.Tests
             for (int seed = 0; seed < 100; seed++)
             {
                 var run = new StringBuilder();
-                for (int sequence = 0; sequence < 13; sequence++)
+                for (int sequence = 0; sequence < 15; sequence++)
                 {
                     string first = Signature(Plan(seed, sequence, sequence)), again = Signature(Plan(seed, sequence, sequence));
                     Assert.AreEqual(first, again, "Seed " + seed + " type " + sequence);
@@ -98,13 +100,13 @@ namespace Muhanok.Tests
         [Test] public void EverySeedAndChunkTypeKeepsTheSafetyRules()
         {
             for (int seed = 0; seed < 500; seed++)
-                for (int type = 0; type < 13; type++)
+                for (int type = 0; type < 15; type++)
                     foreach (bool extended in new[] { false, true })
                         foreach (float chance in new[] { .25f, 1f })
                         {
                             var layout = Plan(seed * 13 + type, type, 1 + seed % 40, extended, false, chance);
                             Assert.IsNull(layout.Violation(), "Seed " + seed + " type " + type + " extended " + extended);
-                            if (ObstacleLayout.IsCart(type) || layout.Blocked || layout.Animal) continue;
+                            if (ObstacleLayout.IsCart(type) || layout.Blocked || layout.Animal || layout.Stair) continue;
                             bool row = false; var slots = Slots(type);
                             for (int i = 0; i < slots.Count; i++) row |= layout.Slots[i] && slots[i].FullRow;
                             Assert.IsTrue(row, "Every walking chunk keeps at least one action row: type " + type);
@@ -132,7 +134,7 @@ namespace Muhanok.Tests
         [Test] public void StartOddsKeepTheSafetyRules()
         {
             for (int seed = 0; seed < 500; seed++)
-                for (int type = 0; type < 13; type++)
+                for (int type = 0; type < 15; type++)
                     foreach (bool extended in new[] { false, true })
                         Assert.IsNull(Plan(seed * 13 + type, type, 1 + seed % 40, extended, false, StartOdds).Violation(), "Seed " + seed + " type " + type + " extended " + extended);
         }

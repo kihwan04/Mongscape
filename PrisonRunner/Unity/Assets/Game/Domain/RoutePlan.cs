@@ -15,6 +15,7 @@ namespace Muhanok.Domain
         private readonly List<float> bases = new List<float>(65) { 0f };
         private readonly Random random;
         private readonly RunConfig config;
+        private readonly int seed;
         private readonly bool interval;
         private int cycle;
         // Leading laps without a cart fork (the tutorial's warm-up lap).
@@ -91,6 +92,7 @@ namespace Muhanok.Domain
             lane = Math.Max(-1, Math.Min(1, lane)); choices[c] = lane;
             // No destination is exposed before commitment; all three directions are shuffled each lap.
             int[] lap = ExtendedLap(destinations[c][lane + 1]);
+            PlaceStairs(c, start, lap);
             for (int i = CartFork.ConnectorChunk; i < lap.Length; i++) types[start + i] = lap[i];
             RebuildBases(start + CartFork.ConnectorChunk);
         }
@@ -116,13 +118,43 @@ namespace Muhanok.Domain
             lap.Add(3); // Covered outdoor-to-mine return, rather than an abrupt biome cut at the next lap.
             return lap.ToArray();
         }
+        // Stair chunks per lap follow the difficulty curve: 1, then 2, then 3. The prison entrance stair counts as one.
+        public const int MinStairSpacing = 6;
+        public static int StairsPerLap(float progress) => progress < 1f / 3f ? 1 : progress < 2f / 3f ? 2 : 3;
+        private static bool Transition(int type) => type == 3 || type == 6 || type == 7 || type == 11;
+        // Turns some walking chunks of the chosen branch into the biome's stair (mine 0 -> 13, zoo 12 -> 14). Corridor chunks stay corridors.
+        // Seeded from (seed, lap), so the same seed and choices always give the same layout; chunks before the destination entrance,
+        // the lap's return chunk and neighbours of transition chunks are never used.
+        private void PlaceStairs(int lapIndex, int lapStart, int[] lap)
+        {
+            if (config == null) return;
+            float progress = new DifficultyDirector().Progress(lapStart * RouteSurface.Length, config);
+            int want = StairsPerLap(progress);
+            var stairs = new List<int>();
+            for (int i = 0; i < lap.Length; i++) if (RouteSurface.IsStair(lap[i])) stairs.Add(i);
+            var rng = new Random(unchecked(seed * 486187739 + lapIndex * 1013904223 + 12345));
+            var candidates = new List<int>();
+            for (int i = CartFork.DestinationChunk + 1; i < lap.Length - 1; i++)
+                if ((lap[i] == 0 || lap[i] == 12) && !Transition(lap[i - 1]) && !Transition(lap[i + 1])) candidates.Add(i);
+            for (int i = candidates.Count - 1; i > 0; i--) { int j = rng.Next(i + 1); int swap = candidates[i]; candidates[i] = candidates[j]; candidates[j] = swap; }
+            foreach (int i in candidates)
+            {
+                if (stairs.Count >= want) break;
+                bool apart = true;
+                foreach (int other in stairs) apart &= Math.Abs(other - i) >= MinStairSpacing;
+                if (!apart) continue;
+                lap[i] = lap[i] == 0 ? RouteSurface.MineStair : RouteSurface.ZooStair; stairs.Add(i);
+            }
+        }
         public RoutePlan(RunConfig tuning, int seed)
         {
+            this.seed = seed;
             config = tuning; interval = tuning != null && tuning.IntervalMode; random = new Random(seed);
             Append(Extended ? ExtendedLap(0) : AuthoredLap);
         }
         private RoutePlan(RunConfig tuning, int seed, int[] warmup)
         {
+            this.seed = seed;
             config = tuning; interval = tuning != null && tuning.IntervalMode; random = new Random(seed); plainLaps = 1;
             Append(warmup);
         }

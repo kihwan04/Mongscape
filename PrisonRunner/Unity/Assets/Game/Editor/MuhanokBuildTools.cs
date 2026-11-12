@@ -62,7 +62,7 @@ namespace Muhanok.Editor
             foreach (var root in scene.GetRootGameObjects()) foreach (var transform in root.GetComponentsInChildren<Transform>(true))
                 foreach (var component in transform.GetComponents<Component>()) if (component == null) throw new Exception("Missing scene script: " + transform.name);
             var game = UnityEngine.Object.FindFirstObjectByType<GameBootstrap>();
-            if (game == null || game.Settings == null || game.IntroTimeline == null || game.ChunkPrefabs.Length != 13)
+            if (game == null || game.Settings == null || game.IntroTimeline == null || game.ChunkPrefabs.Length != MuhanokContentBuilder.ChunkIds.Length)
                 throw new Exception("GameScene content reference missing");
             foreach (var chunk in game.ChunkPrefabs)
                 if (chunk == null || chunk.Entry == null || chunk.Exit == null || chunk.Obstacles.Length != 6) throw new Exception("Chunk contract incomplete");

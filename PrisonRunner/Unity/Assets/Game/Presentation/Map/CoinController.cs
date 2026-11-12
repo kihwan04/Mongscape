@@ -10,6 +10,8 @@ namespace Muhanok.Presentation.Map
         private bool collected, pulled, hasHome;
         private Vector3 home;
         public bool Pulled => pulled;
+        // Stair coins sit at knee height and only count while the runner is knee-stepping.
+        public bool RequiresKneeStep { get; set; }
         // Pooled coins return to their authored spot; chunk preparation then only re-picks the lane (x).
         public void ResetCoin()
         {
@@ -20,6 +22,7 @@ namespace Muhanok.Presentation.Map
         public void Evaluate(RunSession run,float previousZ)
         {
             if(collected||!gameObject.activeSelf||run.Flow.State!=GameFlowState.Running||run.Paused) return;
+            if(!ObstacleLayout.CoinReachable(RequiresKneeStep,run.Runner.KneeStepping)) return;
             RouteSurface.Sample(run.Runner.Z,out float x,out float y);
             var player=new Vector3(run.Runner.WorldLaneOffset+x,run.Runner.Y+y+.85f,run.Runner.Z);
             if(run.Items.IsActive(ItemKind.Magnet))

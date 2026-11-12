@@ -34,7 +34,7 @@ namespace Muhanok.Presentation.Map
         private void Configure(MuhanokMapChunk chunk)
         {
             int previous=RouteSurface.TypeAt(Mathf.Max(0,chunk.Sequence-1)),next=RouteSurface.TypeAt(chunk.Sequence+1);
-            bool fromOutside=previous>=11,toOutside=next>=11;
+            bool fromOutside=RouteSurface.IsOutdoor(previous),toOutside=RouteSurface.IsOutdoor(next);
             bool fromFork=RouteSurface.ActivePlan?.IsForkTrackChunk(chunk.Sequence-1)??false;
             int key=(fromFork?1000:0)+(fromOutside?100:0)+(toOutside?10:0)+(next==7?1:0);
             if(!surfaces.TryGetValue(key,out var mesh)||mesh==null)surfaces[key]=mesh=BuildShell(fromOutside,toOutside,next==7,fromFork);

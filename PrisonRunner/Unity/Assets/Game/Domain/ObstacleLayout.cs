@@ -3,10 +3,10 @@ using System.Collections.Generic;
 
 namespace Muhanok.Domain
 {
-    public enum HazardAction { Jump, Crouch, HighKnee, Dodge }
+    public enum HazardAction { Jump, Crouch, Dodge }
 
     // One authored hazard position in a chunk (local z from the entry). Full rows block every lane and are
-    // passed with the matching action; terrain rows (stairs, the closing stair door) belong to the map and stay on.
+    // passed with the matching action; terrain rows belong to the map and stay on.
     public readonly struct ObstacleSlot
     {
         public readonly ObstacleKind Kind; public readonly int Lane; public readonly float Z; public readonly bool FullRow, Terrain;
@@ -39,6 +39,12 @@ namespace Muhanok.Domain
         // Per rail-gap window: 0 intact, -1 missing left rail, 1 missing right rail.
         public readonly int[] RailGaps = new int[2];
         public bool Animal { get; private set; }
+        // Stair chunks (prison 7, mine 13, zoo 14) carry no hazards at all: the knee-step judge and a knee-height coin line are their content.
+        public bool Stair { get; private set; }
+        public const float StairCoinHeight = .6f, StairCoinFromZ = 4f, StairCoinToZ = 20f;
+        public static float StairCoinZ(int index, int count) => count <= 1 ? StairCoinFromZ : StairCoinFromZ + (StairCoinToZ - StairCoinFromZ) * index / (count - 1);
+        // Coins on a stair are out of reach unless the runner is stepping.
+        public static bool CoinReachable(bool stairChunk, bool kneeStepping) => !stairChunk || kneeStepping;
         public int SafeLane { get; private set; }
         public bool Blocked => Blockers.Count > 0;
         private readonly List<float> rows = new List<float>(4);
@@ -50,7 +56,7 @@ namespace Muhanok.Domain
         public float ZOf(int slot) => slots[slot].FullRow && !slots[slot].Terrain && Same(slots[slot].Z, openingFrom) ? OpeningZ : slots[slot].Z;
 
         public static HazardAction ActionFor(ObstacleKind kind) => kind == ObstacleKind.Crate || kind == ObstacleKind.Cart ? HazardAction.Jump
-            : kind == ObstacleKind.Pipe ? HazardAction.Crouch : kind == ObstacleKind.Stair ? HazardAction.HighKnee : HazardAction.Dodge;
+            : kind == ObstacleKind.Pipe ? HazardAction.Crouch : HazardAction.Dodge;
         public static bool IsCart(int type) => type == 1 || type == 2;
         // Mine, corridor and zoo walks may swap their rows for lane blockers and banana rows on the extended route.
         public static bool LaneBlockType(int type) => type == 0 || type == 4 || type == 5 || type == 12;
@@ -66,10 +72,11 @@ namespace Muhanok.Domain
             HazardOdds odds, bool extended, bool fork, bool boarding = false)
         {
             slots = authored; floor = floorItems;
-            Slots.Clear(); FloorItems.Clear(); Blockers.Clear(); Bananas.Clear(); Animal = false; SafeLane = 0; openingFrom = float.NaN;
+            Slots.Clear(); FloorItems.Clear(); Blockers.Clear(); Bananas.Clear(); Animal = false; Stair = false; SafeLane = 0; openingFrom = float.NaN;
             for (int i = 0; i < slots.Count; i++) Slots.Add(false);
             for (int i = 0; i < floor.Count; i++) FloorItems.Add(false);
             Array.Clear(RailGaps, 0, RailGaps.Length);
+            if (RouteSurface.IsStair(type)) { Stair = true; return; }
             if (IsCart(type)) { if (!fork) PlanRails(random, boarding); return; }
             for (int i = 0; i < slots.Count; i++) if (slots[i].Terrain) Slots[i] = true;
             if (sequence == 0)

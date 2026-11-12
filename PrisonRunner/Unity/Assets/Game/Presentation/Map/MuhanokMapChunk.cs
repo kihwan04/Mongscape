@@ -60,7 +60,7 @@ namespace Muhanok.Presentation.Map
             if(slots!=null)return;
             slots=new System.Collections.Generic.List<ObstacleSlot>(12);floorSlots=new System.Collections.Generic.List<LanePlacement>(2);
             for(int i=0;i<Obstacles.Length;i++)
-                slots.Add(new ObstacleSlot(Obstacles[i].Kind,i%3-1,LocalZ(Obstacles[i].transform),false,RouteType==7));
+                slots.Add(new ObstacleSlot(Obstacles[i].Kind,i%3-1,LocalZ(Obstacles[i].transform),false));
             exerciseHome=new Vector3[ExerciseObstacles!=null?ExerciseObstacles.Length:0];
             if(ExerciseObstacles!=null)for(int i=0;i<ExerciseObstacles.Length;i++)
             {
@@ -113,7 +113,8 @@ namespace Muhanok.Presentation.Map
                 PlaceExercise(i);
                 obstacle.ResetPass();obstacle.FullExerciseRow=true;obstacle.gameObject.SetActive(Layout.Slots[Obstacles.Length+i]);
             }
-            if (Coins != null) foreach(var coin in Coins) { coin.ResetCoin(); coin.gameObject.SetActive(sequence>0); }
+            if (Coins != null) foreach(var coin in Coins) { coin.ResetCoin(); coin.RequiresKneeStep=Layout.Stair; coin.gameObject.SetActive(sequence>0); }
+            if(Layout.Stair){PlaceStairCoins(sequence);return;}
             if(RouteType==1||RouteType==2)
             {
                 UpdateCartRoute();
@@ -124,6 +125,17 @@ namespace Muhanok.Presentation.Map
                 int row = i/3, lane = (sequence+row)%3;
                 if (Obstacles[row*3+lane].gameObject.activeSelf) lane=(lane+1)%3;
                 var position=Coins[i].transform.localPosition; position.x=(lane-1)*2.2f+RouteSurface.LocalX(RouteType,position.z); Coins[i].transform.localPosition=position;
+            }
+        }
+        // Stair chunk: one knee-high coin line along the climb, in one lane that changes from stair to stair. Collectible only while stepping.
+        private void PlaceStairCoins(int sequence)
+        {
+            if(Coins==null)return;
+            int lane=sequence%3-1;
+            for(int i=0;i<Coins.Length;i++)
+            {
+                float z=ObstacleLayout.StairCoinZ(i,Coins.Length);
+                Coins[i].transform.localPosition=new Vector3(lane*2.2f+RouteSurface.LocalX(RouteType,z),RouteSurface.LocalHeight(RouteType,z)+ObstacleLayout.StairCoinHeight,z);
             }
         }
         public void AnimateGates(float runnerZ)

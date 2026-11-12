@@ -121,7 +121,7 @@ namespace Muhanok.Editor
         }
         private static void AddZooHazards(GameObject root,int type)
         {
-            if(type<11)return;
+            if(type<11||RouteSurface.IsStair(type))return;
             foreach(var obstacle in root.GetComponent<MuhanokMapChunk>().Obstacles)
             {
                 Clear(obstacle.transform);var old=obstacle.GetComponent<DescendingGate>();if(old!=null)Object.DestroyImmediate(old);
@@ -145,7 +145,7 @@ namespace Muhanok.Editor
         {
             var old=root.transform.Find("FloorItems");if(old!=null)Object.DestroyImmediate(old.gameObject);
             var chunk=root.GetComponent<MuhanokMapChunk>();chunk.FloorItems=new FloorItemController[type==11?1:type==12?2:0];
-            if(type<11)return;
+            if(type<11||type==RouteSurface.MineStair)return;
             var group=Node("FloorItems",root.transform,Vector3.zero);
             for(int index=0;index<chunk.FloorItems.Length;index++)
             {

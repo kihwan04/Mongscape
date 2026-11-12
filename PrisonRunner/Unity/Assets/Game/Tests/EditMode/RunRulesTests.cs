@@ -193,9 +193,8 @@ namespace Muhanok.Tests
         }
         [Test] public void FullExerciseRowsRequireDistinctActions()
         {
-            Assert.IsFalse(SafePatternValidator.Avoided(ObstacleKind.Stair,1.8f,false,false));
-            Assert.IsFalse(SafePatternValidator.Avoided(ObstacleKind.Pipe,1.8f,false,true));
-            foreach(var kind in new[]{ObstacleKind.Crate,ObstacleKind.Pipe,ObstacleKind.Stair})Assert.IsTrue(SafePatternValidator.IsActionRowSafe(7,kind));
+            Assert.IsFalse(SafePatternValidator.Avoided(ObstacleKind.Pipe,1.8f,false));
+            foreach(var kind in new[]{ObstacleKind.Crate,ObstacleKind.Pipe})Assert.IsTrue(SafePatternValidator.IsActionRowSafe(7,kind));
             Assert.IsFalse(SafePatternValidator.IsActionRowSafe(7,ObstacleKind.Barrier));
         }
         [Test] public void ScoreWithoutExerciseIsTheRoundedDistance()
@@ -223,10 +222,9 @@ namespace Muhanok.Tests
         }
         [Test] public void EachActionMatchesItsHazard()
         {
-            Assert.IsTrue(SafePatternValidator.Avoided(ObstacleKind.Crate, 1.1f, false, false));
-            Assert.IsTrue(SafePatternValidator.Avoided(ObstacleKind.Pipe, 0, true, false));
-            Assert.IsTrue(SafePatternValidator.Avoided(ObstacleKind.Stair, 0, false, true));
-            Assert.IsFalse(SafePatternValidator.Avoided(ObstacleKind.Laser, 2, true, true));
+            Assert.IsTrue(SafePatternValidator.Avoided(ObstacleKind.Crate, 1.1f, false));
+            Assert.IsTrue(SafePatternValidator.Avoided(ObstacleKind.Pipe, 0, true));
+            Assert.IsFalse(SafePatternValidator.Avoided(ObstacleKind.Laser, 2, true));
         }
         [Test] public void RouterClearsTitleCommands()
         {

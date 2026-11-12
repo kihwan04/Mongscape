@@ -64,7 +64,14 @@ namespace Muhanok.Tests
                 else
                 {
                     Assert.AreEqual(destination<0?3:0,p.TypeAt(31));
-                    for(int i=CartFork.DestinationChunk;i<31;i++)Assert.AreEqual(destination<0?12:0,p.TypeAt(i));
+                    // The first lap has one stair chunk (mine 13, zoo 14) in place of a walking chunk; everything else keeps the biome's walk.
+                    int stairs=0;
+                    for(int i=CartFork.DestinationChunk;i<31;i++)
+                    {
+                        if(RouteSurface.IsStair(p.TypeAt(i))){stairs++;Assert.AreEqual(destination<0?RouteSurface.ZooStair:RouteSurface.MineStair,p.TypeAt(i));continue;}
+                        Assert.AreEqual(destination<0?12:0,p.TypeAt(i));
+                    }
+                    Assert.AreEqual(1,stairs);
                 }
             }
         }

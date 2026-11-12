@@ -105,7 +105,7 @@ namespace Muhanok.Editor
         private static void BuildEditableRoutes(bool rebuildCart=false)
         {
             Directory.CreateDirectory(Authoring); AssetDatabase.Refresh();
-            for(int type=0;type<13;type++)
+            for(int type=0;type<MuhanokContentBuilder.ChunkIds.Length;type++)
             {
                 string id=MuhanokContentBuilder.ChunkIds[type];
                 if(File.Exists(Authoring+"/"+id+".prefab")&&(!rebuildCart||type!=1&&type!=2)) continue;
@@ -124,17 +124,17 @@ namespace Muhanok.Editor
                     faces.Add(new Face(new[]{n,n+1,n+2,n,n+2,n+3}));
                 }
                 var floor=ProBuilderMesh.Create(vertices,faces); floor.name="Editable route floor"; floor.transform.SetParent(root.transform,false);
-                floor.GetComponent<MeshRenderer>().sharedMaterial=type==1||type==2?wood:type<4?rock:concrete; floor.ToMesh(); floor.Refresh();
+                floor.GetComponent<MeshRenderer>().sharedMaterial=type==1||type==2?wood:RouteSurface.IsMine(type)?rock:concrete; floor.ToMesh(); floor.Refresh();
                 // Reusable open doorway: no collision or decorative geometry intrudes into the three lanes.
                 foreach(float z in new[]{0f,24f})
                 {
                     float h=RouteSurface.LocalHeight(type,z),x=RouteSurface.LocalX(type,z);
                     bool cart=type==1||type==2;
-                    for(int side=-1;side<=1;side+=2) ProBuilderBox("Editable connector post",root.transform,new Vector3(x+side*(cart?1.4f:3.9f),h+(cart?1.7f:2.4f),z),new Vector3(.24f,cart?3.4f:4.8f,.24f),type<4?wood:iron,true);
-                    ProBuilderBox("Editable connector header",root.transform,new Vector3(x,h+(cart?3.45f:4.85f),z),new Vector3(cart?3.1f:8.1f,.28f,.30f),type<4?wood:iron,true);
+                    for(int side=-1;side<=1;side+=2) ProBuilderBox("Editable connector post",root.transform,new Vector3(x+side*(cart?1.4f:3.9f),h+(cart?1.7f:2.4f),z),new Vector3(.24f,cart?3.4f:4.8f,.24f),RouteSurface.IsMine(type)?wood:iron,true);
+                    ProBuilderBox("Editable connector header",root.transform,new Vector3(x,h+(cart?3.45f:4.85f),z),new Vector3(cart?3.1f:8.1f,.28f,.30f),RouteSurface.IsMine(type)?wood:iron,true);
                     Node(z==0?"EntrySocket":"ExitSocket",root.transform,new Vector3(x,h,z));
                 }
-                if(type==7) for(int z=1;z<24;z++)
+                if(RouteSurface.IsStair(type)) for(int z=1;z<24;z++)
                 {
                     float rise=RouteSurface.LocalHeight(type,z)-RouteSurface.LocalHeight(type,z-1);
                     ProBuilderBox("Editable stair riser",root.transform,new Vector3(0,RouteSurface.LocalHeight(type,z)-rise/2,z),new Vector3(6.6f,Mathf.Max(.01f,rise),.06f),concrete,true);

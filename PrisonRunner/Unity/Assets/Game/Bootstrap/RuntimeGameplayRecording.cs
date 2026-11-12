@@ -165,6 +165,7 @@ namespace Muhanok.Bootstrap
             if(deliberatePeel!=null&&!deliberatePeel.Passed&&deliberatePeel.transform.position.z>z&&deliberatePeel.transform.position.z-z<6)
             {int lane=Lane(deliberatePeel.transform);if((mask&(1<<(lane+1)))==0)desired=lane;}
             if(desired!=run.Runner.Lane)run.Runner.Command(desired<run.Runner.Lane?MotionCommand.Left:MotionCommand.Right);
+            if(StairJudge.StepDue(run.Runner))run.Runner.Command(MotionCommand.KneeStep);
             foreach(var chunk in game.Map.Active){Actions(chunk.Chunk.Obstacles,z,speed);Actions(chunk.Chunk.ExerciseObstacles,z,speed);Actions(chunk.Chunk.DynamicObstacles,z,speed);}
         }
         private static int Lane(Transform item){RouteSurface.Sample(item.position.z,out float x,out _);return Mathf.Clamp(Mathf.RoundToInt((item.position.x-x)/2.2f),-1,1);}
@@ -183,7 +184,6 @@ namespace Muhanok.Bootstrap
                 float d=h.transform.position.z-z;if(h.Passed||!h.gameObject.activeInHierarchy||d<0||d>speed*.3f||(!h.FullExerciseRow&&Lane(h.transform)!=game.Session.Runner.Lane))continue;
                 if(h.Kind==ObstacleKind.Crate||h.Kind==ObstacleKind.Cart){if(game.Session.Runner.Y<=.001f)game.Session.Runner.Command(MotionCommand.Jump);}
                 else if(h.Kind==ObstacleKind.Pipe)game.Session.Runner.Command(MotionCommand.Crouch);
-                else if(h.Kind==ObstacleKind.Stair)game.Session.Runner.Command(MotionCommand.KneeStep);
             }
         }
         private IEnumerator Finish()

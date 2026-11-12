@@ -28,7 +28,7 @@ namespace Muhanok.Editor
             var settings=AssetDatabase.LoadAssetAtPath<GameSettings>("Assets/Game/Content/Data/GameSettings.asset");
             settings.Run.SpeedRampDistance=120f;settings.Run.CartSpeed=settings.Run.BaseSpeed;EditorUtility.SetDirty(settings);
             AssetDatabase.SaveAssets();
-            Debug.Log("MUHANOK_GAMEPLAY_UPGRADE_PASS: every walking map has jump/slide; stairs retain high-knee and closing slide gate; progressive walking/cart speed");
+            Debug.Log("MUHANOK_GAMEPLAY_UPGRADE_PASS: every walking map has jump/slide; stair chunks carry no hazards; progressive walking/cart speed");
         }
 
         public static void Configure(GameObject root,int type)
@@ -36,14 +36,14 @@ namespace Muhanok.Editor
             var chunk=root.GetComponent<MuhanokMapChunk>();
             var previous=root.transform.Find("MapExercises");
             if(previous!=null)UnityEngine.Object.DestroyImmediate(previous.gameObject);
-            if(type==1||type==2){chunk.ExerciseObstacles=new ObstacleController[0];return;}
+            if(type==1||type==2||RouteSurface.IsStair(type)){chunk.ExerciseObstacles=new ObstacleController[0];return;}
 
             var group=new GameObject("MapExercises").transform;group.SetParent(root.transform,false);
-            int rows=type==7?1:2;
+            int rows=2;
             chunk.ExerciseObstacles=new ObstacleController[rows*3];
             for(int row=0;row<rows;row++)for(int lane=-1;lane<=1;lane++)
             {
-                float z=type==7?3f:7f+row*12f;
+                float z=7f+row*12f;
                 string id=row==0?"OBS_Crate_Low":type>=11?MuhanokArtUpgrade.ZooDuckId:"OBS_LowPipe";
                 var source=AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs+id+".prefab");
                 if(source==null)throw new InvalidOperationException("Missing exercise visual: "+id);
@@ -59,12 +59,6 @@ namespace Muhanok.Editor
             {
                 var socket=chunk.Obstacles[lane].transform.parent;
                 socket.localPosition=new Vector3((lane-1)*2.2f,0,23f);
-            }
-            // Jump at the foot of the stairs, then high knees, then slide under the existing entrance.
-            if(type==7)for(int lane=0;lane<3;lane++)
-            {
-                var socket=chunk.Obstacles[lane].transform.parent;
-                socket.localPosition=new Vector3((lane-1)*2.2f,RouteSurface.LocalHeight(type,12f),12f);
             }
         }
     }

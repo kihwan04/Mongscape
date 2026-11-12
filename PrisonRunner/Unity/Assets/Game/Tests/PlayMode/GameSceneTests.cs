@@ -247,6 +247,8 @@ namespace Muhanok.Tests
                 game.Hero.Apply(game.Session.Runner);
                 Assert.AreEqual(offsetY+(game.Session.Runner.Riding?.25f:0),game.Hero.transform.position.y,.001f);
                 Assert.AreEqual(position.x,game.Hero.transform.position.x,.001f);
+                // Stair coins hang at knee height and only count while the runner is stepping.
+                if(RouteSurface.IsStair(type))game.Session.Runner.Command(MotionCommand.KneeStep);
                 int before=game.Session.Score.Coins; coin.Evaluate(game.Session,position.z-1);
                 Assert.AreEqual(before+1,game.Session.Score.Coins,"Authored coin on curved or elevated route must collect");
                 coin.Evaluate(game.Session,position.z-1); Assert.AreEqual(before+1,game.Session.Score.Coins);

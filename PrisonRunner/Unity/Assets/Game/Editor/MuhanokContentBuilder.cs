@@ -22,7 +22,7 @@ namespace Muhanok.Editor
         private const string Content = "Assets/Game/Content";
         private static Material stone, wood, steel, orange, navy, skin, brown, yellow, red, white;
         public static readonly string[] ChunkIds = { "CH_Mine_Start", "CH_Mine_Straight_A", "CH_Mine_Straight_B", "CH_Transition_MineToPrison",
-            "CH_Prison_Corridor_A", "CH_Prison_Corridor_B", "CH_Checkpoint", "CH_Stair", "CH_Laundry", "CH_Kitchen", "CH_Maintenance", "CH_Yard", "CH_OuterWall" };
+            "CH_Prison_Corridor_A", "CH_Prison_Corridor_B", "CH_Checkpoint", "CH_Stair", "CH_Laundry", "CH_Kitchen", "CH_Maintenance", "CH_Yard", "CH_OuterWall", "CH_Mine_Stair", "CH_Zoo_Stair" };
         private static readonly string[] MonkeyClips = { "MinePickaxe_Loop", "StopWork", "LookCart", "IdeaReact", "SprintStart", "Run", "LaneStep_L", "LaneStep_R", "Jump", "CrouchSlide", "HighKnee", "Stumble", "Caught" };
         private static readonly string[] GuardClips = { "Notice", "ChaseRun", "Catch" };
 
@@ -52,13 +52,12 @@ namespace Muhanok.Editor
             var bulb = Save(Bulb()); var alarm = Save(Alarm());
             var dust = Save(Particles("VFX_Dust_Run", new Color(.61f, .5f, .36f), true));
             var hit = Save(Particles("VFX_Hit_Stumble", new Color(1, .55f, .13f), false));
-            var hazards = new GameObject[6];
+            var hazards = new GameObject[5];
             hazards[0] = Save(Hazard("OBS_Crate_Low", ObstacleKind.Crate));
             hazards[1] = Save(Hazard("OBS_LowPipe", ObstacleKind.Pipe));
             hazards[2] = Save(Hazard("OBS_Barrier_Left", ObstacleKind.Barrier));
             hazards[3] = Save(Hazard("OBS_Cart_Crossing", ObstacleKind.Cart));
             hazards[4] = Save(Hazard("OBS_LaserGate", ObstacleKind.Laser));
-            hazards[5] = Save(Hazard("OBS_Stair_HighKnee", ObstacleKind.Stair));
             Save(Hazard("OBS_Barrier_Right", ObstacleKind.Barrier));
             var chunks = new MuhanokMapChunk[ChunkIds.Length];
             for (int i = 0; i < chunks.Length; i++) chunks[i] = Save(Chunk(i, hazards, alarm)).GetComponent<MuhanokMapChunk>();
@@ -95,7 +94,7 @@ namespace Muhanok.Editor
             const string scenePath = "Assets/Game/Scenes/GameScene.unity";
             EditorSceneManager.SaveScene(scene, scenePath);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(scenePath, true) };
-            AssetDatabase.SaveAssets(); AssetDatabase.Refresh(); Debug.Log("MUHANOK_CONTENT_PASS: 13 chunks, character/prop/obstacle/VFX IDs, GameScene.");
+            AssetDatabase.SaveAssets(); AssetDatabase.Refresh(); Debug.Log("MUHANOK_CONTENT_PASS: " + ChunkIds.Length + " chunks, character/prop/obstacle/VFX IDs, GameScene.");
         }
         private static CinemachineCamera Vcam(string id, Transform parent, Vector3 pos, Vector3 target, float fov)
         {
@@ -286,10 +285,6 @@ namespace Muhanok.Editor
             var root = new GameObject(id); root.AddComponent<ObstacleController>().Kind = kind;
             if (kind == ObstacleKind.Crate) Cube("Crate", root.transform, new Vector3(0, .4f, 0), new Vector3(1.6f, .8f, 1.2f), wood);
             else if (kind == ObstacleKind.Pipe) Cube("Pipe", root.transform, new Vector3(0, 1.5f, 0), new Vector3(1.9f, .35f, .6f), yellow);
-            else if (kind == ObstacleKind.Stair)
-            {
-                for (int i = 0; i < 4; i++) Cube("Step", root.transform, new Vector3(0, .07f * (i + 1), .18f * i), new Vector3(1.8f, .14f * (i + 1), .25f), yellow);
-            }
             else
             {
                 Cube("LeftPost", root.transform, new Vector3(-.82f, 1, 0), new Vector3(.17f, 2, .3f), steel);
@@ -309,12 +304,12 @@ namespace Muhanok.Editor
             {
                 var socket = Child("Socket_" + row + "_" + lane, sockets, new Vector3(lane * 2.2f, 0, 7 + row * 12));
                 var contract = socket.gameObject.AddComponent<MuhanokObstacleSocket>(); contract.Row = row; contract.Lane = lane;
-                int hazard = index == 7 ? 5 : (index + row * 3 + lane + 1) % 5;
+                int hazard = (index + row * 3 + lane + 1) % 5;
                 var obstacle = (GameObject)PrefabUtility.InstantiatePrefab(hazards[hazard]); obstacle.transform.SetParent(socket, false);
                 chunk.Obstacles[row * 3 + lane + 1] = obstacle.GetComponent<ObstacleController>(); obstacle.SetActive(false);
             }
             var env = Child("EnvironmentRoot", root.transform, Vector3.zero);
-            bool mine = index < 3, outdoor = index >= 11;
+            bool mine = index < 3 || index == RouteSurface.MineStair, outdoor = RouteSurface.IsOutdoor(index);
             Material walls = mine ? stone : steel;
             Cube("Floor", env, new Vector3(0, -.25f, 12), new Vector3(8.8f, .5f, 24), mine ? stone : steel, true);
             if (!outdoor) Cube("Ceiling", env, new Vector3(0, 4.5f, 12), new Vector3(9, .3f, 24), walls);

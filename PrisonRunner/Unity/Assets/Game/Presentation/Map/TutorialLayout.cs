@@ -19,7 +19,7 @@ namespace Muhanok.Presentation.Map
                 content.PlaceLaneBlock(chunk, TutorialCourse.BlockedLane, chunk.Entry.position.z + TutorialCourse.LaneBlockZ);
             else if (hazard == TutorialHazard.JumpRow) Row(chunk.ExerciseObstacles, 0);
             else if (hazard == TutorialHazard.CrouchRow) Row(chunk.ExerciseObstacles, 1);
-            else if (hazard == TutorialHazard.StairRow) Row(chunk.Obstacles, 0);
+            // StairRow: the stair chunk itself is the lesson (the stair judge); it has no hazard to switch on.
             else if (hazard == TutorialHazard.RailGap && chunk.RailGaps != null && chunk.RailGaps.Length > TutorialCourse.RailGapIndex
                 && chunk.RailGaps[TutorialCourse.RailGapIndex] != null)
                 chunk.RailGaps[TutorialCourse.RailGapIndex].Configure(TutorialCourse.RailMissingSide);

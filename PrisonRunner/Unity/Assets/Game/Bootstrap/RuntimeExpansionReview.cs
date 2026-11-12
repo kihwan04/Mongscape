@@ -230,6 +230,7 @@ namespace Muhanok.Bootstrap
                 for(int lane=-1;lane<=1;lane++)if((blocked&(1<<(lane+1)))==0&&Mathf.Abs(lane-run.Runner.Lane)<distance){best=lane;distance=Mathf.Abs(lane-run.Runner.Lane);}
                 if(best!=run.Runner.Lane)run.Runner.Command(best<run.Runner.Lane?MotionCommand.Left:MotionCommand.Right);
             }
+            if(StairJudge.StepDue(run.Runner))run.Runner.Command(MotionCommand.KneeStep);
             foreach(var active in game.Map.Active)
             {
                 DriveHazards(active.Chunk.Obstacles,z,speed);DriveHazards(active.Chunk.ExerciseObstacles,z,speed);DriveHazards(active.Chunk.DynamicObstacles,z,speed);
@@ -261,7 +262,6 @@ namespace Muhanok.Bootstrap
                 if(!hazard.FullExerciseRow&&Mathf.Abs(run.Runner.Lane*2.2f+x-hazard.transform.position.x)>1.1f)continue;
                 if(hazard.Kind==ObstacleKind.Crate||hazard.Kind==ObstacleKind.Cart){if(run.Runner.Y<=.001f)run.Runner.Command(MotionCommand.Jump);}
                 else if(hazard.Kind==ObstacleKind.Pipe)run.Runner.Command(MotionCommand.Crouch);
-                else if(hazard.Kind==ObstacleKind.Stair)run.Runner.Command(MotionCommand.KneeStep);
             }
         }
         private static Vector2 ElementCenter(VisualElement root,VisualElement element)

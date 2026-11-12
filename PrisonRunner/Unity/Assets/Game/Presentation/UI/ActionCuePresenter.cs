@@ -49,7 +49,7 @@ namespace Muhanok.Presentation
                     if (Mathf.Abs(session.Runner.Lane * session.Config.LaneSpacing + offset - hazard.transform.position.x) > .95f) continue;
                 }
                 nearest = d;
-                cue = hazard.GetComponentInParent<ZooHazard>() != null ? "↑  점프!" : hazard.GetComponent<ClosingSlideGate>() != null ? "↓  숙이기!" : hazard.Kind == ObstacleKind.Pipe ? "↓  숙이기!" : hazard.Kind == ObstacleKind.Stair ? "무릎 번갈아!" : hazard.Kind == ObstacleKind.Crate || hazard.Kind == ObstacleKind.Cart ? "↑  점프!" : "←  옆으로 피하기  →";
+                cue = hazard.GetComponentInParent<ZooHazard>() != null ? "↑  점프!" : hazard.GetComponent<ClosingSlideGate>() != null ? "↓  숙이기!" : hazard.Kind == ObstacleKind.Pipe ? "↓  숙이기!" :  hazard.Kind == ObstacleKind.Crate || hazard.Kind == ObstacleKind.Cart ? "↑  점프!" : "←  옆으로 피하기  →";
             }
         }
     }
