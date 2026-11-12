@@ -18,6 +18,17 @@
 
 튜닝은 `Unity/Assets/Game/Content/Data/GameSettings.asset`의 Run 항목(`DifficultyGraceDistance`, `DifficultyFullDistance`, `SprintSpeed`/`MaxSprintSpeed`, `RestSpeed`/`MaxRestSpeed`, `*Start`/`*Max`)에서 합니다. [설계](superpowers/specs/2026-11-10-difficulty-ramp-design.md).
 
+## 하이니 계단 청크 (2026-11-13/14)
+
+`feature/high-knee-chunk`에서 6단계로 진행했습니다. [설계](superpowers/specs/2026-11-13-high-knee-chunk-design.md), 동작은 [게임 화면 안내](GAME_FLOW_UI.md)와 [몸동작 안내](BODY_TRACKING.md).
+
+- 한 바퀴를 48칸에서 32칸으로 줄였습니다(공통 7 + 갈래 25). 바나나와 하이니 실패는 `SlipStrikes`로 합산하고, 첫 경고 뒤 8초가 지나면 경고가 0이 되며 압력이 0.45 내려갑니다. 8초 안 두 번째 경고는 추격 후 체포(`SlipPursuit`)입니다. HUD에 줄어드는 경고 막대와 "경고 해제" 표시를 더했습니다.
+- 하이니 입력을 "유지"에서 좌우 번갈아 들기 걸음(`KneeStep`, 간격 `KneeStepGap` 0.7초)으로 바꿨습니다. 상체는 큰 팔 번갈아 흔들기, 키보드는 W 연타입니다. `HighKneeHoldSeconds`는 제거했습니다.
+- 청크 높이는 앞 청크 오르내림의 누적이 되었습니다(계단 `StairRise` +4.5m, 감옥 내리막 −3m, 0으로 되돌아가지 않음).
+- 광산(13)·감옥(7)·사육장(14)에 계단 청크를 바퀴당 1~3개(6칸 간격, 장애물 없음, 무릎 높이 코인) 두고 `StairJudge`가 판정합니다. 감옥 갈래는 6칸 간격 때문에 바퀴당 최대 2개(입구 + 사육장 구간 1개)입니다. 안내·무릎 게이지·카메라·발소리와 튜토리얼 계단 단계(무릎 실패는 경고 없이 튜토리얼 실수로만 셈)를 추가했습니다.
+- 광산·사육장 계단 청크 모델은 Blender 생성 스크립트(`References/Blender/scripts`, `M:/Blender/blender.exe --background --factory-startup --python <script>`, 오름 상수는 `stair_common.py`)로 만든 FBX를 연결했습니다.
+- 단계별 자동 검사(커밋 기록 기준): EditMode 264/264, PlayMode 77/77, 컴파일 오류 0. 실물 웹캠으로 하이니·팔 흔들기 판정 값은 아직 실측하지 않았습니다.
+
 ## PR #20 로컬 통합
 
 `lilohdong/PrisonRunner-fork`의 `6880a3365fa902dd3e023be116d76f9a4f48d5ed`를 현재 로컬 소스와 통합했습니다. 아래 검사는 로컬 통합 단계에서 수행했으며, 이 소스와 문서를 develop에 병합하는 범위만 승인받았습니다. [기능 계획](FEATURE_PLAN_2026_10_28.md)과 [이번 검수](reports/PR20_LOCAL_MERGE_2026_10_29.md)를 참고하세요.

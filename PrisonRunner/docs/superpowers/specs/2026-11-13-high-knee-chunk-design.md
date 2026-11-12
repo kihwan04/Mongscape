@@ -70,18 +70,35 @@
 
 ## 완료 기준
 
-- [ ] 고정 seed에서 광산·감옥·사육장 갈래 모두 계단 청크가 나온다
-- [ ] 계단 청크에 다른 장애물이 없다
-- [ ] 바퀴당 계단 청크 수가 진행도에 따라 1~3개이고 서로 6칸 이상 떨어진다
-- [ ] 한쪽 무릎만 들거나 W를 꾹 누르면 계단 청크에서 감속되고, 번갈아 들거나 연타하면 통과한다
-- [ ] 한 계단 청크에서 감속은 최대 1회다
-- [ ] 계단 코인은 `KneeStepping`일 때만 먹힌다
-- [ ] 계단을 오른 뒤 다음 청크(수레 포함)가 오른 높이에서 이어진다
-- [ ] 경고 1회 뒤 8초가 지나면 경고가 0이 되고 압력이 0.45 내려간다
-- [ ] 8초 안 두 번째 경고(바나나·하이니 실패)면 추격 후 체포된다
-- [ ] 튜토리얼 하이니 단계는 번갈아 들기로만 통과한다
-- [ ] 코드에 `MotionCommand.HighKnee`, `ObstacleKind.Stair`, `EntryHeight` 사용처가 남지 않는다
-- [ ] EditMode·PlayMode 테스트와 런타임 검사 스크립트가 통과한다
+- [x] 고정 seed에서 광산·감옥·사육장 갈래 모두 계단 청크가 나온다
+- [x] 계단 청크에 다른 장애물이 없다
+- [x] 바퀴당 계단 청크 수가 진행도에 따라 1~3개이고 서로 6칸 이상 떨어진다
+- [x] 한쪽 무릎만 들거나 W를 꾹 누르면 계단 청크에서 감속되고, 번갈아 들거나 연타하면 통과한다
+- [x] 한 계단 청크에서 감속은 최대 1회다
+- [x] 계단 코인은 `KneeStepping`일 때만 먹힌다
+- [x] 계단을 오른 뒤 다음 청크(수레 포함)가 오른 높이에서 이어진다
+- [x] 경고 1회 뒤 8초가 지나면 경고가 0이 되고 압력이 0.45 내려간다
+- [x] 8초 안 두 번째 경고(바나나·하이니 실패)면 추격 후 체포된다
+- [x] 튜토리얼 하이니 단계는 번갈아 들기로만 통과한다
+- [x] 코드에 `MotionCommand.HighKnee`, `ObstacleKind.Stair`, `EntryHeight` 사용처가 남지 않는다
+- [ ] EditMode·PlayMode 테스트와 런타임 검사 스크립트가 통과한다 (EditMode 264/264, PlayMode 77/77 통과. 런타임 검사 스크립트는 이번 단계에서 따로 실행하지 않아 미확인)
+
+## 진행 결과
+
+2026-11-13/14, `feature/high-knee-chunk`. 위 완료 기준 중 체크한 항목은 아래 커밋의 EditMode·PlayMode 테스트(또는 코드 검색)로 확인했다.
+
+| 단계 | 커밋 |
+|---|---|
+| 설계 | `f1a69db` docs(stairs): design high-knee stair chunks, knee-step input and strike reset |
+| 1 | `8340711` feat(run): 32-chunk laps and slip strikes that clear after 8 seconds, `bff6a86` feat(hud), `56c0935` test(run) |
+| 2 | `6fbaa10` feat(input): replace held high-knee with alternating KneeStep events |
+| 3 | `a6511f3` docs(stairs): fix the stair rise at 4.5 m, `a20635a` feat(route): accumulate chunk height |
+| 4 | `9814cf3` feat(route): stair chunks in every biome, `a458749` feat(stairs): stair cue, knee gauge, camera pitch, tutorial |
+| 5 | `4468418` Blender generators + FBX, `70c366b` rise 4.5 m, `ec88535` merge, `9af06c1` feat(art): stair assets integrated |
+| 6 | 이 문서 갱신(docs(stairs)) |
+
+- 감옥 갈래는 6칸 간격 때문에 바퀴당 계단이 최대 2개(입구 + 사육장 구간 1개)다.
+- 튜토리얼의 무릎 실패는 경고(strike) 없이 튜토리얼 실수로만 센다.
 
 ## 미정
 
