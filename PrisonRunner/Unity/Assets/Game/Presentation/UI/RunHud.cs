@@ -51,6 +51,7 @@ namespace Muhanok.Presentation
             if (session.Flow.State == GameFlowState.Running)
             {
                 if (Model.ShowSiren) DrawSiren();
+                if (Model.ShowStrike || Model.ShowStrikeCleared) DrawStrike();
                 // The small corner needs live video; the recovery panel also shows when the camera fails, to say why. No webcam at all: nothing.
                 if (Model.ShowCamera && data != null && data.CameraDetected && (Model.ShowPoseRecovery || PosePreview.Live(data)))
                     PosePreview.Draw(skin, Model.ShowPoseRecovery ? RecoveryCameraArea : CameraArea, data, Model.ShowPoseRecovery);
@@ -81,6 +82,27 @@ namespace Muhanok.Presentation
             GUI.DrawTexture(new Rect(587, 60, 106, 5), Texture2D.whiteTexture);
             GUI.color = Color.white;
             GUI.Label(new Rect(579, 69, 122, 19), "경찰 접근", skin.Centered(14, FontStyle.Bold));
+        }
+        // Small warning under the siren slot: a shrinking bar while one slip strike can still clear, then a short all-clear.
+        private void DrawStrike()
+        {
+            var area = new Rect(577, 98, 126, 40);
+            skin.Card(area, Palette.A(Palette.Ground, .9f));
+            if (Model.ShowStrike)
+            {
+                GUI.color = Palette.Warn;
+                GUI.Label(new Rect(579, 100, 122, 20), "미끄럼 경고", skin.Centered(14, FontStyle.Bold));
+                GUI.color = new Color(.65f, .69f, .74f, .5f);
+                GUI.DrawTexture(new Rect(587, 124, 106, 6), Texture2D.whiteTexture);
+                GUI.color = Palette.Warn;
+                GUI.DrawTexture(new Rect(587, 124, 106 * Model.StrikeFraction, 6), Texture2D.whiteTexture);
+            }
+            else
+            {
+                GUI.color = new Color(.4f, 1, .6f);
+                GUI.Label(area, "경고 해제", skin.Centered(16, FontStyle.Bold));
+            }
+            GUI.color = Color.white;
         }
         private void DrawFork()
         {

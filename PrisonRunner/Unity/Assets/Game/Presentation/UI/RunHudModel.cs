@@ -21,6 +21,12 @@ namespace Muhanok.Presentation
         public string WorkoutHint { get; private set; } = "";
         public bool ShowPoseRecovery { get; private set; }
         public bool ShowSiren { get; private set; }
+        // One slip strike is active: a bar shrinks over the clear window. ShowStrikeCleared flashes "경고 해제" afterwards.
+        public bool ShowStrike { get; private set; }
+        public float StrikeFraction { get; private set; }
+        public bool ShowStrikeCleared { get; private set; }
+        private int previousStrikes;
+        private float strikeClearedUntil;
         // Camera styles keep the webcam corner on screen unless the player turned it off in settings.
         public bool CameraEnabled { get; set; } = true;
         public bool ShowCamera { get; private set; }
@@ -79,10 +85,15 @@ namespace Muhanok.Presentation
             else {forkDestination=99;ForkCaption=ChoiceCaptions[Mathf.Clamp(ForkLane+1,0,2)];}
             if (now < lastTime || session.Runner.Z < lastZ - .01f)
             {
-                nextScan = comboUntil = policeUntil = sectionUntil = 0;
+                nextScan = comboUntil = policeUntil = sectionUntil = strikeClearedUntil = 0; previousStrikes = 0;
                 actionCue = null; streak = 0; lostSince = -1; previousPolice = previousRiding = false;
             }
             lastZ = session.Runner.Z; lastTime = now;
+            ShowStrike = running && session.SlipStrikes == 1 && !session.SlipPursuit;
+            StrikeFraction = ShowStrike ? Mathf.Clamp01(session.StrikeClearRemaining / Mathf.Max(.01f, session.Config.StrikeClearSeconds)) : 0;
+            if (running && previousStrikes == 1 && session.SlipStrikes == 0) strikeClearedUntil = now + 1.5f;
+            previousStrikes = session.SlipStrikes;
+            ShowStrikeCleared = running && now < strikeClearedUntil && !ShowStrike;
             if (session.Score.Coins != coins) { coins = session.Score.Coins; Coins = coins.ToString(); }
             CoinBoost = session.Items.IsActive(ItemKind.DoubleScore);
             // Keyboard runs count no calories, so the goal card only shows for camera styles.
