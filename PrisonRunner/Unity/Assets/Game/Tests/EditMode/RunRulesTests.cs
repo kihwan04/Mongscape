@@ -37,8 +37,24 @@ namespace Muhanok.Tests
         {
             var runner = new RunnerController(new RunConfig()); runner.Command(MotionCommand.Jump); runner.Tick(.1f, 0); Assert.Greater(runner.Y, .5f);
             for (int i = 0; i < 40; i++) runner.Tick(.05f, 0); Assert.AreEqual(0, runner.Y);
-            runner.Command(MotionCommand.Crouch); runner.Command(MotionCommand.HighKnee); Assert.IsTrue(runner.Crouching && runner.HighKnee);
-            runner.Tick(1.1f, 0); Assert.IsFalse(runner.Crouching || runner.HighKnee);
+            runner.Command(MotionCommand.Crouch); runner.Command(MotionCommand.KneeStep); Assert.IsTrue(runner.Crouching && runner.KneeStepping);
+            runner.Tick(1.1f, 0); Assert.IsFalse(runner.Crouching || runner.KneeStepping);
+        }
+        [Test] public void KneeSteppingLastsOnlyUntilTheStepGapPasses()
+        {
+            var config = new RunConfig(); var runner = new RunnerController(config);
+            Assert.IsFalse(runner.KneeStepping, "No step yet");
+            runner.Tick(1f, 0); runner.Command(MotionCommand.KneeStep);
+            Assert.IsTrue(runner.KneeStepping); Assert.AreEqual(0f, runner.SinceKneeStep, .0001f);
+            runner.Tick(config.KneeStepGap - .05f, 0); Assert.IsTrue(runner.KneeStepping);
+            runner.Tick(.1f, 0); Assert.IsFalse(runner.KneeStepping);
+            runner.Command(MotionCommand.KneeStep); Assert.IsTrue(runner.KneeStepping, "The next step starts it again");
+            runner.Reset(); Assert.IsFalse(runner.KneeStepping);
+        }
+        [Test] public void KneeStepsAreIgnoredWhileRidingTheCart()
+        {
+            var run = Running(); run.Runner.SetStartZ(35); run.Tick(.1f); Assert.IsTrue(run.Runner.Riding);
+            run.Runner.Command(MotionCommand.KneeStep); Assert.IsFalse(run.Runner.KneeStepping);
         }
         [TestCase(0f,9f)] [TestCase(120f,10f)] [TestCase(480f,13f)] [TestCase(960f,17f)] [TestCase(5000f,17f)]
         public void SpeedRampsWithDistanceAndStaysCapped(float distance,float expected)

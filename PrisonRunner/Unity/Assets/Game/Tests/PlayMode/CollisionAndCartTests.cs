@@ -133,7 +133,7 @@ namespace Muhanok.Tests
                     var socket=hazard.GetComponentInParent<MuhanokObstacleSocket>();
                     if(socket.Lane!=0)game.Session.Runner.Command(socket.Lane<0?MotionCommand.Left:MotionCommand.Right);
                     game.Session.Runner.Tick(.25f,0);
-                    game.Session.Runner.Command(hazard.Kind==ObstacleKind.Crate?MotionCommand.Jump:hazard.Kind==ObstacleKind.Pipe?MotionCommand.Crouch:MotionCommand.HighKnee);
+                    game.Session.Runner.Command(hazard.Kind==ObstacleKind.Crate?MotionCommand.Jump:hazard.Kind==ObstacleKind.Pipe?MotionCommand.Crouch:MotionCommand.KneeStep);
                     game.Session.Runner.Tick(.15f,0);game.Session.Runner.SetStartZ(z);hazard.Evaluate(game.Session,z-1);
                     Assert.AreEqual(GameFlowState.Running,game.Session.Flow.State,"Wrong response to "+hazard.Kind);
                 }
@@ -194,7 +194,7 @@ namespace Muhanok.Tests
             if(ahead>session.TargetSpeed*.25f)return;
             if(hazard.Kind==ObstacleKind.Crate&&session.Runner.Y<=.001f)session.Runner.Command(MotionCommand.Jump);
             else if(hazard.Kind==ObstacleKind.Pipe)session.Runner.Command(MotionCommand.Crouch);
-            else if(hazard.Kind==ObstacleKind.Stair)session.Runner.Command(MotionCommand.HighKnee);
+            else if(hazard.Kind==ObstacleKind.Stair)session.Runner.Command(MotionCommand.KneeStep);
         }
         [UnityTest] public IEnumerator RealFloorItemUsesSweptContactJumpAvoidanceAndPoolReset()
         {

@@ -261,7 +261,7 @@ namespace Muhanok.Bootstrap
                 if(!hazard.FullExerciseRow&&Mathf.Abs(run.Runner.Lane*2.2f+x-hazard.transform.position.x)>1.1f)continue;
                 if(hazard.Kind==ObstacleKind.Crate||hazard.Kind==ObstacleKind.Cart){if(run.Runner.Y<=.001f)run.Runner.Command(MotionCommand.Jump);}
                 else if(hazard.Kind==ObstacleKind.Pipe)run.Runner.Command(MotionCommand.Crouch);
-                else if(hazard.Kind==ObstacleKind.Stair)run.Runner.Command(MotionCommand.HighKnee);
+                else if(hazard.Kind==ObstacleKind.Stair)run.Runner.Command(MotionCommand.KneeStep);
             }
         }
         private static Vector2 ElementCenter(VisualElement root,VisualElement element)

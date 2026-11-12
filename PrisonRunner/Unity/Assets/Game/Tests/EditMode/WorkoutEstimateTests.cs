@@ -10,14 +10,14 @@ namespace Muhanok.Tests
         {
             var w=new WorkoutEstimate();Assert.IsTrue(w.SetWeight("70"));Assert.IsTrue(w.SetWeight(""));
             Assert.AreEqual(WorkoutEstimate.DefaultWeightKg,w.WeightKg);Assert.AreEqual(65,w.WeightKg);
-            w.Tick(60,true,true,MotionCommand.HighKnee);Assert.Greater(w.EstimatedKcal,0);Assert.AreEqual(4.55,w.EstimatedKcal,.0001);
+            w.Tick(60,true,true,MotionCommand.KneeStep);Assert.Greater(w.EstimatedKcal,0);Assert.AreEqual(4.55,w.EstimatedKcal,.0001);
         }
         [TestCase("NaN")][TestCase("Infinity")][TestCase("0")][TestCase("500")][TestCase("70kg")]
         public void InvalidWeightIsRejected(string input){var w=new WorkoutEstimate();Assert.IsFalse(w.SetWeight(input));Assert.AreEqual(WorkoutEstimate.DefaultWeightKg,w.WeightKg);}
         [Test] public void WeightAndActualRecognizedTimeScaleEstimate()
         {
             var w=new WorkoutEstimate(); Assert.IsTrue(w.SetWeight("70"));
-            w.Tick(60,true,true,MotionCommand.HighKnee); Assert.AreEqual(4.9,w.EstimatedKcal,.0001);
+            w.Tick(60,true,true,MotionCommand.KneeStep); Assert.AreEqual(4.9,w.EstimatedKcal,.0001);
             w.Tick(60,true,true,MotionCommand.Jump); Assert.AreEqual(9.8,w.EstimatedKcal,.0001);
         }
         [Test] public void LostPoseIdleKeyboardAndPauseAreExcluded()

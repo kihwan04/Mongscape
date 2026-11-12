@@ -79,7 +79,7 @@ namespace Muhanok.Bootstrap
                 if(lane>=0&&lane<3)blocked[lane]=true;
                 if(at-z<4&&obstacle.Kind==ObstacleKind.Crate||at-z<4&&obstacle.Kind==ObstacleKind.Cart)game.Session.Runner.Command(MotionCommand.Jump);
                 if(at-z<5&&obstacle.Kind==ObstacleKind.Pipe)game.Session.Runner.Command(MotionCommand.Crouch);
-                if(at-z<5&&obstacle.Kind==ObstacleKind.Stair)game.Session.Runner.Command(MotionCommand.HighKnee);
+                if(at-z<5&&obstacle.Kind==ObstacleKind.Stair)game.Session.Runner.Command(MotionCommand.KneeStep);
             }
             foreach(var active in game.Map.Active)foreach(var item in active.Chunk.FloorItems)
             {

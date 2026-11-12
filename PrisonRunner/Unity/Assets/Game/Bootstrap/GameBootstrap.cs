@@ -361,7 +361,7 @@ namespace Muhanok.Bootstrap
                 Session.Tick(dt); Map.Tick(Session.Runner.Z); Hero.Apply(Session.Runner); Map.Evaluate(previousZ);
                 Map.AnimateGates(Session.Runner.Z);
                 bool exercising = Pose.UsesCamera ? Pose.Tracking && Pose.Reading.Active : true;
-                int activity=Time.realtimeSinceStartupAsDouble-Pose.LastJumpTime<.65?1:Pose.Reading.Crouch?2:Pose.Reading.HighKnee?3:Pose.Reading.Lane!=0?4:0;
+                int activity=Time.realtimeSinceStartupAsDouble-Pose.LastJumpTime<.65?1:Pose.Reading.Crouch?2:Time.realtimeSinceStartupAsDouble-Pose.LastKneeStepTime<.7?3:Pose.Reading.Lane!=0?4:0;
                 Session.Workout.TickActivity(dt,Session.Flow.State==GameFlowState.Running,Pose.UsesCamera&&Pose.Tracking,exercising,activity);
                 runFade += dt; hud.Fade = Mathf.Clamp01(runFade * 2f);
                 if (dust != null && !dust.isPlaying) dust.Play();
@@ -603,6 +603,7 @@ namespace Muhanok.Bootstrap
         string IHudData.PoseDiagnostics => userSettings != null && userSettings.DeveloperMode && userSettings.PoseDiagnostics ? Pose.Diagnostics : "";
         MotionReading IHudData.Motion => Pose.Reading;
         float IHudData.SecondsSinceJump => (float)(Time.realtimeSinceStartupAsDouble - Pose.LastJumpTime);
+        float IHudData.SecondsSinceKneeStep => (float)(Time.realtimeSinceStartupAsDouble - Pose.LastKneeStepTime);
         float IHudData.CalibrationProgress => Pose.CalibrationProgress;
         float IHudData.StepsPerMinute => Pose.StepsPerMinute;
         bool IHudData.BodyActive => Pose.Tracking && Pose.Reading.Active;

@@ -4,7 +4,7 @@ using PrisonRunner.Core;
 namespace Muhanok.Domain
 {
     public enum GameFlowState { Boot, TitleIdle, IntroTimeline, FirstPersonTakeover, Running, Caught, Result, Retry, LoadingIntro }
-    public enum MotionCommand { Center, Left, Right, Jump, Crouch, HighKnee }
+    public enum MotionCommand { Center, Left, Right, Jump, Crouch, KneeStep }
     public enum ObstacleKind { Crate, Pipe, Barrier, Cart, Laser, Stair }
     public enum CaptureReason { Collision, BrokenRail, SlipPursuit }
     // What made the runner slip: a plain floor hazard only slows, a banana or a missed high-knee step also counts as a strike.
@@ -39,7 +39,9 @@ namespace Muhanok.Domain
     public sealed class RunConfig
     {
         public float LaneSpacing = 2.2f, LaneSeconds = .20f, BaseSpeed = 9f, MaxSpeed = 17f;
-        public float JumpHeight = 1.8f, Gravity = 24f, CrouchSeconds = .8f, HighKneeSeconds = .9f;
+        public float JumpHeight = 1.8f, Gravity = 24f, CrouchSeconds = .8f;
+        // A knee step keeps the runner climbing for this long; the next alternating step has to land inside it.
+        public float KneeStepGap = .7f;
         public float LightHit = .18f, HeavyHit = .35f, Recovery = .018f, StumbleSeconds = .8f;
         public int CleanBonus = 25; // Unused since score v2; kept for saved settings.
         public float SlipSeconds = 2.4f, SlipSpeedMultiplier = .5f, CartSpeed = 9f;
@@ -124,13 +126,13 @@ namespace Muhanok.Domain
     {
         // A complete row always reserves an empty lane. Rows are separated by 12m.
         public static bool IsSafe(int occupiedLaneMask) => (occupiedLaneMask & 7) != 7;
-        public static bool Avoided(ObstacleKind kind, float height, bool crouch, bool highKnee)
+        public static bool Avoided(ObstacleKind kind, float height, bool crouch, bool kneeStepping)
         {
             switch (kind)
             {
                 case ObstacleKind.Crate: return height > .9f;
                 case ObstacleKind.Pipe: return crouch;
-                case ObstacleKind.Stair: return highKnee;
+                case ObstacleKind.Stair: return kneeStepping;
                 case ObstacleKind.Cart: return height > .9f;
                 default: return false;
             }
@@ -141,13 +143,17 @@ namespace Muhanok.Domain
     public sealed class RunnerController
     {
         private readonly RunConfig config;
-        private float laneFrom, laneTime, verticalSpeed, crouchLeft, kneeLeft, stumbleLeft, slowLeft, jumpBuffer, crouchBuffer;
+        private float laneFrom, laneTime, verticalSpeed, crouchLeft, stumbleLeft, slowLeft, jumpBuffer, crouchBuffer;
+        // The runner has no clock of its own: it counts the time it was ticked.
+        private float clock, lastKneeStep = NoKneeStep;
+        private const float NoKneeStep = -100f;
         public int Lane { get; private set; }
         public float X { get; private set; }
         public float Y { get; private set; }
         public float Z { get; private set; }
         public bool Crouching => crouchLeft > 0f;
-        public bool HighKnee => kneeLeft > 0f;
+        public float SinceKneeStep => clock - lastKneeStep;
+        public bool KneeStepping => SinceKneeStep < config.KneeStepGap;
         public bool Stumbling => stumbleLeft > 0f;
         public bool Riding => RouteSurface.IsCart(Z);
         public float CartLean=>Riding&&!(RouteSurface.ActivePlan?.RailChoiceLocked(Z)??false)?X/config.LaneSpacing:0;
@@ -180,7 +186,7 @@ namespace Muhanok.Domain
                 if (Y <= .001f && verticalSpeed <= 0f) crouchLeft = config.CrouchSeconds;
                 else crouchBuffer = config.InputBufferSeconds;
             }
-            if (command == MotionCommand.HighKnee && !Riding) kneeLeft = config.HighKneeSeconds;
+            if (command == MotionCommand.KneeStep && !Riding) lastKneeStep = clock;
         }
         public void Stumble() { stumbleLeft = config.StumbleSeconds; }
         public void Slip() { slowLeft = config.SlipSeconds; }
@@ -199,7 +205,7 @@ namespace Muhanok.Domain
             // Analytic gravity keeps the arc stable even at low frame rates.
             Y = Math.Max(0f, Y + verticalSpeed * dt - config.Gravity * dt * dt * .5f);
             verticalSpeed = Y <= 0f ? Math.Max(0f, verticalSpeed - config.Gravity * dt) : verticalSpeed - config.Gravity * dt;
-            if(Riding){Y=0;verticalSpeed=0;kneeLeft=0;jumpBuffer=0;}
+            if(Riding){Y=0;verticalSpeed=0;lastKneeStep=NoKneeStep;jumpBuffer=0;}
             if (Y <= .001f && verticalSpeed <= 0f)
             {
                 if (jumpBuffer > 0f) { jumpBuffer = 0f; crouchBuffer = 0f; StartJump(); }
@@ -212,7 +218,7 @@ namespace Muhanok.Domain
             if(wasRiding!=Riding){laneFrom=X;Lane=0;laneTime=0;}
             if(wasRiding&&!Riding&&(RouteSurface.ActivePlan?.Extended??false)){X=laneFrom=0;laneTime=1;}
             crouchLeft = Math.Max(0f, crouchLeft - dt);
-            kneeLeft = Math.Max(0f, kneeLeft - dt);
+            clock += dt;
             stumbleLeft = Math.Max(0f, stumbleLeft - dt);
             slowLeft = Math.Max(0f, slowLeft - dt);
         }
@@ -221,7 +227,7 @@ namespace Muhanok.Domain
             crouchLeft = 0f;
             verticalSpeed = (float)Math.Sqrt(2f * config.Gravity * config.JumpHeight);
         }
-        public void Reset() { Lane = 0; X = Y = 0f; Z = 2f; laneFrom = verticalSpeed = crouchLeft = kneeLeft = stumbleLeft = slowLeft = jumpBuffer = crouchBuffer = 0f; laneTime = 1f; }
+        public void Reset() { Lane = 0; X = Y = 0f; Z = 2f; laneFrom = verticalSpeed = crouchLeft = stumbleLeft = slowLeft = jumpBuffer = crouchBuffer = 0f; laneTime = 1f; clock = 0f; lastKneeStep = NoKneeStep; }
     }
 
     public sealed class RunSession

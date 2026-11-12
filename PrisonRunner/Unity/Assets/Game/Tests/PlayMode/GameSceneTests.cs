@@ -43,9 +43,9 @@ namespace Muhanok.Tests
                 InputState.Change(keys, new KeyboardState(Key.A)); game.TickInput();
                 Assert.AreEqual(-1, game.Session.Runner.Lane);
                 InputState.Change(keys, new KeyboardState(Key.S, Key.W)); game.TickInput();
-                Assert.IsTrue(game.Session.Runner.Crouching && game.Session.Runner.HighKnee);
+                Assert.IsTrue(game.Session.Runner.Crouching && game.Session.Runner.KneeStepping);
                 InputState.Change(keys, new KeyboardState()); yield return new WaitForSeconds(1.1f);
-                Assert.IsFalse(game.Session.Runner.Crouching || game.Session.Runner.HighKnee);
+                Assert.IsFalse(game.Session.Runner.Crouching || game.Session.Runner.KneeStepping);
                 InputState.Change(keys, new KeyboardState(Key.Space)); game.TickInput(); game.Session.Tick(.1f);
                 Assert.Greater(game.Session.Runner.Y, 0);
                 game.Session.Runner.SetStartZ(36);
@@ -68,9 +68,9 @@ namespace Muhanok.Tests
             game.Session.Tick(.2f); Assert.AreEqual(-2.2f, game.Session.Runner.X, .0001f);
             game.Session.Runner.Command(MotionCommand.Jump); game.Session.Tick(.1f); Assert.Greater(game.Session.Runner.Y, .5f);
             for (int i = 0; i < 20; i++) game.Session.Tick(.1f);
-            game.Session.Runner.SetStartZ(80);game.Session.Runner.Command(MotionCommand.Crouch); game.Session.Runner.Command(MotionCommand.HighKnee);
-            Assert.IsTrue(game.Session.Runner.Crouching && game.Session.Runner.HighKnee);
-            for (int i = 0; i < 11; i++) game.Session.Tick(.1f); Assert.IsFalse(game.Session.Runner.Crouching || game.Session.Runner.HighKnee);
+            game.Session.Runner.SetStartZ(80);game.Session.Runner.Command(MotionCommand.Crouch); game.Session.Runner.Command(MotionCommand.KneeStep);
+            Assert.IsTrue(game.Session.Runner.Crouching && game.Session.Runner.KneeStepping);
+            for (int i = 0; i < 11; i++) game.Session.Tick(.1f); Assert.IsFalse(game.Session.Runner.Crouching || game.Session.Runner.KneeStepping);
             int created = game.Map.CreatedCount;
             for (int n = 0; n < 120; n++)
             {

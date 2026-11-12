@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.IO;
 using Muhanok.Domain;
 using Muhanok.Infrastructure;
@@ -31,7 +32,7 @@ namespace Muhanok.Tests
             var classifier = new MotionClassifier(new MotionTuning()); classifier.SetStyle(style);
             for (int i = 0; i < 30; i++) classifier.Update(Frame(new Body { Legs = style == PlayStyle.FullBody }, i / 30.0));
             Assert.AreEqual(PoseStatus.Tracking, classifier.Status);
-            var events = new List<string>(); int lane = 0; bool crouch = false, knee = false;
+            var events = new List<string>(); int lane = 0; bool crouch = false;
             for (double t = 0; t < seconds; t += 1 / 30.0)
             {
                 var body = script(t); body.Legs = style == PlayStyle.FullBody;
@@ -40,7 +41,7 @@ namespace Muhanok.Tests
                 if (r.Lane != lane) { events.Add("lane" + r.Lane); lane = r.Lane; }
                 if (r.JumpEdge) events.Add("jump");
                 if (r.Crouch != crouch) { events.Add(r.Crouch ? "crouch" : "stand"); crouch = r.Crouch; }
-                if (r.HighKnee != knee) { if (r.HighKnee) events.Add("knee"); knee = r.HighKnee; }
+                if (r.KneeStep) events.Add("knee");
             }
             return events;
         }
@@ -146,10 +147,10 @@ namespace Muhanok.Tests
             // Shoulders down half a torso for 0.5 s.
             CollectionAssert.AreEqual(new[] { "crouch", "stand" }, Play(PlayStyle.FullBody, t => new Body { Dy = In(t, .2, .7) ? .135f : 0 }, 1.5));
         }
-        [Test] public void HeldCrouchAndAlternatingKneesAreHeldActions()
+        [Test] public void HeldCrouchIsAHeldActionAndAlternatingKneesAreSteps()
         {
             CollectionAssert.AreEqual(new[] { "crouch", "stand" }, Play(PlayStyle.FullBody, t => new Body { Shoulder = In(t, .2, 1.2) ? .12f : 0, Hip = In(t, .2, 1.2) ? .04f : 0 }, 1.6));
-            CollectionAssert.AreEqual(new[] { "knee" }, Play(PlayStyle.FullBody, t => { int s = (int)((t - .2) / .3) % 2; bool on = In(t, .2, 1.6); return new Body { KneeL = on && s == 0 ? .09f : 0, KneeR = on && s == 1 ? .09f : 0 }; }, 1.8));
+            Assert.AreEqual(5, Play(PlayStyle.FullBody, t => { int s = (int)((t - .2) / .3) % 2; bool on = In(t, .2, 1.6); return new Body { KneeL = on && s == 0 ? .09f : 0, KneeR = on && s == 1 ? .09f : 0 }; }, 1.8).Count(e => e == "knee"));
         }
         [Test] public void StandingStillAndJoggingInPlaceTriggerNothing()
         {
@@ -161,7 +162,41 @@ namespace Muhanok.Tests
             CollectionAssert.AreEqual(new[] { "lane-1", "lane0" }, Play(PlayStyle.UpperBody, t => new Body { Dx = In(t, .2, .8) ? -.10f : 0 }, 1.3));
             CollectionAssert.AreEqual(new[] { "jump" }, Play(PlayStyle.UpperBody, t => new Body { WristL = In(t, .2, .6) ? .08f : .6f, WristR = In(t, .2, .6) ? .08f : .6f }, 1.2));
             CollectionAssert.AreEqual(new[] { "crouch", "stand" }, Play(PlayStyle.UpperBody, t => new Body { Shoulder = In(t, .2, 1) ? .07f : 0 }, 1.4));
-            CollectionAssert.AreEqual(new[] { "knee" }, Play(PlayStyle.UpperBody, t => { int s = (int)(t / .3) % 2; bool on = In(t, .2, 1.8); return new Body { WristL = on ? (s == 0 ? .4f : .62f) : .6f, WristR = on ? (s == 1 ? .4f : .62f) : .6f }; }, 2.0));
+            Assert.AreEqual(5, Play(PlayStyle.UpperBody, t => { int s = (int)(t / .3) % 2; bool on = In(t, .2, 1.8); return new Body { WristL = on ? (s == 0 ? .4f : .62f) : .6f, WristR = on ? (s == 1 ? .4f : .62f) : .6f }; }, 2.0).Count(e => e == "knee"), "Big alternating pumps are knee steps");
+        }
+        [Test] public void SmallArmSwingsAreRunningNotKneeSteps()
+        {
+            var events = Play(PlayStyle.UpperBody, t => { int s = (int)(t / .3) % 2; bool on = In(t, .2, 1.8); return new Body { WristL = on ? (s == 0 ? .53f : .6f) : .6f, WristR = on ? (s == 1 ? .53f : .6f) : .6f }; }, 2.0);
+            CollectionAssert.DoesNotContain(events, "knee");
+        }
+        // Lifts the left (-1) or right (1) knee during each [from, to) window.
+        private static Func<double, Body> KneeLifts(params (double from, double to, int side)[] lifts) => t =>
+        {
+            var body = new Body();
+            foreach (var lift in lifts) if (In(t, lift.from, lift.to)) { if (lift.side < 0) body.KneeL = .09f; else body.KneeR = .09f; }
+            return body;
+        };
+        [Test] public void HoldingOneKneeUpForSecondsIsASingleKneeStep()
+        {
+            CollectionAssert.AreEqual(new[] { "knee" }, Play(PlayStyle.FullBody, KneeLifts((.2, 3.2, -1)), 3.6));
+        }
+        [Test] public void AlternatingKneeLiftsAreOneKneeStepEach()
+        {
+            CollectionAssert.AreEqual(new[] { "knee", "knee", "knee", "knee" }, Play(PlayStyle.FullBody, KneeLifts((.2, .6, -1), (.8, 1.2, 1), (1.4, 1.8, -1), (2.0, 2.4, 1)), 2.8));
+        }
+        [Test] public void LiftingTheSameKneeAgainIsNotANewKneeStep()
+        {
+            CollectionAssert.AreEqual(new[] { "knee" }, Play(PlayStyle.FullBody, KneeLifts((.2, .6, -1), (.8, 1.2, -1), (1.4, 1.8, -1)), 2.2));
+            CollectionAssert.AreEqual(new[] { "knee", "knee" }, Play(PlayStyle.FullBody, KneeLifts((.2, .6, -1), (.8, 1.2, -1), (1.4, 1.8, 1)), 2.2));
+        }
+        [Test] public void KneeLiftsWhileAirborneAreIgnored()
+        {
+            CollectionAssert.AreEqual(new[] { "jump" }, Play(PlayStyle.FullBody, t =>
+            {
+                var body = new Body { Dy = In(t, .2, .3) ? .085f : In(t, .3, .6) ? -.06f : 0, Ankle = In(t, .3, .6) ? .06f : 0 };
+                if (In(t, .35, .55)) body.KneeL = .09f;
+                return body;
+            }, 1.5));
         }
         [Test] public void ShortDropoutKeepsTrackingAndVanishingWhileDuckingCountsAsDuck()
         {

@@ -183,7 +183,7 @@ namespace Muhanok.Bootstrap
                 float d=h.transform.position.z-z;if(h.Passed||!h.gameObject.activeInHierarchy||d<0||d>speed*.3f||(!h.FullExerciseRow&&Lane(h.transform)!=game.Session.Runner.Lane))continue;
                 if(h.Kind==ObstacleKind.Crate||h.Kind==ObstacleKind.Cart){if(game.Session.Runner.Y<=.001f)game.Session.Runner.Command(MotionCommand.Jump);}
                 else if(h.Kind==ObstacleKind.Pipe)game.Session.Runner.Command(MotionCommand.Crouch);
-                else if(h.Kind==ObstacleKind.Stair)game.Session.Runner.Command(MotionCommand.HighKnee);
+                else if(h.Kind==ObstacleKind.Stair)game.Session.Runner.Command(MotionCommand.KneeStep);
             }
         }
         private IEnumerator Finish()

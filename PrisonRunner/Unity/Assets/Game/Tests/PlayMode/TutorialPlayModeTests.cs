@@ -90,7 +90,7 @@ namespace Muhanok.Tests
                     if(step==TutorialStep.Lane&&near&&run.Lane==0)run.Command(MotionCommand.Left);
                     else if(step==TutorialStep.Jump&&near&&!t.Resumed&&run.Y<=.001f)run.Command(MotionCommand.Jump);
                     else if(step==TutorialStep.Crouch&&near)run.Command(MotionCommand.Crouch);
-                    else if(step==TutorialStep.HighKnee&&near)run.Command(MotionCommand.HighKnee);
+                    else if(step==TutorialStep.HighKnee&&near)run.Command(MotionCommand.KneeStep);
                     else if(step==TutorialStep.Rail&&t.LessonDistance<=TutorialDirector.SlowDistance&&run.Lane==0)run.Command(TutorialCourse.RailLean);
                     else if(step==TutorialStep.Fork&&(RouteSurface.ActivePlan?.ForkWindow(run.Z)??false)&&run.Lane==0)run.Command(MotionCommand.Left);
                 }

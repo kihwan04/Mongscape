@@ -44,7 +44,7 @@ namespace Muhanok.Domain
         // Lane and fork steps accept either side (Left stands for both); the broken rail needs the lean away from the gap.
         public static MotionCommand? AwaitedOf(TutorialStep step) => step == TutorialStep.Lane || step == TutorialStep.Fork ? MotionCommand.Left
             : step == TutorialStep.Rail ? TutorialCourse.RailLean
-            : step == TutorialStep.Jump ? MotionCommand.Jump : step == TutorialStep.Crouch ? MotionCommand.Crouch : step == TutorialStep.HighKnee ? MotionCommand.HighKnee : (MotionCommand?)null;
+            : step == TutorialStep.Jump ? MotionCommand.Jump : step == TutorialStep.Crouch ? MotionCommand.Crouch : step == TutorialStep.HighKnee ? MotionCommand.KneeStep : (MotionCommand?)null;
         public static bool Accepts(TutorialStep step, MotionCommand command)
         {
             if (step == TutorialStep.Lane || step == TutorialStep.Fork) return command == MotionCommand.Left || command == MotionCommand.Right;
@@ -59,7 +59,7 @@ namespace Muhanok.Domain
                 case TutorialStep.Lane: return runner.Lane != TutorialCourse.BlockedLane;
                 case TutorialStep.Jump: return runner.Y > .01f;
                 case TutorialStep.Crouch: return runner.Crouching;
-                case TutorialStep.HighKnee: return runner.HighKnee;
+                case TutorialStep.HighKnee: return runner.KneeStepping;
                 // The same lean the rail gap judges (CartRailGap: lean toward the intact rail of at least .55).
                 case TutorialStep.Rail: return runner.Riding && runner.CartLean * -TutorialCourse.RailMissingSide >= .55f;
                 case TutorialStep.Fork: return runner.Lane != 0;
@@ -78,7 +78,7 @@ namespace Muhanok.Domain
                 case TutorialStep.Lane: return keys ? "A·D(←·→) 키로 옆 줄로 피하세요." : "왼쪽이나 오른쪽 구역으로 몸을 옮겨 피하세요.";
                 case TutorialStep.Jump: return keys ? "스페이스 키로 점프!" : upper ? "두 손을 머리 위로 들어 점프!" : "제자리에서 점프!";
                 case TutorialStep.Crouch: return keys ? "S(↓) 키를 누르고 있으면 숙입니다." : upper ? "몸을 낮춰 숙이세요!" : "무릎을 굽혀 숙이세요!";
-                case TutorialStep.HighKnee: return keys ? "W(↑) 키를 누르고 있으면 계단을 오릅니다." : upper ? "팔을 힘차게 흔들어 계단을 오르세요!" : "무릎을 높이 들어 계단을 오르세요!";
+                case TutorialStep.HighKnee: return keys ? "W(↑) 키를 번갈아 연타해 계단을 오르세요!" : upper ? "팔을 크게 번갈아 흔들어 계단을 오르세요!" : "양쪽 무릎을 번갈아 높이 들어 계단을 오르세요!";
                 case TutorialStep.Rail:
                 {
                     bool right = TutorialCourse.RailLean == MotionCommand.Right;
