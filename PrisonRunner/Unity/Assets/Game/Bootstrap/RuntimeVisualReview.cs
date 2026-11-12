@@ -133,7 +133,7 @@ namespace Muhanok.Bootstrap
                 {actor.Pose(new Vector3(game.Session.Runner.X,0,game.Session.Runner.Z-Mathf.Lerp(15,1.8f,game.Session.Chase.Pressure)),true);actor.Play("AN_Guard_ChaseRun");}
                 yield return null;
             }
-            if(game.Session.Flow.State!=GameFlowState.Caught||game.Session.Reason!=CaptureReason.BananaPursuit)throw new InvalidOperationException("Two actual banana contacts did not cause pursuit capture");
+            if(game.Session.Flow.State!=GameFlowState.Caught||game.Session.Reason!=CaptureReason.SlipPursuit)throw new InvalidOperationException("Two actual banana contacts did not cause pursuit capture");
             game.enabled=true;yield return new WaitForSecondsRealtime(.40f);yield return Capture("Player_BananaCatch");
         }
         private IEnumerator CaptureRailCrash()

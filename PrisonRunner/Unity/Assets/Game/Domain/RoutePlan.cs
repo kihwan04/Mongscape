@@ -22,7 +22,7 @@ namespace Muhanok.Domain
         private readonly Dictionary<int, int> choices = new Dictionary<int, int>();
         private readonly List<int[]> destinations = new List<int[]>();
         public bool Extended => config != null && config.ExtendedRoutes;
-        public const int ExtendedLapChunks = 48;
+        public const int ExtendedLapChunks = 32;
         public int LocalSequence(int sequence) { Ensure(sequence); return sequence - starts[cycles[sequence]]; }
         public bool IsForkTrackChunk(int sequence) => Extended && LocalSequence(sequence) >= CartFork.FirstChunk && LocalSequence(sequence) <= CartFork.LastChunk && ForkCycle(cycles[sequence]);
         public bool RailChoiceLocked(float z)=>Extended&&ForkLocked(z)&&LapDistance(z)>=CartFork.Decision&&LapDistance(z)<CartFork.End;
@@ -106,7 +106,7 @@ namespace Muhanok.Domain
                 lap.Add(lane<0?3:0);return lap.ToArray();
             }
             lap.Add(7);
-            int prison = 24;
+            int prison = 14;
             for (int i = 0; i < prison; i++) lap.Add(4 + i % 2);
             lap.Add(6); lap.Add(11);
             while (lap.Count < ExtendedLapChunks-1) lap.Add(12);

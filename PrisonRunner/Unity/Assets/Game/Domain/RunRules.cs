@@ -6,7 +6,9 @@ namespace Muhanok.Domain
     public enum GameFlowState { Boot, TitleIdle, IntroTimeline, FirstPersonTakeover, Running, Caught, Result, Retry, LoadingIntro }
     public enum MotionCommand { Center, Left, Right, Jump, Crouch, HighKnee }
     public enum ObstacleKind { Crate, Pipe, Barrier, Cart, Laser, Stair }
-    public enum CaptureReason { Collision, BrokenRail, BananaPursuit }
+    public enum CaptureReason { Collision, BrokenRail, SlipPursuit }
+    // What made the runner slip: a plain floor hazard only slows, a banana or a missed high-knee step also counts as a strike.
+    public enum SlipSource { Floor, Banana, KneeMiss }
 
     public sealed class GameFlowController
     {
@@ -42,6 +44,8 @@ namespace Muhanok.Domain
         public int CleanBonus = 25; // Unused since score v2; kept for saved settings.
         public float SlipSeconds = 2.4f, SlipSpeedMultiplier = .5f, CartSpeed = 9f;
         public float BananaCatchSeconds=1.2f;
+        // A single slip strike is forgiven after this many seconds without a second one.
+        public float StrikeClearSeconds=8f;
         public float SpeedRampDistance = 120f;
         // Jump/slide pressed shortly before landing runs on landing. Zero keeps the strict legacy rule.
         public float InputBufferSeconds = 0f;
@@ -238,12 +242,16 @@ namespace Muhanok.Domain
         // The tutorial slows the runner in front of a lesson obstacle (1 = normal speed).
         public float SpeedScale {get;set;}=1f;
         private bool tutorial;
-        public int BananaHits {get;private set;}
+        public int SlipStrikes {get;private set;}
+        // Seconds until the single active strike clears (0 when there is none).
+        public float StrikeClearRemaining=>SlipStrikes==1&&!SlipPursuit?Math.Max(0f,Config.StrikeClearSeconds-(clock-lastStrike)):0f;
+        // Raised once when a strike times out, so the HUD can show the all-clear.
+        public event Action StrikeCleared;
         public int ShieldSaves {get;private set;}
         public int DodgeStreak {get;private set;}
         public int BestDodgeStreak {get;private set;}
         public void RecordDodge() { DodgeStreak++;BestDodgeStreak=Math.Max(BestDodgeStreak,DodgeStreak); }
-        public bool BananaPursuit=>bananaCatchLeft>0;
+        public bool SlipPursuit=>bananaCatchLeft>0;
         public float TargetSpeed => Config.IntervalMode ? IntervalSpeed() : Difficulty.Speed(Score.Distance, Config, Runner.Riding);
         public float CurrentSpeed => Flow.State == GameFlowState.Running && !Paused ? MoveSpeed * Runner.SpeedMultiplier * SpeedScale : 0f;
         private float MoveSpeed => Config.IntervalMode ? smoothSpeed : TargetSpeed;
@@ -253,7 +261,7 @@ namespace Muhanok.Domain
         public float PhaseRemainingSeconds => RouteSurface.SegmentRemaining(Runner.Z) / Math.Max(1f, TargetSpeed);
         public CaptureReason Reason {get;private set;}
         private float bananaCatchLeft, smoothSpeed;
-        private float lastHit = -100f, clock;
+        private float lastHit = -100f, clock, lastStrike;
         // Play time without pauses; shown to the player, not part of the score.
         public float Elapsed => clock;
         public RunSession(RunConfig config) { Config = config; Score = new ScoreSystem(Workout); Runner = new RunnerController(config); smoothSpeed = TargetSpeed; }
@@ -276,13 +284,17 @@ namespace Muhanok.Domain
             float z = Runner.Z;
             Runner.Tick(dt, MoveSpeed * SpeedScale);
             Score.Advance(Runner.Z - z);
-            if(BananaPursuit)
+            if(SlipPursuit)
             {
                 bananaCatchLeft=Math.Max(0,bananaCatchLeft-dt);
                 Chase.Hit(.55f*dt/Math.Max(.1f,Config.BananaCatchSeconds));
-                if(bananaCatchLeft<=.0001f)Fail(CaptureReason.BananaPursuit);
+                if(bananaCatchLeft<=.0001f)Fail(CaptureReason.SlipPursuit);
             }
-            else if (BananaHits==0&&clock - lastHit > 2f) Chase.Recover(Config.Recovery * dt);
+            else if(SlipStrikes==1&&clock-lastStrike>=Config.StrikeClearSeconds)
+            {
+                SlipStrikes=0;Chase.Hit(-.45f);StrikeCleared?.Invoke();
+            }
+            else if (SlipStrikes==0&&clock - lastHit > 2f) Chase.Recover(Config.Recovery * dt);
         }
         // Reads the item state at pickup time, so a coin in the same frame as the item already counts double.
         public void CollectCoin() { Score.CoinMultiplier = Items.IsActive(ItemKind.DoubleScore) ? 2 : 1; Score.CollectCoin(); }
@@ -303,21 +315,21 @@ namespace Muhanok.Domain
             Flow.Transition(GameFlowState.Caught);
             return true;
         }
-        public bool Slip(bool banana=false)
+        public bool Slip(SlipSource source=SlipSource.Floor)
         {
             if(Flow.State!=GameFlowState.Running||Paused||Runner.Riding)return false;
             DodgeStreak=0;
             // The shield also absorbs one slip: no slowdown, no banana count, so no pursuit starts.
             if(Items.ConsumeShield()){ShieldSaves++;lastHit=clock;return false;}
             Runner.Slip();
-            if(banana)
+            if(source!=SlipSource.Floor)
             {
-                BananaHits++;
-                if(BananaHits==1)Chase.Hit(.45f);
-                if(BananaHits>=2&&!BananaPursuit)bananaCatchLeft=Math.Max(.1f,Config.BananaCatchSeconds);
+                SlipStrikes++;lastStrike=clock;
+                if(SlipStrikes==1)Chase.Hit(.45f);
+                if(SlipStrikes>=2&&!SlipPursuit)bananaCatchLeft=Math.Max(.1f,Config.BananaCatchSeconds);
             }
             return true;
         }
-        public void Reset() { Runner.Reset(); Chase.Reset(); Score.Reset(); Workout.Reset(); Items.Reset(); Paused=false; SpeedScale=1f; clock = 0f; lastHit = -100f;BananaHits=0;ShieldSaves=0;DodgeStreak=BestDodgeStreak=0;bananaCatchLeft=0;Reason=CaptureReason.Collision; smoothSpeed = TargetSpeed; }
+        public void Reset() { Runner.Reset(); Chase.Reset(); Score.Reset(); Workout.Reset(); Items.Reset(); Paused=false; SpeedScale=1f; clock = 0f; lastHit = -100f;SlipStrikes=0;lastStrike=0f;ShieldSaves=0;DodgeStreak=BestDodgeStreak=0;bananaCatchLeft=0;Reason=CaptureReason.Collision; smoothSpeed = TargetSpeed; }
     }
 }

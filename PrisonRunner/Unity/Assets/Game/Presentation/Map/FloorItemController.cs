@@ -16,7 +16,7 @@ namespace Muhanok.Presentation.Map
             Passed=true;
             RouteSurface.Sample(session.Runner.Z,out float offset,out _);
             if(Mathf.Abs(session.Runner.X+offset-transform.position.x)<.9f&&session.Runner.Y<.45f)
-                session.Slip(Kind==FloorItemKind.BananaPeel);
+                session.Slip(Kind==FloorItemKind.BananaPeel?SlipSource.Banana:SlipSource.Floor);
         }
     }
 }

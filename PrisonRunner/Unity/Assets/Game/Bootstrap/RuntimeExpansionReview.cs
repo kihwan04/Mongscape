@@ -110,7 +110,7 @@ namespace Muhanok.Bootstrap
                 Seek(150,BranchFor(destinationType));yield return new WaitForSecondsRealtime(.6f);yield return Capture("16_Biome_Entry_"+(destinationType+1));
                 Seek(176,BranchFor(destinationType));yield return new WaitForSecondsRealtime(.6f);yield return Capture("17_Biome_Start_"+(destinationType+1));
             }
-            Seek(1140,BranchFor(-1));yield return new WaitForSecondsRealtime(.6f);yield return Capture("18_Outdoor_Return_To_Mine");
+            Seek(RoutePlan.ExtendedLapChunks*24-12,BranchFor(-1));yield return new WaitForSecondsRealtime(.6f);yield return Capture("18_Outdoor_Return_To_Mine");
             Seek(480,BranchFor(-1));
             foreach(var active in game.Map.Active)
             {
@@ -158,7 +158,7 @@ namespace Muhanok.Bootstrap
                 yield return null;
             }
             report.cameraStatus=deferCamera?"Deferred by user":game.Pose.Status+": "+game.Pose.Message;game.Pose.SetStyle(PlayStyle.Keyboard);
-            Seek(480,BranchFor(-1));game.Session.Slip(true);
+            Seek(480,BranchFor(-1));game.Session.Slip(SlipSource.Banana);
             yield return new WaitForSecondsRealtime(.4f);yield return Capture("13_Banana_Siren");
             var caughtPortrait=new Texture2D(32,32,TextureFormat.RGB24,false);
             for(int y=0;y<32;y++)for(int x=0;x<32;x++)caughtPortrait.SetPixel(x,y,(x/8+y/8)%2==0?new Color(1,.7f,.2f):new Color(.2f,.65f,1));caughtPortrait.Apply();

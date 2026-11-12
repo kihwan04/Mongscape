@@ -369,7 +369,7 @@ namespace Muhanok.Bootstrap
                 previousStumble = Session.Runner.Stumbling;
                 if (Session.Flow.State == GameFlowState.Running)
                 {
-                    float distance=Session.Runner.Slowing&&Session.BananaHits>0||Session.BananaPursuit?1.8f:Mathf.Lerp(15,1.8f,Session.Chase.Pressure);
+                    float distance=Session.Runner.Slowing&&Session.SlipStrikes>0||Session.SlipPursuit?1.8f:Mathf.Lerp(15,1.8f,Session.Chase.Pressure);
                     guardDistance=Mathf.MoveTowards(guardDistance,distance,dt*18);
                     guard.Pose(new Vector3(Session.Runner.X, 0, Session.Runner.Z-guardDistance), !Session.Runner.Riding);
                     guard.Play("AN_Guard_ChaseRun");

@@ -53,7 +53,7 @@ namespace Muhanok.Presentation
             float target = state == GameFlowState.Result || state == GameFlowState.Caught ? .25f : running ? 1f : .6f;
             level = Mathf.MoveTowards(level, target, Time.unscaledDeltaTime);
             music.volume = musicVolume;
-            float danger = running ? Mathf.Max(session.BananaPursuit ? 1f : 0f, Mathf.InverseLerp(.35f, .9f, session.Chase.Pressure)) : 0f;
+            float danger = running ? Mathf.Max(session.SlipPursuit ? 1f : 0f, Mathf.InverseLerp(.35f, .9f, session.Chase.Pressure)) : 0f;
             siren.volume = Mathf.MoveTowards(siren.volume, danger * effectsVolume * .45f, Time.unscaledDeltaTime);
             if (state == GameFlowState.Running)
             {
