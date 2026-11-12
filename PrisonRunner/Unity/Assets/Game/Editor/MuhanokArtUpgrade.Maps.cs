@@ -56,7 +56,7 @@ namespace Muhanok.Editor
             rng=new System.Random(723+index*71);
             if(index==1||index==2) CartCavern(env,index);
             else if(index<3) {Mine(env,0,24,index);CartDock(env,false);}
-            else if(index==RouteSurface.MineStair){Mine(env,0,24,0);StairClimb(env,index,wood,brass);}
+            else if(index==RouteSurface.MineStair) MineStairLights(env);
             else if(index==3)
             {
                 Mine(env,0,12,index); CartDock(env,true); PrisonShell(env,12,24,index);
@@ -64,16 +64,17 @@ namespace Muhanok.Editor
                 Portal(env,12,wood); Portal(env,15,iron); Label("SERVICE ACCESS",env,new Vector3(0,4.05f,15.15f),.16f,cream.color);
                 Prop("factory-kit","pipe-large-valve",env,new Vector3(3.6f,.3f,13),1.4f,-90,iron);
             }
-            else if(index>=11){Outdoors(env,index);if(index==RouteSurface.ZooStair)StairClimb(env,index,concrete,pale);}
+            else if(index==RouteSurface.ZooStair) ZooStairProps(env);
+            else if(index>=11) Outdoors(env,index);
             else if(index==6){PrisonShell(env,0,16,index);RoomDetails(env,index);ServiceExit(env);}
             else { PrisonShell(env,0,24,index); RoomDetails(env,index); }
             // Identical floor height, width and clear runner envelope at every 24m boundary.
-            for(int segment=0;segment<24&&index!=1&&index!=2;segment++)
+            for(int segment=0;segment<24&&index!=1&&index!=2&&!HasStairMesh(index);segment++)
             {
                 if(!File.Exists(Authoring+"/"+id+".prefab")) ProBuilderBox("ContinuousFloor",env,new Vector3(0,-.19f,segment+.5f),new Vector3(9.8f,.38f,1.002f),RouteSurface.IsMine(index)?rock:concrete);
                 for(int side=-1;side<=1;side+=2) Shape("BoundaryCurb",env,new Vector3(side*3.53f,.075f,segment+.5f),new Vector3(.14f,.15f,1.002f),RouteSurface.IsMine(index)?rockLight:iron);
             }
-            AddBoundaryConnectors(env,index);
+            if(!HasStairMesh(index)) AddBoundaryConnectors(env,index);
             AddPrisonGates(root,index);
             AddZooHazards(root,index);
             MatchWalkingMotions(root,index);
@@ -85,25 +86,12 @@ namespace Muhanok.Editor
             AssetDatabase.StartAssetEditing();
             try { BakeEnvironment(env,id); ApplyRouteSurface(root,index); }
             finally { AssetDatabase.StopAssetEditing(); }
-            AddBakedAuthoringRoute(root,id);
+            AddStairMesh(env,index);
+            if(HasStairMesh(index)) Node("RouteStructure",root.transform,Vector3.zero); // the Blender mesh owns the whole stair surface
+            else AddBakedAuthoringRoute(root,id);
             AddCellActors(root,index);
             MuhanokGameplayUpgrade.Configure(root,index);
             Save(root);
-        }
-        // Placeholder climb for the mine and zoo stair chunks: risers and nosings along the route rise, plus handrails. The art pass replaces it.
-        private static void StairClimb(Transform env,int index,Material riser,Material nosing)
-        {
-            for(int tread=1;tread<24;tread++)
-            {
-                Shape("StairNosing",env,new Vector3(0,.026f,tread),new Vector3(6.6f,.05f,.09f),nosing);
-                float rise=RouteSurface.LocalHeight(index,tread)-RouteSurface.LocalHeight(index,tread-1);
-                Shape("StairRiser",env,new Vector3(0,-rise*.5f,tread),new Vector3(6.6f,rise,.045f),riser);
-            }
-            for(int side=-1;side<=1;side+=2)
-            {
-                for(int z=0;z<24;z++) Beam("StairHandrail",env,new Vector3(side*3.4f,1.06f,z),new Vector3(side*3.4f,1.06f,z+1),.09f,brass);
-                for(int z=0;z<=24;z+=3) Beam("StairPost",env,new Vector3(side*3.4f,.1f,z),new Vector3(side*3.4f,1.05f,z),.07f,brass);
-            }
         }
         // Stair chunks keep the six obstacle sockets of the chunk contract, but nothing sits in them: the old stair hazard
         // instances are replaced by inert, inactive controllers.
