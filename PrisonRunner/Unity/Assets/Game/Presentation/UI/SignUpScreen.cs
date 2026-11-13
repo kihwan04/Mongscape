@@ -7,6 +7,8 @@ using UnityEngine;
 namespace Muhanok.Presentation
 {
     public enum SignUpStep { Consent, Nickname, Settings, Capture }
+    // Every item is required; the face features are sensitive data and get their own separate consent.
+    public enum ConsentItem { Age, Personal, Biometric }
 
     // Sign-up steps without drawing: consent, nickname (server check), weight and style (skippable), face capture.
     // A failed capture stays on the capture step and keeps every earlier answer.
@@ -19,14 +21,22 @@ namespace Muhanok.Presentation
         public bool Checking { get; private set; }
         public string Validation { get; private set; } = "";
         public AccountSettings Settings { get; private set; } = new AccountSettings();
+        private readonly bool[] agreed = new bool[3];
+        public bool Agreed(ConsentItem item) => agreed[(int)item];
+        public bool AllAgreed => agreed[0] && agreed[1] && agreed[2];
+        public void Toggle(ConsentItem item) { if (Step == SignUpStep.Consent) agreed[(int)item] = !agreed[(int)item]; }
+        // "전체 동의": checks every item, or clears them all when every item is already checked.
+        public void ToggleAll() { if (Step != SignUpStep.Consent) return; bool on = !AllAgreed; for (int i = 0; i < agreed.Length; i++) agreed[i] = on; }
         private IIdentityData identity;
         private int ticket;
 
         public void Open(IIdentityData account)
         {
             identity = account; Step = SignUpStep.Consent; Nickname = NameMessage = Validation = ""; Checking = false; Settings = new AccountSettings(); ticket++;
+            Array.Clear(agreed, 0, agreed.Length);
         }
-        public void Agree() { if (Step == SignUpStep.Consent) Step = SignUpStep.Nickname; }
+        // Moves on only with every required item checked.
+        public bool Agree() { if (Step != SignUpStep.Consent || !AllAgreed) return false; Step = SignUpStep.Nickname; return true; }
         public void SubmitNickname(string name)
         {
             if (Step != SignUpStep.Nickname || Checking) return;
@@ -73,13 +83,13 @@ namespace Muhanok.Presentation
     // Draws the sign-up steps; the capture step is the shared face capture screen.
     internal sealed class SignUpScreen
     {
-        private static readonly string[] StepNames = { "저장 동의", "닉네임", "몸무게·방식", "얼굴 등록" };
+        private static readonly string[] StepNames = { "개인정보 동의", "닉네임", "몸무게·방식", "얼굴 등록" };
         private readonly HudSkin skin;
         private readonly IdentityScreen capture;
         private string nameText = "", weightText = "";
         private PlayStyle style = PlayStyle.FullBody;
         private bool focusName;
-        private GUIStyle paragraph;
+        private GUIStyle paragraph, detail;
         public SignUpScreen(HudSkin hudSkin, IdentityScreen captureScreen) { skin = hudSkin; capture = captureScreen; }
         public void Open() { nameText = weightText = ""; style = PlayStyle.FullBody; focusName = true; }
 
@@ -112,12 +122,44 @@ namespace Muhanok.Presentation
             GUI.Label(new Rect(195, 610, 700, 30), GesturePointer.Hint("Enter를 누르세요."), skin.Style(16, FontStyle.Normal)); GUI.color = Color.white;
             if (skin.FlatButton(new Rect(940, 600, 150, 46), flow.Step == SignUpStep.Consent ? "뒤로" : "이전", false) && !flow.Back()) leave?.Invoke();
         }
+        // Notice per item: items, purpose, retention; then the right to refuse and what refusing costs.
+        // The sensitive (biometric) item is highlighted and kept apart from the ordinary personal data.
         private void Consent(Rect r, SignUpFlow flow)
         {
-            GUI.Label(new Rect(r.x, r.y, r.width, 200), "연결된 얼굴 서버에 얼굴 특징값, 닉네임, 설정(몸무게·기본 방식), 플레이 기록을 저장합니다.\n얼굴 사진은 저장하지 않습니다.\n가입 후에는 이름 입력 없이 얼굴로 로그인하고, 게임을 끄면 로그아웃됩니다.", paragraph);
-            GUI.color = new Color(1, 1, 1, .75f);
-            GUI.Label(new Rect(r.x, r.y + 210, r.width, 60), "전시용 얼굴 로그인입니다. 사진·영상 위조를 차단하는 보안 인증 기능은 포함하지 않습니다.", skin.Style(17, FontStyle.Normal)); GUI.color = Color.white;
-            if (skin.PrimaryButton(new Rect(r.x, 540, 450, 58), "동의하고 계속") || IdentityScreen.Enter()) { flow.Agree(); focusName = true; }
+            detail ??= new GUIStyle(skin.Style(16, FontStyle.Normal)) { wordWrap = true };
+            if (Check(new Rect(r.x, r.y - 14, r.width, 36), flow.AllAgreed, "전체 동의 (아래 필수 항목에 모두 동의합니다)", 22, true)) flow.ToggleAll();
+            Fill(new Rect(r.x, r.y + 30, r.width, 2), Palette.A(Palette.Cream, .3f));
+            if (Check(new Rect(r.x, r.y + 40, r.width, 30), flow.Agreed(ConsentItem.Age), "[필수] 만 14세 이상입니다.", 19, false)) flow.Toggle(ConsentItem.Age);
+            Detail(new Rect(r.x + 40, r.y + 68, r.width - 40, 22), "만 14세 미만은 회원가입 없이 게스트로 플레이할 수 있습니다.", .7f);
+            if (Check(new Rect(r.x, r.y + 98, r.width, 30), flow.Agreed(ConsentItem.Personal), "[필수] 개인정보 수집·이용 동의", 19, false)) flow.Toggle(ConsentItem.Personal);
+            Detail(new Rect(r.x + 40, r.y + 126, r.width - 40, 44), "항목: 닉네임, 몸무게, 기본 플레이 방식, 플레이 기록·코인·아이템  ·  목적: 회원 식별, 기록·랭킹·상점 제공\n저장: 연결된 얼굴 서버  ·  보유기간: 회원 탈퇴 시까지 (탈퇴하면 즉시 삭제)", .85f);
+            if (Check(new Rect(r.x, r.y + 178, r.width, 30), flow.Agreed(ConsentItem.Biometric), "[필수] 민감정보(생체인식정보) 수집·이용 동의", 19, false, Palette.Gold)) flow.Toggle(ConsentItem.Biometric);
+            GUI.color = Palette.Gold;
+            GUI.Label(new Rect(r.x + 40, r.y + 206, r.width - 40, 44), "항목: 얼굴 특징값(얼굴 사진에서 계산한 숫자, 사진·영상은 저장하지 않음)  ·  목적: 얼굴 로그인 시 본인 확인\n저장: 연결된 얼굴 서버  ·  보유기간: 회원 탈퇴 시까지 (탈퇴하면 즉시 삭제)", detail); GUI.color = Color.white;
+            Detail(new Rect(r.x, r.y + 258, r.width, 44), "동의를 거부할 수 있습니다. 거부하면 회원가입과 얼굴 로그인은 이용할 수 없지만 게스트로 플레이할 수 있습니다.\n동의 철회는 내 정보 > 회원 탈퇴에서 언제든 할 수 있습니다.", .85f);
+            Detail(new Rect(r.x, r.y + 306, r.width, 24), "사진·영상 위조를 막는 보안 인증 기능은 없으므로 금융 등 보안 인증에는 쓰지 않습니다.", .6f);
+            bool wasEnabled = GUI.enabled; GUI.enabled = wasEnabled && flow.AllAgreed;
+            if ((skin.PrimaryButton(new Rect(r.x, 540, 450, 58), flow.AllAgreed ? "동의하고 계속" : "필수 항목에 동의해 주세요") || IdentityScreen.Enter()) && flow.Agree()) focusName = true;
+            GUI.enabled = wasEnabled;
+        }
+        private static void Fill(Rect r, Color color)
+        {
+            var before = GUI.color; GUI.color = color; GUI.DrawTexture(r, Texture2D.whiteTexture); GUI.color = before;
+        }
+        private void Detail(Rect r, string text, float alpha)
+        {
+            GUI.color = new Color(1, 1, 1, alpha); GUI.Label(r, text, detail); GUI.color = Color.white;
+        }
+        // A check box row; the whole row is the click (or gesture) target. True when pressed.
+        private bool Check(Rect row, bool on, string text, int size, bool bold, Color? tint = null)
+        {
+            var box = new Rect(row.x, row.y + (row.height - 26) / 2, 26, 26);
+            // Square box: cream frame, dark inside when off, gold with a dark centre mark when on.
+            Fill(box, on ? Palette.Gold : Palette.Cream); Fill(new Rect(box.x + 3, box.y + 3, 20, 20), on ? Palette.Gold : Palette.Outline);
+            if (on) Fill(new Rect(box.x + 7, box.y + 7, 12, 12), Palette.Outline);
+            GUI.color = tint ?? Color.white;
+            GUI.Label(new Rect(row.x + 40, row.y, row.width - 40, row.height), text, skin.Style(size, bold || tint.HasValue ? FontStyle.Bold : FontStyle.Normal)); GUI.color = Color.white;
+            return GUI.Button(row, GUIContent.none, GUIStyle.none) || GesturePointer.Activate(row, text);
         }
         private void Nickname(Rect r, SignUpFlow flow)
         {

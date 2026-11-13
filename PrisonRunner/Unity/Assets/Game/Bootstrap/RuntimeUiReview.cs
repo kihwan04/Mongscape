@@ -53,7 +53,8 @@ namespace Muhanok.Bootstrap
             yield return Shot("01_Title");
             game.OpenLogin(); yield return Shot("02_Login");
             hud.ShowPage(MenuPage.SignUp); yield return Shot("03_SignUp_Consent");
-            hud.SignUp.Agree(); yield return Shot("03b_SignUp_Nickname");
+            hud.SignUp.Toggle(ConsentItem.Biometric); yield return Shot("03a_SignUp_ConsentPartial");
+            hud.SignUp.ToggleAll(); hud.SignUp.Agree(); yield return Shot("03b_SignUp_Nickname");
             game.OpenMainMenu(); yield return Shot("03c_MainMenu_Guest");
             hud.ShowPage(MenuPage.Shop); yield return Shot("03d_Shop_Guest");
 
@@ -63,6 +64,7 @@ namespace Muhanok.Bootstrap
             // The review data is on this PC (keyboard runs); the member tab would ask the server.
             hud.ShowPage(MenuPage.Ranking); hud.Ranking.Select(false, PlayStyle.Keyboard, false); yield return Shot("06_Ranking");
             game.OpenMainMenu(); yield return Shot("07_MainMenu");
+            hud.SelectMenu(MenuAction.Credits); yield return Shot("07c_Credits"); hud.CloseCredits();
             // Settings: each tab, then cancel so the review leaves the stored settings untouched.
             var settings = FindFirstObjectByType<SettingsWindow>();
             game.OpenSettings();
