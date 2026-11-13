@@ -45,12 +45,28 @@ namespace Muhanok.Editor
             PlayerSettings.defaultScreenWidth = OutputResolution.Width; PlayerSettings.defaultScreenHeight = OutputResolution.Height;
             // Per-flavor player settings are restored after the build so ProjectSettings stays unchanged.
             var screenBefore = PlayerSettings.fullScreenMode; var traceBefore = PlayerSettings.GetStackTraceLogType(LogType.Log);
+            var argumentsBefore = PlayerSettings.GetAdditionalCompilerArguments(NamedBuildTarget.Standalone);
+            // The compiler writes each DLL's debug-info path (this PC's project folder) into the DLL; a release player maps it to "Mongscape".
+            if (release) PlayerSettings.SetAdditionalCompilerArguments(NamedBuildTarget.Standalone, ReleaseCompilerArguments(argumentsBefore));
             // The saved settings decide the mode after launch; this is only the first frame before they load.
             PlayerSettings.fullScreenMode = release ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
             // Ordinary logs keep no stack traces in a release player; warnings and errors keep theirs for bug reports.
             PlayerSettings.SetStackTraceLogType(LogType.Log, release ? StackTraceLogType.None : StackTraceLogType.ScriptOnly);
             try { BuildPlayer(release); }
-            finally { PlayerSettings.fullScreenMode = screenBefore; PlayerSettings.SetStackTraceLogType(LogType.Log, traceBefore); AssetDatabase.SaveAssets(); }
+            finally
+            {
+                PlayerSettings.fullScreenMode = screenBefore; PlayerSettings.SetStackTraceLogType(LogType.Log, traceBefore);
+                PlayerSettings.SetAdditionalCompilerArguments(NamedBuildTarget.Standalone, argumentsBefore); AssetDatabase.SaveAssets();
+            }
+        }
+        // Existing arguments plus a path map from the project folder to a neutral name.
+        internal static string[] ReleaseCompilerArguments(string[] existing)
+        {
+            string project = Path.GetFullPath(Path.Combine(UnityEngine.Application.dataPath, "..")).TrimEnd('\\', '/');
+            var arguments = new System.Collections.Generic.List<string>(existing ?? Array.Empty<string>());
+            // The compiler escapes ',' and '=' in a path map by doubling them.
+            arguments.Add("-pathmap:\"" + project.Replace(",", ",,").Replace("=", "==") + "=Mongscape\"");
+            return arguments.ToArray();
         }
         private static void BuildPlayer(bool release)
         {

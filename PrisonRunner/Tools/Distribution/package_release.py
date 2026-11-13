@@ -28,6 +28,12 @@ def package():
         if path.suffix.lower() in (".pdb", ".log"):
             continue
         entries[f"Game/{path.relative_to(build).as_posix()}"] = path
+    # No file may carry this PC's folder path (e.g. a DLL's debug-info path); the release build maps it away.
+    local = {str(PROJECT), PROJECT.as_posix()}
+    needles = [n.encode(enc) for n in local for enc in ("utf-8", "utf-16-le")]
+    leaks = [name for name, path in entries.items() if any(n in path.read_bytes() for n in needles)]
+    if leaks:
+        raise RuntimeError("Build PC folder path found in: " + ", ".join(leaks[:5]) + " (rebuild with Mongscape > Build Windows Release)")
     entries["THIRD_PARTY_NOTICES.md"] = PROJECT / "THIRD_PARTY_NOTICES.md"
     entries["PRIVACY_POLICY.md"] = privacy
     entries["CHANGELOG.md"] = PROJECT / "CHANGELOG.md"
@@ -41,7 +47,7 @@ def package():
     start_guide = """# Mongscape 실행 안내
 
 1. ZIP 전체를 압축 해제합니다. `Game` 폴더 전체를 그대로 두세요.
-2. `StartGame.cmd`를 더블클릭합니다. 실제 게임은 `Game/Mongscape.exe`입니다.
+2. `StartGame.cmd`를 더블클릭합니다. 실제 게임은 `Game/Mongscape.exe`입니다. "Windows의 PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누르세요(실행 파일에 코드 서명이 없어서 뜨는 안내입니다).
 3. **얼굴 로그인 / 회원가입 / 게스트 플레이** 중 하나를 고릅니다. 가입 없이 바로 하려면 게스트 플레이를 고르세요.
 4. 메인 메뉴의 **게임 시작**에서 플레이 방식(전신 / 상체 / 키보드)을 고르고 **시작하기**를 누릅니다.
 
