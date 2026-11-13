@@ -93,6 +93,17 @@ namespace Muhanok.Tests
         }
 
         [UnityTest]
+        public IEnumerator CreditsReturnToWhereTheyWereOpened()
+        {
+            yield return Open();
+            game.OpenLogin();hud.ChooseLogin(LoginAction.Credits);Assert.AreEqual(MenuPage.Credits,hud.Page);yield return null;
+            hud.CloseCredits();Assert.AreEqual(MenuPage.Login,hud.Page,"Opened from the login gate");
+            hud.OpenMainMenu();hud.SelectMenu(MenuAction.Credits);Assert.AreEqual(MenuPage.Credits,hud.Page);yield return null;
+            hud.CloseCredits();Assert.AreEqual(MenuPage.Main,hud.Page,"Opened from the main menu");
+            StringAssert.StartsWith("v"+UnityEngine.Application.version,BuildInfo.Label);
+        }
+
+        [UnityTest]
         public IEnumerator SkippedSettingsEnrollWithDefaults()
         {
             yield return Open();
