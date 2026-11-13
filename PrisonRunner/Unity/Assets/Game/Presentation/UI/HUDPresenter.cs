@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Muhanok.Presentation
 {
-    public enum MenuPage { None, Main, Setup, Profile, Shop, Ranking, Identity, Login, SignUp, TutorialOffer }
+    public enum MenuPage { None, Main, Setup, Profile, Shop, Ranking, Identity, Login, SignUp, TutorialOffer, Credits }
 
     // UI root: owns the menu page state and draws exactly one screen for the current game state.
     public sealed class HUDPresenter : MonoBehaviour
@@ -60,6 +60,9 @@ namespace Muhanok.Presentation
         private OverlaySkin overlaySkin;
         private TitleScreen title;
         private MainMenuScreen menu;
+        private CreditsScreen credits;
+        // Credits opens from the login gate or the main menu and returns there.
+        private MenuPage creditsReturn = MenuPage.Main;
         private SetupScreen setup;
         private ProfileScreen profile;
         private ShopScreen shop;
@@ -74,7 +77,7 @@ namespace Muhanok.Presentation
             skin = new HudSkin();
             overlaySkin = new OverlaySkin();
             title = new TitleScreen(skin); setup = new SetupScreen(skin); loading = new LoadingScreen(skin); identity=new IdentityScreen(skin); signUp=new SignUpScreen(skin,identity);
-            menu = new MainMenuScreen(overlaySkin); tutorialOffer = new TutorialOfferScreen(overlaySkin); gate = new LoginGateScreen(overlaySkin); profile = new ProfileScreen(overlaySkin); shop = new ShopScreen(overlaySkin); board = new LeaderboardScreen(overlaySkin, Ranking);
+            menu = new MainMenuScreen(overlaySkin); credits = new CreditsScreen(overlaySkin); tutorialOffer = new TutorialOfferScreen(overlaySkin); gate = new LoginGateScreen(overlaySkin); profile = new ProfileScreen(overlaySkin); shop = new ShopScreen(overlaySkin); board = new LeaderboardScreen(overlaySkin, Ranking);
             calibration = new CalibrationPanel(overlaySkin, skin);
             runHud = new RunHud(skin, new ProgressHud(overlaySkin)); pause = new PauseScreen(skin);
         }
@@ -82,6 +85,7 @@ namespace Muhanok.Presentation
         {
             // 내 정보 is for members; a guest stays on the main menu.
             if (page == MenuPage.Profile && (Account == null || !Account.SignedIn)) page = MenuPage.Main;
+            if (page == MenuPage.Credits && Page != MenuPage.Credits) creditsReturn = Page == MenuPage.Login ? MenuPage.Login : MenuPage.Main;
             Page = page;
             if (page == MenuPage.Setup) setup.Open(Data);
             else if (page == MenuPage.Profile) { Profile.Open(Data, Account); profile.Open(); }
@@ -92,6 +96,7 @@ namespace Muhanok.Presentation
             TextInput?.Invoke(page == MenuPage.Setup || page == MenuPage.Profile || page == MenuPage.SignUp);
         }
         public void OpenMainMenu() => ShowPage(MenuPage.Main);
+        public void CloseCredits() => ShowPage(creditsReturn);
         public void OpenLogin() => ShowPage(MenuPage.Login);
         // Face login capture screen (from the login gate).
         public void ShowIdentity() => ShowPage(MenuPage.Identity);
@@ -114,6 +119,7 @@ namespace Muhanok.Presentation
             else if (action == LoginAction.SignUp) ShowPage(MenuPage.SignUp);
             else if (action == LoginAction.Guest) ChooseGuest();
             else if (action == LoginAction.Settings) OpenSettings?.Invoke();
+            else if (action == LoginAction.Credits) ShowPage(MenuPage.Credits);
             else if (action == LoginAction.Quit) Quit?.Invoke();
         }
         // Main menu actions. "게임 시작" goes to the run setup, after a one-time tutorial offer; the login entry signs a member out first.
@@ -126,6 +132,7 @@ namespace Muhanok.Presentation
             else if (action == MenuAction.Profile) ShowPage(MenuPage.Profile);
             else if (action == MenuAction.Identity) Logout();
             else if (action == MenuAction.Settings) OpenSettings?.Invoke();
+            else if (action == MenuAction.Credits) ShowPage(MenuPage.Credits);
             else if (action == MenuAction.Quit) Quit?.Invoke();
         }
         // Main menu "로그아웃" and 내 정보: a member is signed out; both go to the login gate.
@@ -238,6 +245,7 @@ namespace Muhanok.Presentation
                     break;
                 case MenuPage.Main: SelectMenu(menu.Draw(Data, TitleLogo)); break;
                 case MenuPage.TutorialOffer: ChooseTutorial(tutorialOffer.Draw(offerAfterSignUp)); break;
+                case MenuPage.Credits: if (credits.Draw()) CloseCredits(); break;
             }
         }
         private void OnDestroy() { skin?.Dispose(); overlaySkin?.Dispose(); }
