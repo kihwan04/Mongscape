@@ -7,7 +7,7 @@
 ## 다운로드와 실행
 
 1. `Mongscape-Windows-x64.zip`을 내려받아 전체를 압축 해제합니다.
-2. `StartGame.cmd`를 더블클릭합니다. 실제 게임은 `Game/Mongscape.exe`입니다.
+2. `StartGame.cmd`를 더블클릭합니다. 실제 게임은 `Game/Mongscape.exe`입니다. "Windows의 PC 보호" 창이 뜨면 **추가 정보 → 실행**을 누르세요. 실행 파일에 코드 서명이 없어서 뜨는 안내입니다.
 3. **얼굴 로그인**, **회원가입**, **게스트 플레이** 중 하나를 고릅니다.
 
 `SHA256SUMS.txt`로 내려받은 파일이 손상되지 않았는지 확인할 수 있습니다.
