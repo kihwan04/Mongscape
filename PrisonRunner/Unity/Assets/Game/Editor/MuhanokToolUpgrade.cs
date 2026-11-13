@@ -226,7 +226,7 @@ namespace Muhanok.Editor
         }
         public static void BuildValidated()
         {
-            ValidateTools(); MuhanokMixamoImport.ValidateDownloaded(); MuhanokBuildTools.BuildWindows();
+            ValidateTools(); MuhanokMixamoImport.ValidateDownloaded(); MuhanokBuildTools.BuildWindowsDev();
         }
     }
 }

@@ -91,10 +91,7 @@ namespace Muhanok.Bootstrap
         private bool tutorialOffered;
         private void Awake()
         {
-            var flags=System.Environment.GetCommandLineArgs();
-            automated=System.Array.IndexOf(flags,"--muhanok-smoke")>=0||System.Array.IndexOf(flags,"--muhanok-uicapture")>=0
-                ||System.Array.IndexOf(flags,"--mongscape-review")>=0||System.Array.IndexOf(flags,"--mongscape-tests")>=0
-                ||System.Array.IndexOf(flags,"--muhanok-capture")>=0||System.Array.IndexOf(flags,"--mongscape-recording")>=0;
+            automated=ToolingFlags.Automated;
             Session = new RunSession(Settings != null ? JsonUtility.FromJson<RunConfig>(JsonUtility.ToJson(Settings.Run)) : new RunConfig());
             if (ChunkPrefabs == null || ChunkPrefabs.Length < 5 || CameraRig == null || OutputCamera == null)
             { Debug.LogError("GameScene requires content references. Run Muhanok/Build GameScene."); enabled = false; return; }
@@ -469,10 +466,7 @@ namespace Muhanok.Bootstrap
             if (state == GameFlowState.Result)
             {
                 Time.timeScale = 1;
-                var args=System.Environment.GetCommandLineArgs();
-                bool tooling=System.Array.IndexOf(args,"--muhanok-capture")>=0||System.Array.IndexOf(args,"--muhanok-smoke")>=0
-                    ||System.Array.IndexOf(args,"--mongscape-review")>=0||System.Array.IndexOf(args,"--mongscape-tests")>=0
-                    ||System.Array.IndexOf(args,"--muhanok-uicapture")>=0;
+                bool tooling=ToolingFlags.SkipsRecords;
                 lastEntry=null; lastRank=lastTodayRank=0; lastBestScore=-1; lastNewBest=false; lastStats=null; lastStatsFailed=false;
                 if(!tooling&&playerRun) RecordFinishedRun();
             }

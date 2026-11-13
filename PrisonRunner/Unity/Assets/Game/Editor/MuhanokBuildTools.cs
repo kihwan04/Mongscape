@@ -3,6 +3,7 @@ using System.IO;
 using Muhanok.Bootstrap;
 using Muhanok.Domain;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -18,8 +19,14 @@ namespace Muhanok.Editor
         private const string PreviewKey = "Muhanok.Preview";
         private const string StepKey = "Muhanok.PreviewStep";
         static MuhanokBuildTools() { EditorApplication.update += PreviewTick; EditorApplication.playModeStateChanged += Changed; }
-        [MenuItem("Mongscape/Build Windows Demo")]
-        public static void BuildWindows()
+        public const string ReleaseVersion = "1.0.0";
+        // Release: what players download. No development player, no tooling flags, fullscreen on first launch.
+        [MenuItem("Mongscape/Build Windows Release")]
+        public static void BuildWindowsRelease() => BuildWindows(true);
+        // Dev: development player for QA scripts, captures and recordings (they read their command-line flags only here).
+        [MenuItem("Mongscape/Build Windows Dev (QA)")]
+        public static void BuildWindowsDev() => BuildWindows(false);
+        private static void BuildWindows(bool release)
         {
             // A bad face server address stops the build before it starts, not after.
             IdentityServerSetup.Resolve(out _);
@@ -30,22 +37,32 @@ namespace Muhanok.Editor
             pipeline.gpuResidentDrawerMode=GPUResidentDrawerMode.InstancedDrawing;
             EditorUtility.SetDirty(pipeline);AssetDatabase.SaveAssetIfDirty(pipeline);
             PlayerSettings.productName = "Mongscape";
+            PlayerSettings.bundleVersion = ReleaseVersion;
+            // Interim icon composed from the title logo until dedicated icon art exists.
+            var icon=AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Game/Content/Branding/MongscapeIcon.png");
+            if(icon==null)throw new Exception("App icon missing");
+            PlayerSettings.SetIcons(NamedBuildTarget.Unknown,new[]{icon},IconKind.Any);
             PlayerSettings.defaultScreenWidth = OutputResolution.Width; PlayerSettings.defaultScreenHeight = OutputResolution.Height;
-            PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
-            string destination = Path.GetFullPath(Path.Combine(UnityEngine.Application.dataPath, "../../Builds/Mongscape/Windows/Mongscape.exe"));
+            // The saved settings decide the mode after launch; this is only the first frame before they load.
+            PlayerSettings.fullScreenMode = release ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
+            // Ordinary logs keep no stack traces in a release player; warnings and errors keep theirs for bug reports.
+            PlayerSettings.SetStackTraceLogType(LogType.Log, release ? StackTraceLogType.None : StackTraceLogType.ScriptOnly);
+            string folder = release ? "Windows" : "WindowsDev";
+            string destination = Path.GetFullPath(Path.Combine(UnityEngine.Application.dataPath, "../../Builds/Mongscape/" + folder + "/Mongscape.exe"));
             Directory.CreateDirectory(Path.GetDirectoryName(destination));
             string complete=Path.Combine(Path.GetDirectoryName(destination),"Mongscape.complete");
             if(File.Exists(complete))File.Delete(complete);
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = new[] { "Assets/Game/Scenes/GameScene.unity" }, locationPathName = destination,
-                target = BuildTarget.StandaloneWindows64, options = BuildOptions.Development
+                target = BuildTarget.StandaloneWindows64, options = release ? BuildOptions.None : BuildOptions.Development
             });
             if (report.summary.result != BuildResult.Succeeded) throw new Exception("MUHANOK_BUILD_FAIL: " + report.summary.result);
             // The game reads identity-server.json next to the exe; no environment variable is needed on the player PC.
             IdentityServerSetup.ApplyToBuild(Path.GetDirectoryName(destination));
-            File.WriteAllText(complete,DateTime.UtcNow.ToString("O"));
-            Debug.Log("MUHANOK_BUILD_PASS: " + destination + " / " + report.summary.totalSize + " bytes");
+            // "release 1.0.0" or "dev 1.0.0" on the first line: packaging refuses anything but a release build.
+            File.WriteAllText(complete,(release ? "release " : "dev ") + ReleaseVersion + Environment.NewLine + DateTime.UtcNow.ToString("O") + Environment.NewLine);
+            Debug.Log("MUHANOK_BUILD_PASS: " + (release ? "release " : "dev ") + ReleaseVersion + " / " + destination + " / " + report.summary.totalSize + " bytes");
         }
         public static void ValidateContent()
         {
