@@ -12,7 +12,12 @@ $arguments=@('-batchmode','-projectPath',('"'+$project+'"'),'-logFile',('"'+$log
 if($Phase -eq 'Build'){$arguments+=@('-quit','-executeMethod','Muhanok.Editor.MuhanokBuildTools.BuildWindows')}
 else{$arguments+=@('-runTests','-testPlatform',$Phase,'-testResults',('"'+$xml+'"'))}
 if($Phase -ne 'Build' -and $TestFilter){$arguments+=@('-testFilter',$TestFilter)}
-$process=Start-Process -FilePath 'C:/Program Files/Unity/Hub/Editor/6000.3.10f1/Editor/Unity.exe' -ArgumentList $arguments -WindowStyle Hidden -PassThru -Wait
+# Default Hub folder first, then the Hub's custom install folder (Unity Hub > Preferences > Installs).
+$unity='C:/Program Files/Unity/Hub/Editor/6000.3.10f1/Editor/Unity.exe'
+$hubPath=Join-Path $env:APPDATA 'UnityHub/secondaryInstallPath.json'
+if(-not (Test-Path -LiteralPath $unity) -and (Test-Path -LiteralPath $hubPath)){$unity=Join-Path (Get-Content -LiteralPath $hubPath -Raw | ConvertFrom-Json) '6000.3.10f1/Editor/Unity.exe'}
+if(-not (Test-Path -LiteralPath $unity)){throw 'Unity 6000.3.10f1 not found'}
+$process=Start-Process -FilePath $unity -ArgumentList $arguments -WindowStyle Hidden -PassThru -Wait
 $result=@{phase=$Phase;exitCode=$process.ExitCode;log=$log;project=$project}
 if($TestFilter){$result.filter=$TestFilter}
 if($Phase -ne 'Build' -and (Test-Path -LiteralPath $xml)){
