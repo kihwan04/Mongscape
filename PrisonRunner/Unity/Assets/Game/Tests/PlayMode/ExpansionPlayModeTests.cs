@@ -190,7 +190,7 @@ namespace Muhanok.Tests
                 var shell=connector.GetComponentInChildren<RouteTransitionView>().Surface;
                 RouteSurface.Sample(150,out float center,out _);
                 Assert.IsTrue(shell.Raycast(new Ray(new Vector3(center,1.6f,150),Vector3.up),out _,10));
-                if(destination!=1)
+                if(destination<0)
                 {
                     Seek(game,RoutePlan.ExtendedLapChunks*24-12,BranchFor(game,destination));yield return null;Physics.SyncTransforms();
                     MuhanokMapChunk back=null;foreach(var item in game.Map.Active)if(item.Chunk.Sequence==RoutePlan.ExtendedLapChunks-1)back=item.Chunk;
