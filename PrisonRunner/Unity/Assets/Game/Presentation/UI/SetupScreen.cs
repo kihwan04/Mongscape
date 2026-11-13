@@ -16,7 +16,7 @@ namespace Muhanok.Presentation
         private GUIStyle guideStyle;
         // Key and action columns, so the actions line up whatever the key glyphs' widths.
         private static readonly string[] KeyboardKeys = { "A / ←", "D / →", "Space", "S / ↓", "W / ↑" };
-        private static readonly string[] KeyboardActions = { "왼쪽", "오른쪽", "점프", "숙이기 (누르고 있기)", "무릎 들기 (계단)" };
+        private static readonly string[] KeyboardActions = { "왼쪽", "오른쪽", "점프", "숙이기 (누르고 있기)", "무릎 들기 (계단, 연타)" };
         public SetupScreen(HudSkin hudSkin) { skin = hudSkin; }
         public void Open(IHudData data)
         {
@@ -50,16 +50,20 @@ namespace Muhanok.Presentation
                 GUI.color = new Color(1, 1, 1, .7f); GUI.Label(new Rect(215, 280, 360, 34), data is IIdentityData account && account.SignedIn ? "닉네임과 몸무게는 내 정보에서 바꿀 수 있어요." : "회원가입하면 닉네임과 설정이 계정에 남아요.", skin.Style(15, FontStyle.Normal)); GUI.color = Color.white;
             }
             GUI.Label(new Rect(195, 344, 300, 34), "플레이 방식", skin.Label);
+            bool bodyOk = data == null || data.BodyStylesAllowed;
+            var playable = PlayStyleInfo.Playable(style, bodyOk, false);
+            if (playable != style) { style = playable; data?.PreviewStyle(style); }
             for (int i = 0; i < 3; i++)
             {
                 var option = (PlayStyle)i;
-                if (Choice(new Rect(195 + i * 136, 380, 128, 48), PlayStyleInfo.Label(option), option == style) && option != style)
+                bool allowed = PlayStyleInfo.Allowed(option, bodyOk, false);
+                if (Choice(new Rect(195 + i * 136, 380, 128, 48), PlayStyleInfo.Label(option), option == style, allowed) && option != style)
                 {
                     style = option; data?.PreviewStyle(style);
                 }
             }
             guideStyle??=new GUIStyle(skin.Style(16,FontStyle.Normal)){wordWrap=true};
-            GUI.Label(new Rect(195,434,420,60),Guide(style),guideStyle);
+            GUI.Label(new Rect(195,434,420,60),bodyOk?Guide(style):NoCameraGuide,guideStyle);
             bool exercise = PlayStyleInfo.UsesCamera(style);
             // Keyboard runs count no calories, so the goal field is only shown for camera styles.
             if (exercise)
@@ -82,11 +86,12 @@ namespace Muhanok.Presentation
             }
             if (data != null && PlayStyleInfo.UsesCamera(style) && skin.FlatButton(new Rect(640, 500, 450, 40), "자세 다시 맞추기 (R)", false)) data.Recalibrate();
         }
-        private bool Choice(Rect rect, string text, bool selected)
+        public const string NoCameraGuide = "카메라가 연결되어 있지 않아 키보드로만 플레이할 수 있어요. 카메라를 연결하면 전신·상체를 고를 수 있어요.";
+        private bool Choice(Rect rect, string text, bool selected, bool enabled = true)
         {
-            skin.Card(rect, selected ? Palette.Gold : Palette.Panel);
-            GUI.color = selected ? Palette.Outline : Palette.Cream;
-            bool pressed = GUI.Button(rect, GUIContent.none, GUIStyle.none) || GesturePointer.Activate(rect,text);
+            skin.Card(rect, selected ? Palette.Gold : enabled ? Palette.Panel : Palette.A(Palette.Panel, .35f));
+            GUI.color = selected ? Palette.Outline : enabled ? Palette.Cream : Palette.A(Palette.Cream, .35f);
+            bool pressed = enabled && (GUI.Button(rect, GUIContent.none, GUIStyle.none) || GesturePointer.Activate(rect,text));
             GUI.Label(rect, text, skin.Centered(22, FontStyle.Bold)); GUI.color = Color.white;
             return pressed;
         }

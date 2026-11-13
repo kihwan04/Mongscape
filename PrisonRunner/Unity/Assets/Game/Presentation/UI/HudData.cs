@@ -14,6 +14,8 @@ namespace Muhanok.Presentation
         Texture CameraTexture { get; }
         // A webcam is plugged in. Without one no screen shows a camera view.
         bool CameraDetected { get; }
+        // Full-body and upper-body play can be chosen: a camera is connected, or developer mode is on.
+        bool BodyStylesAllowed { get; }
         PoseFrame PoseFrame { get; }
         PoseStatus PoseStatus { get; }
         string PoseMessage { get; }

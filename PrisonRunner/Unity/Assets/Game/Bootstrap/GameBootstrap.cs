@@ -242,7 +242,9 @@ namespace Muhanok.Bootstrap
             if(profile==null||Session.Flow.State!=GameFlowState.TitleIdle||hud.Loading) return;
             // A weight outside 10-350 kg (an old profile) never blocks the run: it counts as the 65 kg default.
             if(!Session.Workout.SetWeight(profile.Weight)) Session.Workout.SetWeight("");
-            if(!userSettings.DeveloperMode&&profile.Style!=Account.Settings.Style){var saved=Account.Settings;saved.Style=profile.Style;SaveSettings(saved);}
+            // No camera: a body style falls back to the keyboard for this run, and the saved default is left alone.
+            if(!PlayableStyle(profile.Style)){profile.Style=PlayStyle.Keyboard;}
+            else if(!userSettings.DeveloperMode&&profile.Style!=Account.Settings.Style){var saved=Account.Settings;saved.Style=profile.Style;SaveSettings(saved);}
             player=profile; playerRun=true; KeyboardGameInput.SetTextInput(false);
             // The best to beat is read before the run (and before its save).
             RefreshMemberStats();
@@ -257,6 +259,7 @@ namespace Muhanok.Bootstrap
         {
             if(Session.Flow.State!=GameFlowState.TitleIdle||hud.Loading) return;
             tutorialOffered=true; playerRun=false; KeyboardGameInput.SetTextInput(false);
+            if(!PlayableStyle(player.Style)) player.Style=PlayStyle.Keyboard;
             Session.Workout.SetWeight(""); Session.Workout.Met=PlayStyleInfo.Met(player.Style);
             menuCamera=false; Pose.SetStyle(player.Style);
             Session.IsTutorial=true; Tutorial.Begin(player.Style,Session.Config.ExtendedRoutes);
@@ -604,6 +607,14 @@ namespace Muhanok.Bootstrap
         Texture IHudData.CameraTexture => Pose.CameraTexture;
         // Listed, or already delivering frames (a camera the driver listed late still counts).
         bool IHudData.CameraDetected => cameraDetected || Pose.CameraTexture != null && Pose.CameraTexture.width > 16;
+        bool IHudData.BodyStylesAllowed => automated || userSettings == null || userSettings.DeveloperMode || ((IHudData)this).CameraDetected;
+        // Body styles need a connected camera, except in developer mode and automated test/tool runs.
+        private bool PlayableStyle(PlayStyle style)
+        {
+            if(!PlayStyleInfo.UsesCamera(style)) return true;
+            if(!cameraDetected&&!automated) cameraDetected=WebCamTexture.devices.Length>0;
+            return ((IHudData)this).BodyStylesAllowed;
+        }
         PoseFrame IHudData.PoseFrame => Pose.LastFrame;
         PoseStatus IHudData.PoseStatus => Pose.Status;
         string IHudData.PoseMessage => Pose.Message;
