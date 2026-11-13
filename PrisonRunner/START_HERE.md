@@ -1,16 +1,16 @@
 # Mongscape 처음 실행하기
 
-기준일: **2026-10-29**. 현재 소스는 PR #20의 계정·튜토리얼·게임 규칙과 기존 개선을 합친 버전입니다. 이번 작업은 develop 소스 병합이며 새 게임 ZIP·릴리스·서버 배포는 하지 않습니다.
+기준일: **2026-11-14**. 이 브랜치는 **1.0.0 출시 준비**(`deploy-test`) 소스입니다. 출시 ZIP을 받은 플레이어는 ZIP 안의 `START_HERE.md`를 보면 됩니다. 이 문서는 소스에서 실행하고 빌드하는 방법을 설명합니다.
 
 ## 현재 소스로 실행
 
 Unity Hub에서 `Unity/`를 **6000.3.10f1**로 열고 패키지 복원 후 **Mongscape → Play GameScene**을 실행합니다. 배포용 Windows 실행 파일은 **Mongscape → Build Windows Release**로 만듭니다. 출력은 `Builds/Mongscape/Windows/Mongscape.exe`입니다. QA 스크립트·캡처·녹화는 **Build Windows Dev (QA)**의 `Builds/Mongscape/WindowsDev/Mongscape.exe`를 사용합니다.
 
-이 작업 PC에는 통합본의 로컬 빌드를 검수해 두었습니다. 저장소 맨 위 또는 이 폴더의 `StartGame.cmd`는 완료된 빌드를 우선 실행하고 없으면 Unity에서 현재 소스를 엽니다. 다른 PC에서 소스를 새로 받은 경우 빌드를 포함하지 않으므로 Unity 실행/빌드가 필요합니다. 기존 v2026.10.26 공개 ZIP에는 계정 v2 통합 기능이 없습니다.
+저장소 맨 위 또는 이 폴더의 `StartGame.cmd`는 완료된 빌드를 우선 실행하고, 없으면 Unity에서 현재 소스를 엽니다. 소스를 새로 받은 PC에는 빌드가 없으므로 Unity로 실행하거나 빌드해야 합니다. 출시 ZIP은 `Tools/Distribution/package_release.py`로 만들며 순서는 [출시 체크리스트](docs/RELEASE_CHECKLIST.md)를 따릅니다.
 
 ## 시작과 조작
 
-타이틀 → **얼굴 로그인 / 회원가입 / 게스트 플레이** 선택 → 메인 메뉴 → 게임 시작/튜토리얼 → 플레이 방식·칼로리 목표 → 시작하기 순서입니다. 서버가 없어도 게스트 키보드·몸동작 플레이가 가능합니다. 회원은 서버의 코인·해금·통합 랭킹을 사용하고, 게스트는 이 PC 랭킹만 사용합니다.
+타이틀 → **얼굴 로그인 / 회원가입(만 14세 이상, 동의 필요) / 게스트 플레이** 선택 → 메인 메뉴 → 게임 시작/튜토리얼 → 플레이 방식·칼로리 목표 → 시작하기 순서입니다. 서버가 없어도 게스트 키보드·몸동작 플레이가 가능합니다. 회원은 서버의 코인·해금·통합 랭킹을 사용하고, 게스트는 이 PC 랭킹만 사용합니다.
 
 | 키 | 동작 |
 | --- | --- |
@@ -33,8 +33,8 @@ Unity Hub에서 `Unity/`를 **6000.3.10f1**로 열고 패키지 복원 후 **Mon
 
 개발 PC에서는 Unity 메뉴 **Mongscape → Identity Server Address…**에서 주소를 한 번 저장하면 됩니다. `Unity/identity-server.json`(Git 제외)에 저장되고, 두 빌드 메뉴가 빌드할 때마다 출력 폴더의 `identity-server.json`으로 복사하므로 환경 변수를 설정하거나 Unity를 다시 켤 필요가 없습니다. 명령줄 빌드는 `-identityUrl https://…` 인수로도 지정할 수 있습니다. 주소가 잘못되면 빌드가 시작 전에 멈춥니다.
 
-환경 변수 `MONGSCAPE_IDENTITY_URL`이 파일보다 우선합니다(Unity Editor는 실행할 때의 환경 변수만 읽습니다). 원격 연결은 HTTPS, 테스트 loopback은 HTTP를 사용합니다. 주소를 바꾼 뒤 게임을 다시 실행합니다. 얼굴 사진은 서버에 보관하지 않고 인식 특징값·계정·기록을 PostgreSQL에 저장합니다.
+환경 변수 `MONGSCAPE_IDENTITY_URL`이 파일보다 우선합니다(Unity Editor는 실행할 때의 환경 변수만 읽습니다). 원격 연결은 HTTPS, 테스트 loopback은 HTTP를 사용합니다. 주소를 바꾼 뒤 게임을 다시 실행합니다. 얼굴 사진은 서버에 보관하지 않고 인식 특징값·계정·기록을 PostgreSQL에 저장합니다. 처리 내용은 [개인정보 처리방침](docs/PRIVACY_POLICY.md)에 정리했습니다.
 
-기존 스키마 v1 서버는 백업 후 계정 v2 이전이 필요합니다. 이전 도구는 자동 실행하지 않으며 이번 작업에서 개인 DB에 적용하지 않았습니다. 구체적인 설정/백업은 [서버 안내](Services/Identity/README_DOCKER.md)를 확인하세요. 문서의 명령은 운영 방법을 설명하며 이번 작업에서 서버를 기동·배포했다는 뜻이 아닙니다.
+기존 스키마 v1 서버는 백업 후 계정 v2 이전이 필요합니다. 이전 도구는 자동 실행하지 않습니다. 구체적인 설정/백업은 [서버 안내](Services/Identity/README_DOCKER.md)를 확인하세요. 문서의 명령은 운영 방법을 설명할 뿐, 서버를 기동·배포했다는 뜻이 아닙니다.
 
 [기술 스택](docs/TECH_STACK.md) · [진행 상태와 남은 검수](docs/PROGRESS.md) · [문서 목록](docs/README.md)

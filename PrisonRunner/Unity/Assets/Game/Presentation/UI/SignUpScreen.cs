@@ -132,10 +132,10 @@ namespace Muhanok.Presentation
             if (Check(new Rect(r.x, r.y + 40, r.width, 30), flow.Agreed(ConsentItem.Age), "[필수] 만 14세 이상입니다.", 19, false)) flow.Toggle(ConsentItem.Age);
             Detail(new Rect(r.x + 40, r.y + 68, r.width - 40, 22), "만 14세 미만은 회원가입 없이 게스트로 플레이할 수 있습니다.", .7f);
             if (Check(new Rect(r.x, r.y + 98, r.width, 30), flow.Agreed(ConsentItem.Personal), "[필수] 개인정보 수집·이용 동의", 19, false)) flow.Toggle(ConsentItem.Personal);
-            Detail(new Rect(r.x + 40, r.y + 126, r.width - 40, 44), "항목: 닉네임, 몸무게, 기본 플레이 방식, 플레이 기록·코인·아이템  ·  목적: 회원 식별, 기록·랭킹·상점 제공\n저장: 연결된 얼굴 서버  ·  보유기간: 회원 탈퇴 시까지 (탈퇴하면 즉시 삭제)", .85f);
+            Detail(new Rect(r.x + 40, r.y + 126, r.width - 40, 44), "항목: 닉네임, 몸무게, 칼로리 목표, 기본 플레이 방식, 플레이 기록·코인·아이템  ·  목적: 회원 식별, 기록·랭킹·상점 제공\n저장: 연결된 얼굴 서버  ·  보유기간: 회원 탈퇴 시까지 (탈퇴 즉시 삭제, 백업본은 14일 안에 삭제)", .85f);
             if (Check(new Rect(r.x, r.y + 178, r.width, 30), flow.Agreed(ConsentItem.Biometric), "[필수] 민감정보(생체인식정보) 수집·이용 동의", 19, false, Palette.Gold)) flow.Toggle(ConsentItem.Biometric);
             GUI.color = Palette.Gold;
-            GUI.Label(new Rect(r.x + 40, r.y + 206, r.width - 40, 44), "항목: 얼굴 특징값(얼굴 사진에서 계산한 숫자, 사진·영상은 저장하지 않음)  ·  목적: 얼굴 로그인 시 본인 확인\n저장: 연결된 얼굴 서버  ·  보유기간: 회원 탈퇴 시까지 (탈퇴하면 즉시 삭제)", detail); GUI.color = Color.white;
+            GUI.Label(new Rect(r.x + 40, r.y + 206, r.width - 40, 44), "항목: 얼굴 특징값(얼굴 사진에서 계산한 숫자, 사진·영상은 저장하지 않음)  ·  목적: 얼굴 로그인 시 본인 확인\n저장: 연결된 얼굴 서버  ·  보유기간: 회원 탈퇴 시까지 (탈퇴 즉시 삭제, 백업본은 14일 안에 삭제)", detail); GUI.color = Color.white;
             Detail(new Rect(r.x, r.y + 258, r.width, 44), "동의를 거부할 수 있습니다. 거부하면 회원가입과 얼굴 로그인은 이용할 수 없지만 게스트로 플레이할 수 있습니다.\n동의 철회는 내 정보 > 회원 탈퇴에서 언제든 할 수 있습니다.", .85f);
             Detail(new Rect(r.x, r.y + 306, r.width, 24), "사진·영상 위조를 막는 보안 인증 기능은 없으므로 금융 등 보안 인증에는 쓰지 않습니다.", .6f);
             bool wasEnabled = GUI.enabled; GUI.enabled = wasEnabled && flow.AllAgreed;
