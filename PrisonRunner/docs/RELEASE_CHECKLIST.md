@@ -12,9 +12,9 @@ Mongscape 1.0.0을 GitHub Releases에 ZIP으로 올리기 전에 위에서부터
 
 ## 1. 문서
 
-- [ ] [개인정보 처리방침](PRIVACY_POLICY.md)의 `[작성 필요]`를 모두 채웠습니다(운영자, 시행일, 보호책임자 연락처, 처리 위탁).
+- [x] [개인정보 처리방침](PRIVACY_POLICY.md)의 `[작성 필요]`를 모두 채웠습니다(운영자, 시행일, 보호책임자 연락처, 처리 위탁).
 - [ ] 처리방침과 회원가입 동의 문구를 법률 검토로 확인했습니다.
-- [ ] [CHANGELOG](../CHANGELOG.md)의 "출시 준비 중"을 출시일로 바꿨습니다.
+- [x] [CHANGELOG](../CHANGELOG.md)의 "출시 준비 중"을 출시일(2026-11-19)로 바꿨습니다.
 - [x] 크레딧의 만든 사람 표기를 확정했습니다: bodyLanguage, Monkeys (`Presentation/UI/Overlay/CreditsScreen.cs`).
 
 ## 2. 얼굴 서버
