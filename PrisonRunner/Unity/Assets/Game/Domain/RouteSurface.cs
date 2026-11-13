@@ -44,15 +44,16 @@ namespace Muhanok.Domain
             for(int i=0;i<sequence%route.Length;i++)height+=Rise(route[i]);
             return height;
         }
-        // Stair chunks: prison 7 (existing), mine 13, zoo 14. Biome of the others: mine 0-3 (+13), prison 4-10, zoo 11-12 (+14).
-        public const int MineStair=13, ZooStair=14;
+        // Stair chunks: prison 7 (existing), mine 13, zoo 14. Biome of the others: mine 0-3 (+13), prison 4-10 (+15 exit), zoo 11-12 (+14).
+        public const int MineStair=13, ZooStair=14, PrisonExit=15;
         public static bool IsStair(int type)=>type==7||type==MineStair||type==ZooStair;
+        public static bool IsZoo(int type)=>type==11||type==12||type==ZooStair;
         public static bool IsOutdoor(int type)=>type==11||type==12||type==ZooStair;
         public static bool IsMine(int type)=>type<4||type==MineStair;
         public static string AreaAt(float distance)
         {
             int type=TypeAt((int)Math.Floor(Math.Max(0,distance)/Length));
-            return type==1||type==2?"광산 수레":type==MineStair?"광산 계단":type==ZooStair?"사육장 계단":type<4?"광산":type==7?"계단":type>=11?"사육장":"감옥 복도";
+            return type==1||type==2?"광산 수레":type==MineStair?"광산 계단":type==ZooStair?"사육장 계단":type<4?"광산":type==7?"계단":IsZoo(type)?"사육장":"감옥 복도";
         }
         public static float Rise(int type)=>IsStair(type)?StairRise:type==11?-3f:0f;
         public static float LocalHeight(int type,float z)

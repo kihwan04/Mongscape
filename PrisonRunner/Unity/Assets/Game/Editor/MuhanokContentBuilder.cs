@@ -22,7 +22,7 @@ namespace Muhanok.Editor
         private const string Content = "Assets/Game/Content";
         private static Material stone, wood, steel, orange, navy, skin, brown, yellow, red, white;
         public static readonly string[] ChunkIds = { "CH_Mine_Start", "CH_Mine_Straight_A", "CH_Mine_Straight_B", "CH_Transition_MineToPrison",
-            "CH_Prison_Corridor_A", "CH_Prison_Corridor_B", "CH_Checkpoint", "CH_Stair", "CH_Laundry", "CH_Kitchen", "CH_Maintenance", "CH_Yard", "CH_OuterWall", "CH_Mine_Stair", "CH_Zoo_Stair" };
+            "CH_Prison_Corridor_A", "CH_Prison_Corridor_B", "CH_Checkpoint", "CH_Stair", "CH_Laundry", "CH_Kitchen", "CH_Maintenance", "CH_Yard", "CH_OuterWall", "CH_Mine_Stair", "CH_Zoo_Stair", "CH_Prison_Exit" };
         private static readonly string[] MonkeyClips = { "MinePickaxe_Loop", "StopWork", "LookCart", "IdeaReact", "SprintStart", "Run", "LaneStep_L", "LaneStep_R", "Jump", "CrouchSlide", "HighKnee", "Stumble", "Caught" };
         private static readonly string[] GuardClips = { "Notice", "ChaseRun", "Catch" };
 
