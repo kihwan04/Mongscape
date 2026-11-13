@@ -43,7 +43,7 @@ namespace Muhanok.Presentation
             skin.BorderBox(panel, Palette.A(Palette.Panel, 0.97f), Palette.Wood, 3);
             skin.Text(new Rect(200, 72, 600, 50), "크레딧", 36, Palette.Gold, TextAnchor.MiddleLeft);
             skin.Text(new Rect(700, 80, 380, 40), "Mongscape (몽스케이프)  " + BuildInfo.Label, 18, Palette.Sand, TextAnchor.MiddleRight, false, true);
-            skin.Text(new Rect(200, 128, 880, 30), "기획·개발: Mongscape 팀", 20, Palette.Cream, TextAnchor.MiddleLeft, false, true);
+            skin.Text(new Rect(200, 128, 880, 30), "기획·개발: bodyLanguage, Monkeys", 20, Palette.Cream, TextAnchor.MiddleLeft, false, true);
             skin.Text(new Rect(200, 160, 880, 26), "배경 음악과 효과음은 게임 안에서 코드로 합성합니다.", 16, Palette.Sand, TextAnchor.MiddleLeft, false);
 
             skin.Fill(new Rect(200, 198, 880, 2), Palette.A(Palette.Wood, 0.9f));
