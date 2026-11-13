@@ -78,7 +78,6 @@ namespace Muhanok.Editor
         private static void CartDock(Transform env,bool exit)
         {
             float z=exit?2:22;
-            Label(exit?"DISEMBARK / SERVICE STAIRS":"BOARD / BALANCE LEFT OR RIGHT",env,new Vector3(0,3.7f,z),.11f,cream.color);
             for(int side=-1;side<=1;side+=2)
             {
                 Shape("DockPlatform",env,new Vector3(side*2.0f,.1f,z),new Vector3(1.9f,.2f,4),wood);
@@ -162,7 +161,7 @@ namespace Muhanok.Editor
             foreach(var obstacle in chunk.Obstacles)
             {
                 int row=obstacle.GetComponentInParent<MuhanokObstacleSocket>().Row;
-                string replacement=type==0&&row==1||type==3&&row==1||type==6&&row==1?"OBS_LowPipe":type==3&&row==0?"OBS_Crate_Low":null;
+                string replacement=type==0&&row==1||type==3&&row==1||type==15&&row==1||type==6&&row==1?"OBS_LowPipe":(type==3||type==15)&&row==0?"OBS_Crate_Low":null;
                 if(replacement!=null)
                 {
                     Clear(obstacle.transform);var gate=obstacle.GetComponent<DescendingGate>();if(gate!=null)Object.DestroyImmediate(gate);
