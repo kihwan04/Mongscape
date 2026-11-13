@@ -48,9 +48,9 @@ namespace Muhanok.Infrastructure
         private readonly Func<bool> riding;
         private int lastZone;
         private bool lastRiding;
-        private double lastCrouch = -10, lastKnee = -10;
+        private double lastCrouch = -10;
         public PoseCommandSource(PoseGameInput target, Func<int> lane, Func<bool> cart) { output = target; runnerLane = lane; riding = cart; }
-        public void Reset(int zone) { lastZone = zone; lastRiding = riding(); lastCrouch = lastKnee = -10; output.Clear(); }
+        public void Reset(int zone) { lastZone = zone; lastRiding = riding(); lastCrouch = -10; output.Clear(); }
         public void Feed(MotionReading reading, double now)
         {
             bool cart = riding();
@@ -67,7 +67,8 @@ namespace Muhanok.Infrastructure
             if (reading.JumpEdge) output.Buffer.Add(MotionCommand.Jump);
             // Held actions refresh the runner's timers while the body keeps the pose.
             if (reading.Crouch && now - lastCrouch >= .2) { output.Buffer.Add(MotionCommand.Crouch); lastCrouch = now; }
-            if (reading.HighKnee && now - lastKnee >= .2) { output.Buffer.Add(MotionCommand.HighKnee); lastKnee = now; }
+            // A knee step is a one-frame edge, sent once.
+            if (reading.KneeStep) output.Buffer.Add(MotionCommand.KneeStep);
         }
     }
 
@@ -88,6 +89,7 @@ namespace Muhanok.Infrastructure
         public float CalibrationProgress => classifier.CalibrationProgress;
         public float StepsPerMinute => classifier.StepsPerMinute;
         public double LastJumpTime { get; private set; } = -10;
+        public double LastKneeStepTime { get; private set; } = -10;
         // When the last calibration finished (Tick time, -1 none) and whether tracking dropped or restarted since.
         public double CalibratedAt { get; private set; } = -1;
         public bool LostSinceCalibration { get; private set; } = true;
@@ -182,6 +184,7 @@ namespace Muhanok.Infrastructure
             else if (!classifier.Calibrated || classifier.Status != PoseStatus.Tracking) LostSinceCalibration |= calibrated;
             calibrated = classifier.Calibrated;
             if (reading.JumpEdge) LastJumpTime = now;
+            if (reading.KneeStep) LastKneeStepTime = now;
             if (feedCommands && classifier.Status == PoseStatus.Tracking) commands.Feed(reading, now);
             else commands.Reset(reading.Lane);
         }

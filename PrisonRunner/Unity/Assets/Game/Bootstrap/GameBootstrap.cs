@@ -37,6 +37,8 @@ namespace Muhanok.Bootstrap
         private InputRouter router;
         private HUDPresenter hud;
         private GameAudio audioPlayer;
+        private readonly StairCameraFx stairFx = new StairCameraFx();
+        public StairCameraFx StairFx => stairFx;
         private float caughtTime, runFade, runStartedAt = -10, caughtAt = -10;
         private ParticleSystem dust, hit;
         private bool previousStumble;
@@ -272,7 +274,7 @@ namespace Muhanok.Bootstrap
             RouteSurface.UsePlan(TutorialCourse.Plan(Session.Config));
             Session.Reset(); Session.Runner.SetStartZ(z); keyboard.Clear(); poseInput.Clear(); Pose.ResetCommands();
             Map.Reset(); Map.Tick(z); Map.AnimateGates(z);
-            guardDistance=15; previousStumble=false; Hero.Apply(Session.Runner); CameraRig.Takeover(Hero.Head);
+            stairFx.Reset(); guardDistance=15; previousStumble=false; Hero.Apply(Session.Runner); CameraRig.Takeover(Hero.Head);
         }
         // A member's profile remembers the finished tutorial; then back to the main menu.
         private void FinishTutorial()
@@ -361,7 +363,7 @@ namespace Muhanok.Bootstrap
                 Session.Tick(dt); Map.Tick(Session.Runner.Z); Hero.Apply(Session.Runner); Map.Evaluate(previousZ);
                 Map.AnimateGates(Session.Runner.Z);
                 bool exercising = Pose.UsesCamera ? Pose.Tracking && Pose.Reading.Active : true;
-                int activity=Time.realtimeSinceStartupAsDouble-Pose.LastJumpTime<.65?1:Pose.Reading.Crouch?2:Pose.Reading.HighKnee?3:Pose.Reading.Lane!=0?4:0;
+                int activity=Time.realtimeSinceStartupAsDouble-Pose.LastJumpTime<.65?1:Pose.Reading.Crouch?2:Time.realtimeSinceStartupAsDouble-Pose.LastKneeStepTime<.7?3:Pose.Reading.Lane!=0?4:0;
                 Session.Workout.TickActivity(dt,Session.Flow.State==GameFlowState.Running,Pose.UsesCamera&&Pose.Tracking,exercising,activity);
                 runFade += dt; hud.Fade = Mathf.Clamp01(runFade * 2f);
                 if (dust != null && !dust.isPlaying) dust.Play();
@@ -369,7 +371,7 @@ namespace Muhanok.Bootstrap
                 previousStumble = Session.Runner.Stumbling;
                 if (Session.Flow.State == GameFlowState.Running)
                 {
-                    float distance=Session.Runner.Slowing&&Session.BananaHits>0||Session.BananaPursuit?1.8f:Mathf.Lerp(15,1.8f,Session.Chase.Pressure);
+                    float distance=Session.Runner.Slowing&&Session.SlipStrikes>0||Session.SlipPursuit?1.8f:Mathf.Lerp(15,1.8f,Session.Chase.Pressure);
                     guardDistance=Mathf.MoveTowards(guardDistance,distance,dt*18);
                     guard.Pose(new Vector3(Session.Runner.X, 0, Session.Runner.Z-guardDistance), !Session.Runner.Riding);
                     guard.Play("AN_Guard_ChaseRun");
@@ -439,7 +441,12 @@ namespace Muhanok.Bootstrap
             {
                 if(Session.Flow.State==GameFlowState.Caught&&Session.Reason!=CaptureReason.BrokenRail)CameraRig.FollowCapture(Hero.transform.position,Time.unscaledDeltaTime,Capture.ProneBlend);
                 else if(Session.Runner.Riding)CameraRig.FollowCart(Hero.Head,Time.deltaTime,-Session.Runner.CartLean*12);
-                else CameraRig.Follow(Hero.Head,Session.Runner.Crouching,Time.deltaTime,Session.Runner.Slowing?Mathf.Sin(Time.time*12)*2:0);
+                else
+                {
+                    stairFx.Tick(Time.deltaTime,StairCameraFx.OnStairChunk(Session.Runner),Session.Runner.KneeSteps);
+                    if(stairFx.Stepped&&audioPlayer!=null)audioPlayer.Footstep();
+                    CameraRig.Follow(Hero.Head,Session.Runner.Crouching,Time.deltaTime,Session.Runner.Slowing?Mathf.Sin(Time.time*12)*2:0,stairFx.Pitch,stairFx.Bob);
+                }
             }
         }
         private void StateChanged(GameFlowState state)
@@ -603,6 +610,7 @@ namespace Muhanok.Bootstrap
         string IHudData.PoseDiagnostics => userSettings != null && userSettings.DeveloperMode && userSettings.PoseDiagnostics ? Pose.Diagnostics : "";
         MotionReading IHudData.Motion => Pose.Reading;
         float IHudData.SecondsSinceJump => (float)(Time.realtimeSinceStartupAsDouble - Pose.LastJumpTime);
+        float IHudData.SecondsSinceKneeStep => (float)(Time.realtimeSinceStartupAsDouble - Pose.LastKneeStepTime);
         float IHudData.CalibrationProgress => Pose.CalibrationProgress;
         float IHudData.StepsPerMinute => Pose.StepsPerMinute;
         bool IHudData.BodyActive => Pose.Tracking && Pose.Reading.Active;

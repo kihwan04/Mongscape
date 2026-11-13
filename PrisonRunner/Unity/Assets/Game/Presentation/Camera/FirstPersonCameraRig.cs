@@ -56,15 +56,16 @@ namespace Muhanok.Presentation
             Chase.transform.SetPositionAndRotation(head, Quaternion.identity); Chase.Lens.FieldOfView = 80f;
             Select(FirstPerson);
         }
-        public void Follow(Vector3 head, bool crouch, float dt,float bank=0)
+        public void Follow(Vector3 head, bool crouch, float dt,float bank=0,float pitch=0,float bob=0)
         {
             if(active!=FirstPerson&&output!=null)FirstPerson.transform.SetPositionAndRotation(output.transform.position,output.transform.rotation);
             Select(FirstPerson);
             Vector3 position = head;
             if (crouch) position.y -= .8f;
+            position.y += bob;
             FirstPerson.transform.position = Vector3.Lerp(FirstPerson.transform.position, position, 1 - Mathf.Exp(-24f * dt));
             RouteSurface.Sample(head.z,out float x,out float y); RouteSurface.Sample(head.z+.5f,out float nextX,out float nextY);
-            FirstPerson.transform.rotation = Quaternion.Slerp(FirstPerson.transform.rotation,Quaternion.LookRotation(new Vector3(nextX-x,nextY-y,.5f))*Quaternion.AngleAxis(bank,Vector3.forward),1-Mathf.Exp(-8*dt));
+            FirstPerson.transform.rotation = Quaternion.Slerp(FirstPerson.transform.rotation,Quaternion.LookRotation(new Vector3(nextX-x,nextY-y,.5f))*Quaternion.AngleAxis(-pitch,Vector3.right)*Quaternion.AngleAxis(bank,Vector3.forward),1-Mathf.Exp(-8*dt));
         }
         public void FollowCart(Vector3 head,float dt,float bank)
         {

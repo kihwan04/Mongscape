@@ -45,7 +45,7 @@ namespace Muhanok.Presentation
             transform.rotation=Quaternion.LookRotation(new Vector3(nextX-x,nextY-y,.25f));
             if(runner.Riding)transform.rotation*=Quaternion.AngleAxis(-runner.CartLean*12,Vector3.forward);
             Play(runner.Stumbling ? "AN_Monkey_Stumble" : runner.Riding ? "AN_Monkey_CartRide" : runner.Crouching ? "AN_Monkey_CrouchSlide"
-                : runner.HighKnee ? "AN_Monkey_HighKnee" : runner.Y > .05f ? "AN_Monkey_Jump" : "AN_Monkey_Run");
+                : runner.KneeStepping ? "AN_Monkey_HighKnee" : runner.Y > .05f ? "AN_Monkey_Jump" : "AN_Monkey_Run");
         }
         public void Play(string clip)
         {

@@ -9,14 +9,14 @@ namespace Muhanok.Presentation
         private RunSession run;
         private int lastHits;
         private float remaining;
-        public bool Visible=>run!=null&&run.Flow.State==GameFlowState.Running&&!run.Paused&&(remaining>0||run.BananaPursuit);
+        public bool Visible=>run!=null&&run.Flow.State==GameFlowState.Running&&!run.Paused&&(remaining>0||run.SlipPursuit);
         public void Configure(RunSession session){run=session;}
         private void Update()
         {
             if(run==null)return;
             bool live=run.Flow.State==GameFlowState.Running;
-            if(run.BananaHits==0){lastHits=0;remaining=0;}
-            if(live&&run.BananaHits>lastHits){lastHits=run.BananaHits;remaining=3.6f;}
+            if(run.SlipStrikes==0){lastHits=0;remaining=0;}
+            if(live&&run.SlipStrikes>lastHits){lastHits=run.SlipStrikes;remaining=3.6f;}
             if(live&&!run.Paused)remaining=Mathf.Max(0,remaining-Time.unscaledDeltaTime);
         }
     }

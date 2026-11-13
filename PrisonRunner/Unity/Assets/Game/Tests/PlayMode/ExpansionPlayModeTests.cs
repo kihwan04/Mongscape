@@ -79,7 +79,7 @@ namespace Muhanok.Tests
         // Zoo chunks hold either an animal or (ZooDuckChance) the duck row, so walk the zoo branch until one shows.
         private static IEnumerable ZooChunks(GameBootstrap game,int branch)
         {
-            for(float z=480;z<=960;z+=48)
+            for(float z=480;z<=720;z+=48)
             {
                 Seek(game,z,branch);
                 foreach(var active in game.Map.Active)if(active.Type==12)yield return active.Chunk;
@@ -192,10 +192,10 @@ namespace Muhanok.Tests
                 Assert.IsTrue(shell.Raycast(new Ray(new Vector3(center,1.6f,150),Vector3.up),out _,10));
                 if(destination!=1)
                 {
-                    Seek(game,1140,BranchFor(game,destination));yield return null;Physics.SyncTransforms();
-                    MuhanokMapChunk back=null;foreach(var item in game.Map.Active)if(item.Chunk.Sequence==47)back=item.Chunk;
+                    Seek(game,RoutePlan.ExtendedLapChunks*24-12,BranchFor(game,destination));yield return null;Physics.SyncTransforms();
+                    MuhanokMapChunk back=null;foreach(var item in game.Map.Active)if(item.Chunk.Sequence==RoutePlan.ExtendedLapChunks-1)back=item.Chunk;
                     Assert.IsNotNull(back.GetComponentInChildren<RouteTransitionView>());
-                    RouteSurface.Sample(1150,out center,out _);Assert.IsTrue(back.GetComponentInChildren<RouteTransitionView>().Surface.Raycast(new Ray(new Vector3(center,1.6f,1150),Vector3.up),out _,10));
+                    float backZ=RoutePlan.ExtendedLapChunks*24-2;RouteSurface.Sample(backZ,out center,out _);Assert.IsTrue(back.GetComponentInChildren<RouteTransitionView>().Surface.Raycast(new Ray(new Vector3(center,1.6f,backZ),Vector3.up),out _,10));
                 }
             }
         }
@@ -213,7 +213,7 @@ namespace Muhanok.Tests
                     {
                         blocks++;Assert.AreEqual(ObstacleKind.Barrier,block.Hazard.Kind);Assert.GreaterOrEqual(block.Hazard.CollisionHalfWidth,1.1f);
                         RouteSurface.Sample(block.transform.position.z,out float x,out _);mask|=1<<(Mathf.RoundToInt((block.transform.position.x-x)/2.2f)+1);
-                        Assert.IsFalse(SafePatternValidator.Avoided(block.Hazard.Kind,2,true,true));
+                        Assert.IsFalse(SafePatternValidator.Avoided(block.Hazard.Kind,2,true));
                     }
                     foreach(var item in chunk.DynamicFloorItems)
                     {
@@ -265,7 +265,7 @@ namespace Muhanok.Tests
             int lane=Mathf.RoundToInt((peel.transform.position.x-x)/2.2f);game.Session.Runner.SetStartZ(z);
             while(game.Session.Runner.Lane!=lane)game.Session.Runner.Command(lane<game.Session.Runner.Lane?MotionCommand.Left:MotionCommand.Right);game.Session.Runner.Tick(.25f,0);
             peel.Evaluate(game.Session,z-1);peel.Evaluate(game.Session,z-1);yield return null;
-            Assert.AreEqual(1,game.Session.BananaHits);Assert.IsTrue(game.PursuitCue.Visible);Assert.IsFalse(game.Capture.BatonVisible);
+            Assert.AreEqual(1,game.Session.SlipStrikes);Assert.IsTrue(game.PursuitCue.Visible);Assert.IsFalse(game.Capture.BatonVisible);
             yield return null;Assert.IsTrue(game.GetComponent<HUDPresenter>().RunModel.ShowSiren);
             Assert.IsNull(game.OutputCamera.transform.Find("NearPoliceHandAndBaton"),"The warning must not create camera-space geometry");
             game.Session.Paused=true;yield return null;Assert.IsFalse(game.PursuitCue.Visible);
@@ -276,7 +276,7 @@ namespace Muhanok.Tests
             Assert.IsFalse(game.PursuitCue.Visible);Assert.AreEqual(1,game.Capture.ProneBlend,.001f);
             var head=game.Hero.RigAnimator.GetBoneTransform(HumanBodyBones.Head);var badge=game.Hero.transform.Find("PlayerFaceBadge");
             Assert.IsTrue(badge.GetComponent<Renderer>().enabled);Assert.Less(Vector3.Distance(head.position,badge.position),.8f);
-            Assert.Less(head.position.y,1.5f,"Head must lower with the prone body");
+            Assert.Less(head.position.y-game.Hero.transform.position.y,1.5f,"Head must lower with the prone body");
             game.Capture.Tick(5);game.Session.Flow.Transition(GameFlowState.Result);game.Retry();yield return null;
             Assert.IsTrue(game.Hero.RigAnimator.enabled);Assert.Greater(Vector3.Dot(game.Hero.Visual.up,Vector3.up),.99f);Assert.IsFalse(game.PursuitCue.Visible);
         }

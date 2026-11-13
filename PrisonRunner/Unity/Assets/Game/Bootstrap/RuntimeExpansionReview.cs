@@ -110,7 +110,7 @@ namespace Muhanok.Bootstrap
                 Seek(150,BranchFor(destinationType));yield return new WaitForSecondsRealtime(.6f);yield return Capture("16_Biome_Entry_"+(destinationType+1));
                 Seek(176,BranchFor(destinationType));yield return new WaitForSecondsRealtime(.6f);yield return Capture("17_Biome_Start_"+(destinationType+1));
             }
-            Seek(1140,BranchFor(-1));yield return new WaitForSecondsRealtime(.6f);yield return Capture("18_Outdoor_Return_To_Mine");
+            Seek(RoutePlan.ExtendedLapChunks*24-12,BranchFor(-1));yield return new WaitForSecondsRealtime(.6f);yield return Capture("18_Outdoor_Return_To_Mine");
             Seek(480,BranchFor(-1));
             foreach(var active in game.Map.Active)
             {
@@ -158,7 +158,7 @@ namespace Muhanok.Bootstrap
                 yield return null;
             }
             report.cameraStatus=deferCamera?"Deferred by user":game.Pose.Status+": "+game.Pose.Message;game.Pose.SetStyle(PlayStyle.Keyboard);
-            Seek(480,BranchFor(-1));game.Session.Slip(true);
+            Seek(480,BranchFor(-1));game.Session.Slip(SlipSource.Banana);
             yield return new WaitForSecondsRealtime(.4f);yield return Capture("13_Banana_Siren");
             var caughtPortrait=new Texture2D(32,32,TextureFormat.RGB24,false);
             for(int y=0;y<32;y++)for(int x=0;x<32;x++)caughtPortrait.SetPixel(x,y,(x/8+y/8)%2==0?new Color(1,.7f,.2f):new Color(.2f,.65f,1));caughtPortrait.Apply();
@@ -230,6 +230,7 @@ namespace Muhanok.Bootstrap
                 for(int lane=-1;lane<=1;lane++)if((blocked&(1<<(lane+1)))==0&&Mathf.Abs(lane-run.Runner.Lane)<distance){best=lane;distance=Mathf.Abs(lane-run.Runner.Lane);}
                 if(best!=run.Runner.Lane)run.Runner.Command(best<run.Runner.Lane?MotionCommand.Left:MotionCommand.Right);
             }
+            if(StairJudge.StepDue(run.Runner))run.Runner.Command(MotionCommand.KneeStep);
             foreach(var active in game.Map.Active)
             {
                 DriveHazards(active.Chunk.Obstacles,z,speed);DriveHazards(active.Chunk.ExerciseObstacles,z,speed);DriveHazards(active.Chunk.DynamicObstacles,z,speed);
@@ -261,7 +262,6 @@ namespace Muhanok.Bootstrap
                 if(!hazard.FullExerciseRow&&Mathf.Abs(run.Runner.Lane*2.2f+x-hazard.transform.position.x)>1.1f)continue;
                 if(hazard.Kind==ObstacleKind.Crate||hazard.Kind==ObstacleKind.Cart){if(run.Runner.Y<=.001f)run.Runner.Command(MotionCommand.Jump);}
                 else if(hazard.Kind==ObstacleKind.Pipe)run.Runner.Command(MotionCommand.Crouch);
-                else if(hazard.Kind==ObstacleKind.Stair)run.Runner.Command(MotionCommand.HighKnee);
             }
         }
         private static Vector2 ElementCenter(VisualElement root,VisualElement element)

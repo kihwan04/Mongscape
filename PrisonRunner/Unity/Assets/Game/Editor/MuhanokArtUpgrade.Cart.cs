@@ -162,7 +162,7 @@ namespace Muhanok.Editor
             foreach(var obstacle in chunk.Obstacles)
             {
                 int row=obstacle.GetComponentInParent<MuhanokObstacleSocket>().Row;
-                string replacement=type==0&&row==1||type==3&&row==1||type==6&&row==1||type==7&&row==1?"OBS_LowPipe":type==3&&row==0?"OBS_Crate_Low":type==7?"OBS_Stair_HighKnee":null;
+                string replacement=type==0&&row==1||type==3&&row==1||type==6&&row==1?"OBS_LowPipe":type==3&&row==0?"OBS_Crate_Low":null;
                 if(replacement!=null)
                 {
                     Clear(obstacle.transform);var gate=obstacle.GetComponent<DescendingGate>();if(gate!=null)Object.DestroyImmediate(gate);

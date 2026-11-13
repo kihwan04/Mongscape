@@ -11,7 +11,7 @@ namespace Muhanok.Tests
 {
     public sealed class CollisionAndCartTests
     {
-        [UnityTest] public IEnumerator StairEntryDoorAllowsSlideThenClosesBehindBeforePrison()
+        [UnityTest] public IEnumerator StairChunksCarryNoHazardsAndOnlyKneeHighCoinsThatNeedSteps()
         {
             yield return SceneManager.LoadSceneAsync("GameScene");yield return null;
             var game=Object.FindFirstObjectByType<GameBootstrap>();game.Session.Config.ExtendedRoutes=false;game.BeginRun("");
@@ -19,22 +19,26 @@ namespace Muhanok.Tests
             MuhanokMapChunk stair=null,prison=null;
             foreach(var active in game.Map.Active){if(active.Type==7)stair=active.Chunk;if(active.Type==4)prison=active.Chunk;}
             Assert.IsNotNull(stair);Assert.IsNotNull(prison);Assert.Less(Vector3.Distance(stair.Exit.position,prison.Entry.position),.001f);
-            Assert.AreEqual(3,stair.SlideGates.Length);
-            foreach(var gate in stair.SlideGates)
+            Assert.IsTrue(stair.Layout.Stair);Assert.AreEqual(0,stair.SlideGates.Length,"The closing door is gone");
+            foreach(var hazard in stair.Obstacles)Assert.IsFalse(hazard.gameObject.activeSelf);
+            Assert.IsEmpty(stair.ExerciseObstacles);
+            foreach(var coin in stair.Coins)
             {
-                float z=gate.transform.position.z;gate.Preview(z-16);Assert.AreEqual(gate.OpenBottom,gate.Bottom,.001f);
-                gate.Preview(z);Assert.AreEqual(.95f,gate.Bottom,.001f,"Leave a physical opening for the slide at contact");
-                gate.Preview(z+3);Assert.AreEqual(0,gate.Bottom,.001f,"Close completely behind the runner");
-                var hazard=gate.GetComponent<ObstacleController>();Assert.AreEqual(ObstacleKind.Pipe,hazard.Kind);Assert.IsTrue(hazard.gameObject.activeSelf);
-                game.Session.Reset();game.Session.Runner.SetStartZ(z-1);
-                int lane=hazard.GetComponentInParent<MuhanokObstacleSocket>().Lane;
-                if(lane!=0)game.Session.Runner.Command(lane<0?MotionCommand.Left:MotionCommand.Right);
-                game.Session.Runner.Tick(.25f,0);game.Session.Runner.Command(MotionCommand.Crouch);game.Session.Runner.SetStartZ(z);
-                hazard.Evaluate(game.Session,z-1);Assert.AreEqual(GameFlowState.Running,game.Session.Flow.State);
-                gate.ResetGate();Assert.AreEqual(gate.OpenBottom,gate.Bottom);
+                Assert.IsTrue(coin.RequiresKneeStep);Assert.IsTrue(coin.gameObject.activeSelf);
+                float local=coin.transform.position.z-stair.Entry.position.z;
+                Assert.That(local,Is.InRange(ObstacleLayout.StairCoinFromZ-.01f,ObstacleLayout.StairCoinToZ+.01f));
+                float surface=stair.Entry.position.y+RouteSurface.LocalHeight(7,local);
+                Assert.AreEqual(ObstacleLayout.StairCoinHeight,coin.transform.position.y-surface,.01f,"Coins hang at knee height above the stair");
             }
-            var middle=stair.Obstacles[4];middle.ResetPass();game.Session.Reset();game.Session.Runner.SetStartZ(middle.transform.position.z);
-            middle.Evaluate(game.Session,middle.transform.position.z-1);Assert.AreEqual(GameFlowState.Caught,game.Session.Flow.State,"Standing cannot pass the closing entrance");
+            // Standing still cannot take a stair coin; a fresh step can.
+            var coinA=stair.Coins[0];game.Session.Reset();game.Session.Runner.SetStartZ(coinA.transform.position.z);
+            RouteSurface.Sample(coinA.transform.position.z,out float offsetX,out _);
+            int lane=Mathf.RoundToInt((coinA.transform.position.x-offsetX)/2.2f);
+            if(lane!=0)game.Session.Runner.Command(lane<0?MotionCommand.Left:MotionCommand.Right);
+            game.Session.Runner.Tick(.25f,0);game.Session.Runner.SetStartZ(coinA.transform.position.z);
+            coinA.Evaluate(game.Session,coinA.transform.position.z-1);Assert.AreEqual(0,game.Session.Score.Coins);Assert.IsTrue(coinA.gameObject.activeSelf);
+            game.Session.Runner.Command(MotionCommand.KneeStep);coinA.Evaluate(game.Session,coinA.transform.position.z-1);
+            Assert.AreEqual(1,game.Session.Score.Coins);Assert.IsFalse(coinA.gameObject.activeSelf);
         }
         [UnityTest] public IEnumerator MovingBetweenLanesCannotBypassFullWidthExerciseRow()
         {
@@ -116,14 +120,14 @@ namespace Muhanok.Tests
             brokenGap.Evaluate(game.Session,at-1);
             Assert.AreEqual(GameFlowState.Caught,game.Session.Flow.State);Assert.AreEqual(CaptureReason.BrokenRail,game.Session.Reason);
         }
-        [UnityTest] public IEnumerator ActualExerciseRowsMatchJumpDuckAndHighKneeWithoutAnEmptyLane()
+        [UnityTest] public IEnumerator ActualExerciseRowsMatchJumpAndDuckWithoutAnEmptyLane()
         {
             yield return SceneManager.LoadSceneAsync("GameScene");yield return null;
             var game=Object.FindFirstObjectByType<GameBootstrap>();game.Session.Config.ExtendedRoutes=false;game.BeginRun("");
             yield return new WaitUntil(()=>!game.IsLoading&&!game.IsRevealing);game.enabled=false;game.Map.Tick(90);
             foreach(var active in game.Map.Active)
             {
-                if(active.Type!=3&&active.Type!=7)continue;
+                if(active.Type!=3)continue;
                 var hazards=new System.Collections.Generic.List<ObstacleController>(active.Chunk.Obstacles);
                 hazards.AddRange(active.Chunk.ExerciseObstacles);
                 foreach(var hazard in hazards)
@@ -133,7 +137,7 @@ namespace Muhanok.Tests
                     var socket=hazard.GetComponentInParent<MuhanokObstacleSocket>();
                     if(socket.Lane!=0)game.Session.Runner.Command(socket.Lane<0?MotionCommand.Left:MotionCommand.Right);
                     game.Session.Runner.Tick(.25f,0);
-                    game.Session.Runner.Command(hazard.Kind==ObstacleKind.Crate?MotionCommand.Jump:hazard.Kind==ObstacleKind.Pipe?MotionCommand.Crouch:MotionCommand.HighKnee);
+                    game.Session.Runner.Command(hazard.Kind==ObstacleKind.Crate?MotionCommand.Jump:MotionCommand.Crouch);
                     game.Session.Runner.Tick(.15f,0);game.Session.Runner.SetStartZ(z);hazard.Evaluate(game.Session,z-1);
                     Assert.AreEqual(GameFlowState.Running,game.Session.Flow.State,"Wrong response to "+hazard.Kind);
                 }
@@ -146,7 +150,7 @@ namespace Muhanok.Tests
             yield return new WaitUntil(()=>!game.IsLoading&&!game.IsRevealing);game.enabled=false;
             foreach(var prefab in game.ChunkPrefabs)
             {
-                if(prefab.RouteType==1||prefab.RouteType==2){Assert.IsEmpty(prefab.ExerciseObstacles);continue;}
+                if(prefab.RouteType==1||prefab.RouteType==2||RouteSurface.IsStair(prefab.RouteType)){Assert.IsEmpty(prefab.ExerciseObstacles);continue;}
                 bool jump=false,slide=false;
                 foreach(var hazard in prefab.ExerciseObstacles){jump|=hazard.Kind==ObstacleKind.Crate;slide|=hazard.Kind==ObstacleKind.Pipe;}
                 foreach(var hazard in prefab.Obstacles)slide|=hazard.Kind==ObstacleKind.Pipe;
@@ -169,6 +173,7 @@ namespace Muhanok.Tests
                     foreach(var hazard in active.Chunk.Obstacles)PrepareAction(run,hazard);
                     foreach(var hazard in active.Chunk.ExerciseObstacles)PrepareAction(run,hazard);
                 }
+                if(StairJudge.StepDue(run.Runner))run.Runner.Command(MotionCommand.KneeStep);
                 float previous=run.Runner.Z;run.Tick(1f/30f);game.Map.Tick(run.Runner.Z);
                 foreach(var active in game.Map.Active)
                 {
@@ -194,7 +199,6 @@ namespace Muhanok.Tests
             if(ahead>session.TargetSpeed*.25f)return;
             if(hazard.Kind==ObstacleKind.Crate&&session.Runner.Y<=.001f)session.Runner.Command(MotionCommand.Jump);
             else if(hazard.Kind==ObstacleKind.Pipe)session.Runner.Command(MotionCommand.Crouch);
-            else if(hazard.Kind==ObstacleKind.Stair)session.Runner.Command(MotionCommand.HighKnee);
         }
         [UnityTest] public IEnumerator RealFloorItemUsesSweptContactJumpAvoidanceAndPoolReset()
         {

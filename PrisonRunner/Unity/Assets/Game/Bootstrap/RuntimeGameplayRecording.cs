@@ -69,7 +69,7 @@ namespace Muhanok.Bootstrap
             driving=false;
             if(finishing)yield break;
             ChapterAt("경찰에게 잡힘");
-            if(result.animalsSeen!=7||game.Session.BananaHits<2||game.Session.Reason!=CaptureReason.BananaPursuit)failure="Run ended before all zoo encounters and pursuit after two real banana contacts";
+            if(result.animalsSeen!=7||game.Session.SlipStrikes<2||game.Session.Reason!=CaptureReason.SlipPursuit)failure="Run ended before all zoo encounters and pursuit after two real banana contacts";
             yield return new WaitUntil(()=>game.Session.Flow.State==GameFlowState.Result);
             ChapterAt("결과 화면");yield return new WaitForSecondsRealtime(4);yield return Finish();
         }
@@ -128,21 +128,21 @@ namespace Muhanok.Bootstrap
                 else if(animated is FallenTreeHazard)result.animalsSeen|=4;
             }
             if((before^result.animalsSeen)!=0)ChapterAt((result.animalsSeen^before)==1?"기린 목 장애물":(result.animalsSeen^before)==2?"코끼리 코 장애물":"쓰러지는 나무");
-            if(run.BananaHits>result.bananaHits){result.bananaHits=run.BananaHits;firstSlip=z;deliberatePeel=null;ChapterAt(run.BananaHits==1?"바나나 접촉 · 사이렌 경고":"두 번째 바나나 · 경찰 추격");}
+            if(run.SlipStrikes>result.bananaHits){result.bananaHits=run.SlipStrikes;firstSlip=z;deliberatePeel=null;ChapterAt(run.SlipStrikes==1?"바나나 접촉 · 사이렌 경고":"두 번째 바나나 · 경찰 추격");}
             if(run.Runner.Riding)
             {
                 var plan=RouteSurface.ActivePlan;
                 if(plan.ForkWindow(z))
                 {
                     int lap=plan.CycleAt(RouteSurface.SequenceAt(z)),destination=lap==0?0:-1,choice=0;
-                    for(int lane=-1;lane<=1;lane++){var probe=new RoutePlan(run.Config,723);probe.UpdateChoice(lap*1152+120,lane);if(probe.DestinationAt(lap*48+6)==destination){choice=lane;break;}}
+                    for(int lane=-1;lane<=1;lane++){var probe=new RoutePlan(run.Config,723);probe.UpdateChoice(lap*RoutePlan.ExtendedLapChunks*RouteSurface.Length+120,lane);if(probe.DestinationAt(lap*RoutePlan.ExtendedLapChunks+6)==destination){choice=lane;break;}}
                     run.Runner.Command(choice<0?MotionCommand.Left:choice>0?MotionCommand.Right:MotionCommand.Center);return;
                 }
                 foreach(var chunk in game.Map.Active)foreach(var gap in chunk.Chunk.RailGaps)
                     if(gap.gameObject.activeInHierarchy&&!gap.Passed&&gap.transform.position.z>=z&&gap.transform.position.z-z<speed*.8f)run.Runner.Command(gap.RequiredLean<0?MotionCommand.Left:MotionCommand.Right);
                 return;
             }
-            bool seekBanana=result.animalsSeen==7&&z>900&&run.BananaHits<2&&(firstSlip<0||z-firstSlip>80);
+            bool seekBanana=result.animalsSeen==7&&z>900&&run.SlipStrikes<2&&(run.SlipStrikes==0||run.StrikeClearRemaining>1.5f);// the second contact must land before the first strike clears
             if(deliberatePeel!=null&&(deliberatePeel.Passed||!deliberatePeel.gameObject.activeInHierarchy||deliberatePeel.transform.position.z<z))deliberatePeel=null;
             if(seekBanana&&deliberatePeel==null)
                 foreach(var chunk in game.Map.Active)foreach(var peel in chunk.Chunk.DynamicFloorItems)
@@ -165,6 +165,7 @@ namespace Muhanok.Bootstrap
             if(deliberatePeel!=null&&!deliberatePeel.Passed&&deliberatePeel.transform.position.z>z&&deliberatePeel.transform.position.z-z<6)
             {int lane=Lane(deliberatePeel.transform);if((mask&(1<<(lane+1)))==0)desired=lane;}
             if(desired!=run.Runner.Lane)run.Runner.Command(desired<run.Runner.Lane?MotionCommand.Left:MotionCommand.Right);
+            if(StairJudge.StepDue(run.Runner))run.Runner.Command(MotionCommand.KneeStep);
             foreach(var chunk in game.Map.Active){Actions(chunk.Chunk.Obstacles,z,speed);Actions(chunk.Chunk.ExerciseObstacles,z,speed);Actions(chunk.Chunk.DynamicObstacles,z,speed);}
         }
         private static int Lane(Transform item){RouteSurface.Sample(item.position.z,out float x,out _);return Mathf.Clamp(Mathf.RoundToInt((item.position.x-x)/2.2f),-1,1);}
@@ -183,7 +184,6 @@ namespace Muhanok.Bootstrap
                 float d=h.transform.position.z-z;if(h.Passed||!h.gameObject.activeInHierarchy||d<0||d>speed*.3f||(!h.FullExerciseRow&&Lane(h.transform)!=game.Session.Runner.Lane))continue;
                 if(h.Kind==ObstacleKind.Crate||h.Kind==ObstacleKind.Cart){if(game.Session.Runner.Y<=.001f)game.Session.Runner.Command(MotionCommand.Jump);}
                 else if(h.Kind==ObstacleKind.Pipe)game.Session.Runner.Command(MotionCommand.Crouch);
-                else if(h.Kind==ObstacleKind.Stair)game.Session.Runner.Command(MotionCommand.HighKnee);
             }
         }
         private IEnumerator Finish()

@@ -21,8 +21,12 @@ namespace Muhanok.Domain
         private float sumCx, sumSy, sumHy, sumScale, sumKneeL, sumKneeR, sumAnkle, sumNose, sumTilt, sumRoll;
         private int ankleSamples, noseSamples, kneeSamples;
         // Tracking state.
-        private double lostSince = -1, crouchPendingSince = -1, crouchSince = -10, landingUntil, kneeUntil, lastStep, lastJump = -10, lastLaneChange = -10, pumpUntil;
+        private double lostSince = -1, crouchPendingSince = -1, crouchSince = -10, landingUntil, lastKneeStep = -10, lastStep, lastJump = -10, lastLaneChange = -10, pumpUntil;
         private bool airborne, hopping, handsUp, duckOnLoss;
+        // Full body: which knee crossed the lift line last (-1 left, 1 right, 0 none) and which knees are above it now.
+        private int kneeSide;
+        private bool kneeUpL, kneeUpR;
+        private const double KneeStepActiveSeconds = .7;
         // Previous full-body frame, for the rise speed of shoulders and hips.
         private double lastTrackTime = -1;
         private float lastSy, lastHy;
@@ -49,13 +53,13 @@ namespace Muhanok.Domain
         public void Recalibrate()
         {
             calibrated = false; samples = 0; smoothed = false; Reading.Clear(); airborne = hopping = handsUp = duckOnLoss = false; dropRatio = 0; actionLockUntil = 0; laneCandidate = 0;
-            crouchPendingSince = -1; crouchSince = -10; lastTrackTime = -1; laneLastTime = -1; kneeUntil = pumpUntil = 0; stepSign = pumpSign = 0; StepsPerMinute = 0;
+            crouchPendingSince = -1; crouchSince = -10; lastTrackTime = -1; laneLastTime = -1; lastKneeStep = -10; kneeSide = 0; kneeUpL = kneeUpR = false; pumpUntil = 0; stepSign = pumpSign = 0; StepsPerMinute = 0;
             Status = PoseStatus.Calibrating;
         }
 
         public MotionReading Update(PoseFrame frame)
         {
-            Reading.JumpEdge = false;
+            Reading.JumpEdge = false; Reading.KneeStep = false;
             double now = frame.Time;
             if (!frame.HasPose || !Smooth(frame) || !RequiredVisible())
             {
@@ -65,7 +69,7 @@ namespace Muhanok.Domain
                 if (calibrated && lost <= tuning.LostGraceSeconds && !duckOnLoss) return Reading;
                 if (calibrated && duckOnLoss && lost <= tuning.DuckHoldSeconds) { Reading.Crouch = true; Reading.Active = true; Status = PoseStatus.Tracking; return Reading; }
                 if (now - lostSince > tuning.LostSeconds && calibrated) Recalibrate();
-                Status = PoseStatus.Searching; Reading.Crouch = Reading.HighKnee = Reading.Active = false; crouchPendingSince = -1;
+                Status = PoseStatus.Searching; Reading.Crouch = Reading.Active = false; crouchPendingSince = -1; kneeSide = 0; kneeUpL = kneeUpR = false;
                 return Reading;
             }
             // Landmarks right after re-acquiring the body jump around; ignore actions for a moment.
@@ -75,7 +79,7 @@ namespace Muhanok.Domain
             Status = PoseStatus.Tracking;
             if (style == PlayStyle.UpperBody) TrackUpper(frame.Aspect, now); else TrackFull(frame.Aspect, now);
             UpdateCadence(now);
-            Reading.Active = now - lastStep < .8 || now - lastJump < 1 || Reading.Crouch || Reading.HighKnee || now - lastLaneChange < 1 || now < pumpUntil;
+            Reading.Active = now - lastStep < .8 || now - lastJump < 1 || Reading.Crouch || now - lastKneeStep < KneeStepActiveSeconds || now - lastLaneChange < 1 || now < pumpUntil;
             return Reading;
         }
 
@@ -227,14 +231,20 @@ namespace Muhanok.Domain
                 float liftL = (bKneeL - KneeDrop(PoseJoint.LeftKnee, PoseJoint.LeftHip)) / scale;
                 float liftR = (bKneeR - KneeDrop(PoseJoint.RightKnee, PoseJoint.RightHip)) / scale;
                 float diff = liftL - liftR;
-                if (!airborne && Math.Max(liftL, liftR) > tuning.HighKneeLift && Math.Abs(diff) > tuning.HighKneeLift * .7f) kneeUntil = now + tuning.HighKneeHoldSeconds;
+                // A knee step is the rising edge of a knee crossing the lift line on the other side from the last one.
+                bool upL = !airborne && liftL > tuning.HighKneeLift && diff > tuning.HighKneeLift * .7f;
+                bool upR = !airborne && liftR > tuning.HighKneeLift && -diff > tuning.HighKneeLift * .7f;
+                if (upL && !kneeUpL && kneeSide != -1) { kneeSide = -1; EmitKneeStep(now); }
+                if (upR && !kneeUpR && kneeSide != 1) { kneeSide = 1; EmitKneeStep(now); }
+                kneeUpL = upL; kneeUpR = upR;
                 // Alternating small lifts are running in place.
                 int sign = Math.Abs(diff) > tuning.StepLift ? Math.Sign(diff) : 0;
                 if (sign != 0 && sign != stepSign) { if (stepSign != 0) RegisterStep(now); stepSign = sign; }
             }
-            Reading.HighKnee = now < kneeUntil;
-            if (Reading.Lane == 0 && !airborne && !Reading.Crouch && !Reading.HighKnee && Math.Abs(offset) < exit * .5f) Drift();
+            if (Reading.Lane == 0 && !airborne && !Reading.Crouch && now - lastKneeStep >= KneeStepActiveSeconds && Math.Abs(offset) < exit * .5f) Drift();
         }
+
+        private void EmitKneeStep(double now) { Reading.KneeStep = true; lastKneeStep = now; }
 
         private void TrackUpper(float aspect, double now)
         {
@@ -271,11 +281,10 @@ namespace Muhanok.Domain
                 int sign = Math.Abs(diff) > tuning.ArmSwingAmplitude ? Math.Sign(diff) : 0;
                 if (sign != 0 && sign != pumpSign)
                 {
-                    if (pumpSign != 0) { RegisterStep(now); pumpUntil = now + .8; if (Math.Abs(diff) > tuning.ArmPumpAmplitude) kneeUntil = now + tuning.HighKneeHoldSeconds + .25; }
+                    if (pumpSign != 0) { RegisterStep(now); pumpUntil = now + .8; if (Math.Abs(diff) > tuning.ArmPumpAmplitude) EmitKneeStep(now); }
                     pumpSign = sign;
                 }
             }
-            Reading.HighKnee = now < kneeUntil;
             if (Reading.Lane == 0 && !handsUp && !Reading.Crouch && Math.Abs(lean) < tuning.UpperLaneExit * .5f) Drift();
         }
 

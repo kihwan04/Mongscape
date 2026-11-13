@@ -27,13 +27,13 @@ namespace Muhanok.Tests
             for(int sequence=0;sequence<120;sequence++)
             {
                 int type=RouteSurface.TypeAt(sequence), next=RouteSurface.TypeAt(sequence+1);
-                Assert.AreEqual(RouteSurface.EntryHeight(next),RouteSurface.EntryHeight(type)+RouteSurface.Rise(type),.00001f);
+                Assert.AreEqual(RouteSurface.BaseHeight(sequence+1),RouteSurface.BaseHeight(sequence)+RouteSurface.Rise(type),.00001f);
                 RouteSurface.Sample((sequence+1)*24-.001f,out float x0,out float y0);
                 RouteSurface.Sample((sequence+1)*24+.001f,out float x1,out float y1);
                 Assert.AreEqual(x0,x1,.00001f); Assert.AreEqual(y0,y1,.00001f);
                 Assert.AreEqual(0,RouteSurface.LocalX(type,24)-RouteSurface.LocalX(type,23.999f),.00001f);
             }
-            Assert.AreEqual(3,RouteSurface.LocalHeight(7,24)); Assert.AreEqual(-3,RouteSurface.LocalHeight(11,24));
+            Assert.AreEqual(RouteSurface.StairRise,RouteSurface.LocalHeight(7,24)); Assert.AreEqual(-3,RouteSurface.LocalHeight(11,24));
             Assert.Greater(RouteSurface.LocalX(1,12),1f);
         }
     }

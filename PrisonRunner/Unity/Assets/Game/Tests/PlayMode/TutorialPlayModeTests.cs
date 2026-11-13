@@ -69,6 +69,68 @@ namespace Muhanok.Tests
             game.FaceLogout(false);
         }
 
+        // Drives the keyboard tutorial up to the HighKnee step (earlier lessons answered like a player would).
+        private IEnumerator DriveToStairs()
+        {
+            yield return OpenAsMember();
+            hud.OpenMainMenu();hud.SelectMenu(MenuAction.Play);hud.ChooseTutorial(TutorialChoice.Start);
+            yield return WaitRunning();
+            var run=game.Session.Runner;Time.timeScale=3;
+            float deadline=Time.realtimeSinceStartup+90;
+            while(game.Tutorial.Active&&game.Tutorial.Script.Current!=TutorialStep.HighKnee&&Time.realtimeSinceStartup<deadline)
+            {
+                var t=game.Tutorial;var step=t.Script.Current;
+                if(!t.Retrying&&game.Session.Flow.State==GameFlowState.Running)
+                {
+                    bool near=t.LessonDistance<=TutorialDirector.ActDistance;
+                    if(step==TutorialStep.Lane&&near&&run.Lane==0)run.Command(MotionCommand.Left);
+                    else if(step==TutorialStep.Jump&&near&&!t.Resumed&&run.Y<=.001f)run.Command(MotionCommand.Jump);
+                    else if(step==TutorialStep.Crouch&&near)run.Command(MotionCommand.Crouch);
+                }
+                yield return null;
+            }
+            Assert.AreEqual(TutorialStep.HighKnee,game.Tutorial.Script.Current,"The warm-up reaches the stair lesson");
+        }
+
+        [UnityTest]
+        public IEnumerator StairLessonWithoutStepsIsAMissAndRestarts()
+        {
+            yield return DriveToStairs();
+            Time.timeScale=3;
+            float deadline=Time.realtimeSinceStartup+40;
+            while(!game.Tutorial.Retrying&&Time.realtimeSinceStartup<deadline)yield return null;
+            Assert.IsTrue(game.Tutorial.Retrying,"Standing still on the stairs is a counted miss");
+            Assert.AreEqual(TutorialStep.HighKnee,game.Tutorial.Script.Current);Assert.AreEqual(1,game.Tutorial.Script.Retries);
+            Assert.AreEqual(0,game.Session.SlipStrikes,"No real penalty in the tutorial");
+            Time.timeScale=1;game.ExitToMenu();game.FaceLogout(false);
+        }
+
+        [UnityTest]
+        public IEnumerator StairChunkExposesCueGaugeAndCameraPitchThenReturnsToNormal()
+        {
+            yield return DriveToStairs();
+            var run=game.Session.Runner;var model=hud.RunModel;var fx=game.StairFx;
+            bool cue=false,gauge=false,warnSeen=false;float pitch=0,bob=0;
+            float deadline=Time.realtimeSinceStartup+60;
+            while(game.Tutorial.Active&&game.Tutorial.Script.Current==TutorialStep.HighKnee&&Time.realtimeSinceStartup<deadline)
+            {
+                if(!game.Tutorial.Retrying&&(game.Tutorial.LessonDistance<=TutorialDirector.ActDistance||StairJudge.StepDue(run))&&run.SinceKneeStep>=.4f)run.Command(MotionCommand.KneeStep);
+                cue|=ActionCuePresenter.Find(game.Session,game.Map,PlayStyle.Keyboard)=="W 연타!";
+                gauge|=model.ShowStair&&model.KneeGauge>0f&&model.StairProgress>0f;
+                warnSeen|=model.KneeWarning;
+                pitch=Mathf.Max(pitch,fx.Pitch);bob=Mathf.Max(bob,fx.Bob);
+                yield return null;
+            }
+            Assert.IsTrue(cue,"Keyboard play is told W 연타 before the stairs");
+            Assert.IsTrue(gauge,"The knee gauge and progress are exposed while climbing");
+            Assert.Greater(pitch,1f,"The camera tilts up on the stairs");Assert.Greater(bob,.0f,"A step bobs the camera");
+            // Past the stairs the pitch eases back to normal.
+            float end=Time.realtimeSinceStartup+10;
+            while(fx.Pitch>0f&&Time.realtimeSinceStartup<end)yield return null;
+            Assert.AreEqual(0f,fx.Pitch,.001f);Assert.IsFalse(model.ShowStair);
+            Time.timeScale=1;game.ExitToMenu();game.FaceLogout(false);
+        }
+
         [UnityTest]
         public IEnumerator KeyboardTutorialCompletesAndMarksTheMember()
         {
@@ -90,7 +152,7 @@ namespace Muhanok.Tests
                     if(step==TutorialStep.Lane&&near&&run.Lane==0)run.Command(MotionCommand.Left);
                     else if(step==TutorialStep.Jump&&near&&!t.Resumed&&run.Y<=.001f)run.Command(MotionCommand.Jump);
                     else if(step==TutorialStep.Crouch&&near)run.Command(MotionCommand.Crouch);
-                    else if(step==TutorialStep.HighKnee&&near)run.Command(MotionCommand.HighKnee);
+                    else if(step==TutorialStep.HighKnee&&(near||StairJudge.StepDue(run))&&run.SinceKneeStep>=.4f)run.Command(MotionCommand.KneeStep);
                     else if(step==TutorialStep.Rail&&t.LessonDistance<=TutorialDirector.SlowDistance&&run.Lane==0)run.Command(TutorialCourse.RailLean);
                     else if(step==TutorialStep.Fork&&(RouteSurface.ActivePlan?.ForkWindow(run.Z)??false)&&run.Lane==0)run.Command(MotionCommand.Left);
                 }

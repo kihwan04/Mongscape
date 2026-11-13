@@ -28,7 +28,7 @@ namespace Muhanok.Infrastructure
             if (k.cKey.wasPressedThisFrame) buffer.Enqueue(MotionCommand.Center);
             if (k.spaceKey.wasPressedThisFrame) buffer.Enqueue(MotionCommand.Jump);
             if (k.sKey.isPressed || k.downArrowKey.isPressed) buffer.Enqueue(MotionCommand.Crouch);
-            if (k.wKey.isPressed || k.upArrowKey.isPressed) buffer.Enqueue(MotionCommand.HighKnee);
+            if (k.wKey.wasPressedThisFrame || k.upArrowKey.wasPressedThisFrame) buffer.Enqueue(MotionCommand.KneeStep);
         }
         public bool TryRead(out MotionCommand command) { command = MotionCommand.Center; if (buffer.Count == 0) return false; command = buffer.Dequeue(); return true; }
         public void Clear() { buffer.Clear(); }

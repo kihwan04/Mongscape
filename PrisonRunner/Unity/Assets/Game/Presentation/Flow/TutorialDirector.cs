@@ -85,6 +85,16 @@ namespace Muhanok.Presentation
                     Approach(LessonDistance <= SlowDistance && TutorialScript.Performed(Script.Current, runner));
                     return;
                 }
+                case TutorialPass.ObstaclePassed when Script.Current == TutorialStep.HighKnee:
+                {
+                    // The stair chunk is the lesson: the runner waits at its foot for the first step, then a gap in the steps counts as a miss
+                    // (the stair judge) and reaching the top completes the step.
+                    float start = TutorialCourse.StairChunk * RouteSurface.Length;
+                    if (runner.Z >= start + RouteSurface.Length) { Next(now); return; }
+                    LessonDistance = start + StairJudge.From + 1f - runner.Z;
+                    Approach(LessonDistance <= ActDistance && TutorialScript.Performed(Script.Current, runner));
+                    return;
+                }
                 case TutorialPass.ObstaclePassed:
                 {
                     FindLesson();
@@ -104,7 +114,7 @@ namespace Muhanok.Presentation
             Waiting = !Resumed && d <= SlowDistance;
             session.SpeedScale = Resumed || d > SlowDistance ? 1 : d <= HoldDistance ? CreepScale : Mathf.Lerp(CreepScale, 1, Mathf.InverseLerp(HoldDistance, SlowDistance, d));
             Message = d <= SlowDistance ? TutorialScript.Instruction(Script.Current, Script.Style) : null;
-            cue = Waiting ? ActionCuePresenter.Find(session, map) : null;
+            cue = Waiting ? ActionCuePresenter.Find(session, map, Script.Style) : null;
         }
         private void Next(float now)
         {

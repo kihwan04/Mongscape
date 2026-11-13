@@ -43,9 +43,9 @@ namespace Muhanok.Tests
                 InputState.Change(keys, new KeyboardState(Key.A)); game.TickInput();
                 Assert.AreEqual(-1, game.Session.Runner.Lane);
                 InputState.Change(keys, new KeyboardState(Key.S, Key.W)); game.TickInput();
-                Assert.IsTrue(game.Session.Runner.Crouching && game.Session.Runner.HighKnee);
+                Assert.IsTrue(game.Session.Runner.Crouching && game.Session.Runner.KneeStepping);
                 InputState.Change(keys, new KeyboardState()); yield return new WaitForSeconds(1.1f);
-                Assert.IsFalse(game.Session.Runner.Crouching || game.Session.Runner.HighKnee);
+                Assert.IsFalse(game.Session.Runner.Crouching || game.Session.Runner.KneeStepping);
                 InputState.Change(keys, new KeyboardState(Key.Space)); game.TickInput(); game.Session.Tick(.1f);
                 Assert.Greater(game.Session.Runner.Y, 0);
                 game.Session.Runner.SetStartZ(36);
@@ -68,9 +68,9 @@ namespace Muhanok.Tests
             game.Session.Tick(.2f); Assert.AreEqual(-2.2f, game.Session.Runner.X, .0001f);
             game.Session.Runner.Command(MotionCommand.Jump); game.Session.Tick(.1f); Assert.Greater(game.Session.Runner.Y, .5f);
             for (int i = 0; i < 20; i++) game.Session.Tick(.1f);
-            game.Session.Runner.SetStartZ(80);game.Session.Runner.Command(MotionCommand.Crouch); game.Session.Runner.Command(MotionCommand.HighKnee);
-            Assert.IsTrue(game.Session.Runner.Crouching && game.Session.Runner.HighKnee);
-            for (int i = 0; i < 11; i++) game.Session.Tick(.1f); Assert.IsFalse(game.Session.Runner.Crouching || game.Session.Runner.HighKnee);
+            game.Session.Runner.SetStartZ(80);game.Session.Runner.Command(MotionCommand.Crouch); game.Session.Runner.Command(MotionCommand.KneeStep);
+            Assert.IsTrue(game.Session.Runner.Crouching && game.Session.Runner.KneeStepping);
+            for (int i = 0; i < 11; i++) game.Session.Tick(.1f); Assert.IsFalse(game.Session.Runner.Crouching || game.Session.Runner.KneeStepping);
             int created = game.Map.CreatedCount;
             for (int n = 0; n < 120; n++)
             {
@@ -81,7 +81,7 @@ namespace Muhanok.Tests
                 {
                     var chunk = active[i].Chunk; Assert.AreEqual(24, chunk.Exit.position.z - chunk.Entry.position.z, .001f);
                     if (i > 0) Assert.Less(Vector3.Distance(active[i - 1].Chunk.Exit.position,chunk.Entry.position),.001f);
-                    Assert.AreEqual(RouteSurface.EntryHeight(active[i].Type),chunk.Entry.position.y,.001f);
+                    Assert.AreEqual(RouteSurface.BaseHeight(chunk.Sequence),chunk.Entry.position.y,.001f);
                     for (int row = 0; row < 2; row++)
                     {
                         int count = 0; for (int lane = 0; lane < 3; lane++) if (chunk.Obstacles[row * 3 + lane].gameObject.activeSelf) count++;
@@ -247,6 +247,8 @@ namespace Muhanok.Tests
                 game.Hero.Apply(game.Session.Runner);
                 Assert.AreEqual(offsetY+(game.Session.Runner.Riding?.25f:0),game.Hero.transform.position.y,.001f);
                 Assert.AreEqual(position.x,game.Hero.transform.position.x,.001f);
+                // Stair coins hang at knee height and only count while the runner is stepping.
+                if(RouteSurface.IsStair(type))game.Session.Runner.Command(MotionCommand.KneeStep);
                 int before=game.Session.Score.Coins; coin.Evaluate(game.Session,position.z-1);
                 Assert.AreEqual(before+1,game.Session.Score.Coins,"Authored coin on curved or elevated route must collect");
                 coin.Evaluate(game.Session,position.z-1); Assert.AreEqual(before+1,game.Session.Score.Coins);

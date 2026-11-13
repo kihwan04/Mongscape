@@ -23,7 +23,7 @@ namespace Muhanok.Tests
             Assert.AreEqual(TutorialPass.Calibrated, TutorialScript.PassOf(TutorialStep.Calibrate)); Assert.IsNull(TutorialScript.AwaitedOf(TutorialStep.Calibrate));
             Assert.AreEqual(MotionCommand.Jump, TutorialScript.AwaitedOf(TutorialStep.Jump)); Assert.AreEqual(TutorialPass.ObstaclePassed, TutorialScript.PassOf(TutorialStep.Jump));
             Assert.AreEqual(MotionCommand.Crouch, TutorialScript.AwaitedOf(TutorialStep.Crouch));
-            Assert.AreEqual(MotionCommand.HighKnee, TutorialScript.AwaitedOf(TutorialStep.HighKnee));
+            Assert.AreEqual(MotionCommand.KneeStep, TutorialScript.AwaitedOf(TutorialStep.HighKnee));
             Assert.AreEqual(TutorialPass.ForkChosen, TutorialScript.PassOf(TutorialStep.Fork));
             Assert.IsTrue(TutorialScript.Accepts(TutorialStep.Lane, MotionCommand.Right)); Assert.IsTrue(TutorialScript.Accepts(TutorialStep.Fork, MotionCommand.Left));
             Assert.AreEqual(TutorialPass.ObstaclePassed, TutorialScript.PassOf(TutorialStep.Rail)); Assert.AreEqual(TutorialCourse.RailLean, TutorialScript.AwaitedOf(TutorialStep.Rail));
@@ -81,7 +81,7 @@ namespace Muhanok.Tests
             plan.UpdateChoice(TutorialCourse.ForkDecisionZ, -1); Assert.IsTrue(plan.ForkLocked(TutorialCourse.ForkDecisionZ));
             Assert.AreEqual(-1, plan.ChoiceAt(TutorialCourse.ForkLapStart + CartFork.ConnectorChunk));
             Assert.AreEqual(TutorialHazard.LaneBlock, TutorialCourse.HazardAt(TutorialCourse.LaneChunk));
-            Assert.AreEqual(TutorialHazard.StairRow, TutorialCourse.HazardAt(TutorialCourse.StairChunk)); Assert.AreEqual(7, plan.TypeAt(TutorialCourse.StairChunk));
+            Assert.AreEqual(TutorialHazard.StairChunk, TutorialCourse.HazardAt(TutorialCourse.StairChunk)); Assert.AreEqual(7, plan.TypeAt(TutorialCourse.StairChunk));
             Assert.AreEqual(TutorialHazard.None, TutorialCourse.HazardAt(0));
             Assert.AreEqual(TutorialHazard.RailGap, TutorialCourse.HazardAt(TutorialCourse.RailChunk)); Assert.AreEqual(1, plan.TypeAt(TutorialCourse.RailChunk), "The broken rail is on a cart chunk");
             Assert.AreEqual(1, TutorialCourse.Plan(new RunConfig { ExtendedRoutes = false }).TypeAt(TutorialCourse.RailChunk), "also on the authored lap");

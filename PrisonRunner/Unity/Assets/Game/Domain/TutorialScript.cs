@@ -7,7 +7,7 @@ namespace Muhanok.Domain
     // What a step waits for: a calibrated body, a lesson obstacle (or broken rail) passed cleanly, or a lean at the cart fork.
     public enum TutorialPass { Calibrated, ObstaclePassed, ForkChosen, None }
     // The one obstacle each lesson chunk keeps; every random hazard, item and coin is removed.
-    public enum TutorialHazard { None, LaneBlock, JumpRow, CrouchRow, StairRow, RailGap }
+    public enum TutorialHazard { None, LaneBlock, JumpRow, CrouchRow, StairChunk, RailGap }
 
     // Lessons for one play style: 보정 → 좌우 이동 → 점프 → 숙이기 → 하이니 → 끊긴 레일 → 갈림길 기울이기 → 완료.
     // A step the style or route lacks is left out (keyboard play needs no calibration; a route without forks has no lean).
@@ -44,7 +44,7 @@ namespace Muhanok.Domain
         // Lane and fork steps accept either side (Left stands for both); the broken rail needs the lean away from the gap.
         public static MotionCommand? AwaitedOf(TutorialStep step) => step == TutorialStep.Lane || step == TutorialStep.Fork ? MotionCommand.Left
             : step == TutorialStep.Rail ? TutorialCourse.RailLean
-            : step == TutorialStep.Jump ? MotionCommand.Jump : step == TutorialStep.Crouch ? MotionCommand.Crouch : step == TutorialStep.HighKnee ? MotionCommand.HighKnee : (MotionCommand?)null;
+            : step == TutorialStep.Jump ? MotionCommand.Jump : step == TutorialStep.Crouch ? MotionCommand.Crouch : step == TutorialStep.HighKnee ? MotionCommand.KneeStep : (MotionCommand?)null;
         public static bool Accepts(TutorialStep step, MotionCommand command)
         {
             if (step == TutorialStep.Lane || step == TutorialStep.Fork) return command == MotionCommand.Left || command == MotionCommand.Right;
@@ -59,7 +59,7 @@ namespace Muhanok.Domain
                 case TutorialStep.Lane: return runner.Lane != TutorialCourse.BlockedLane;
                 case TutorialStep.Jump: return runner.Y > .01f;
                 case TutorialStep.Crouch: return runner.Crouching;
-                case TutorialStep.HighKnee: return runner.HighKnee;
+                case TutorialStep.HighKnee: return runner.KneeStepping;
                 // The same lean the rail gap judges (CartRailGap: lean toward the intact rail of at least .55).
                 case TutorialStep.Rail: return runner.Riding && runner.CartLean * -TutorialCourse.RailMissingSide >= .55f;
                 case TutorialStep.Fork: return runner.Lane != 0;
@@ -78,7 +78,7 @@ namespace Muhanok.Domain
                 case TutorialStep.Lane: return keys ? "A·D(←·→) 키로 옆 줄로 피하세요." : "왼쪽이나 오른쪽 구역으로 몸을 옮겨 피하세요.";
                 case TutorialStep.Jump: return keys ? "스페이스 키로 점프!" : upper ? "두 손을 머리 위로 들어 점프!" : "제자리에서 점프!";
                 case TutorialStep.Crouch: return keys ? "S(↓) 키를 누르고 있으면 숙입니다." : upper ? "몸을 낮춰 숙이세요!" : "무릎을 굽혀 숙이세요!";
-                case TutorialStep.HighKnee: return keys ? "W(↑) 키를 누르고 있으면 계단을 오릅니다." : upper ? "팔을 힘차게 흔들어 계단을 오르세요!" : "무릎을 높이 들어 계단을 오르세요!";
+                case TutorialStep.HighKnee: return keys ? "W(↑) 키를 번갈아 연타해 계단을 오르세요!" : upper ? "팔을 크게 번갈아 흔들어 계단을 오르세요!" : "양쪽 무릎을 번갈아 높이 들어 계단을 오르세요!";
                 case TutorialStep.Rail:
                 {
                     bool right = TutorialCourse.RailLean == MotionCommand.Right;
@@ -113,7 +113,7 @@ namespace Muhanok.Domain
         public static float ForkDecisionZ => ForkLapStart * RouteSurface.Length + CartFork.Decision;
         public static RoutePlan Plan(RunConfig config) => RoutePlan.Tutorial(config, Seed, WarmupLap);
         public static TutorialHazard HazardAt(int sequence) => sequence == LaneChunk ? TutorialHazard.LaneBlock : sequence == JumpChunk ? TutorialHazard.JumpRow
-            : sequence == CrouchChunk ? TutorialHazard.CrouchRow : sequence == StairChunk ? TutorialHazard.StairRow
+            : sequence == CrouchChunk ? TutorialHazard.CrouchRow : sequence == StairChunk ? TutorialHazard.StairChunk
             : sequence == RailChunk ? TutorialHazard.RailGap : TutorialHazard.None;
         public static int ChunkOf(TutorialStep step) => step == TutorialStep.Lane ? LaneChunk : step == TutorialStep.Jump ? JumpChunk
             : step == TutorialStep.Crouch ? CrouchChunk : step == TutorialStep.HighKnee ? StairChunk : step == TutorialStep.Rail ? RailChunk : -1;

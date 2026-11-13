@@ -37,8 +37,24 @@ namespace Muhanok.Tests
         {
             var runner = new RunnerController(new RunConfig()); runner.Command(MotionCommand.Jump); runner.Tick(.1f, 0); Assert.Greater(runner.Y, .5f);
             for (int i = 0; i < 40; i++) runner.Tick(.05f, 0); Assert.AreEqual(0, runner.Y);
-            runner.Command(MotionCommand.Crouch); runner.Command(MotionCommand.HighKnee); Assert.IsTrue(runner.Crouching && runner.HighKnee);
-            runner.Tick(1.1f, 0); Assert.IsFalse(runner.Crouching || runner.HighKnee);
+            runner.Command(MotionCommand.Crouch); runner.Command(MotionCommand.KneeStep); Assert.IsTrue(runner.Crouching && runner.KneeStepping);
+            runner.Tick(1.1f, 0); Assert.IsFalse(runner.Crouching || runner.KneeStepping);
+        }
+        [Test] public void KneeSteppingLastsOnlyUntilTheStepGapPasses()
+        {
+            var config = new RunConfig(); var runner = new RunnerController(config);
+            Assert.IsFalse(runner.KneeStepping, "No step yet");
+            runner.Tick(1f, 0); runner.Command(MotionCommand.KneeStep);
+            Assert.IsTrue(runner.KneeStepping); Assert.AreEqual(0f, runner.SinceKneeStep, .0001f);
+            runner.Tick(config.KneeStepGap - .05f, 0); Assert.IsTrue(runner.KneeStepping);
+            runner.Tick(.1f, 0); Assert.IsFalse(runner.KneeStepping);
+            runner.Command(MotionCommand.KneeStep); Assert.IsTrue(runner.KneeStepping, "The next step starts it again");
+            runner.Reset(); Assert.IsFalse(runner.KneeStepping);
+        }
+        [Test] public void KneeStepsAreIgnoredWhileRidingTheCart()
+        {
+            var run = Running(); run.Runner.SetStartZ(35); run.Tick(.1f); Assert.IsTrue(run.Runner.Riding);
+            run.Runner.Command(MotionCommand.KneeStep); Assert.IsFalse(run.Runner.KneeStepping);
         }
         [TestCase(0f,9f)] [TestCase(120f,10f)] [TestCase(480f,13f)] [TestCase(960f,17f)] [TestCase(5000f,17f)]
         public void SpeedRampsWithDistanceAndStaysCapped(float distance,float expected)
@@ -123,18 +139,50 @@ namespace Muhanok.Tests
         }
         [Test] public void SecondBananaStartsDelayedPursuitAndPauseAndRetryResetIt()
         {
-            var run=Running();Assert.IsTrue(run.Slip(true));run.Tick(3);
-            Assert.AreEqual(1,run.BananaHits);Assert.IsFalse(run.Runner.Slowing);Assert.Greater(run.Chase.Pressure,.4f);
-            run.Runner.SetStartZ(80);Assert.IsTrue(run.Slip(true));run.Tick(.6f);
-            Assert.AreEqual(GameFlowState.Running,run.Flow.State);Assert.IsTrue(run.BananaPursuit);Assert.IsTrue(run.Runner.Slowing);
+            var run=Running();Assert.IsTrue(run.Slip(SlipSource.Banana));run.Tick(3);
+            Assert.AreEqual(1,run.SlipStrikes);Assert.IsFalse(run.Runner.Slowing);Assert.Greater(run.Chase.Pressure,.4f);
+            run.Runner.SetStartZ(80);Assert.IsTrue(run.Slip(SlipSource.Banana));run.Tick(.6f);
+            Assert.AreEqual(GameFlowState.Running,run.Flow.State);Assert.IsTrue(run.SlipPursuit);Assert.IsTrue(run.Runner.Slowing);
             run.Paused=true;run.Tick(10);Assert.AreEqual(GameFlowState.Running,run.Flow.State);
-            run.Paused=false;run.Tick(.61f);Assert.AreEqual(GameFlowState.Caught,run.Flow.State);Assert.AreEqual(CaptureReason.BananaPursuit,run.Reason);
-            run.Reset();Assert.AreEqual(0,run.BananaHits);Assert.IsFalse(run.BananaPursuit);Assert.AreEqual(0,run.Chase.Pressure);
+            run.Paused=false;run.Tick(.61f);Assert.AreEqual(GameFlowState.Caught,run.Flow.State);Assert.AreEqual(CaptureReason.SlipPursuit,run.Reason);
+            run.Reset();Assert.AreEqual(0,run.SlipStrikes);Assert.IsFalse(run.SlipPursuit);Assert.AreEqual(0,run.Chase.Pressure);
+        }
+        [Test] public void SingleStrikeClearsAfterEightSecondsAndRemovesItsPressure()
+        {
+            var run=Running();Assert.IsTrue(run.Slip(SlipSource.Banana));
+            Assert.AreEqual(.45f,run.Chase.Pressure,.001f);Assert.AreEqual(run.Config.StrikeClearSeconds,run.StrikeClearRemaining,.01f);
+            run.Tick(7.5f);Assert.AreEqual(1,run.SlipStrikes);Assert.AreEqual(.45f,run.Chase.Pressure,.001f);Assert.AreEqual(.5f,run.StrikeClearRemaining,.05f);
+            run.Tick(.6f);Assert.AreEqual(0,run.SlipStrikes);Assert.AreEqual(0,run.Chase.Pressure,.001f);Assert.AreEqual(0,run.StrikeClearRemaining);
+        }
+        [Test] public void SecondStrikeWithinTheWindowStartsPursuitAndCatches()
+        {
+            var run=Running();run.Slip(SlipSource.Banana);run.Tick(7);run.Runner.SetStartZ(80);
+            run.Slip(SlipSource.Banana);Assert.IsTrue(run.SlipPursuit);run.Tick(2);
+            Assert.AreEqual(GameFlowState.Caught,run.Flow.State);Assert.AreEqual(CaptureReason.SlipPursuit,run.Reason);
+        }
+        [Test] public void StrikeAfterClearingCountsAsAFirstStrikeAgain()
+        {
+            var run=Running();run.Slip(SlipSource.Banana);run.Tick(8.5f);Assert.AreEqual(0,run.SlipStrikes);
+            run.Tick(3);run.Runner.SetStartZ(80);run.Slip(SlipSource.Banana);
+            Assert.AreEqual(1,run.SlipStrikes);Assert.IsFalse(run.SlipPursuit);Assert.AreEqual(GameFlowState.Running,run.Flow.State);
+            run.Tick(.1f);Assert.AreEqual(GameFlowState.Running,run.Flow.State);
+        }
+        [Test] public void KneeMissCountsLikeABananaAndFloorSlipsDoNot()
+        {
+            var run=Running();run.Slip(SlipSource.Floor);Assert.AreEqual(0,run.SlipStrikes);
+            Assert.IsTrue(run.Slip(SlipSource.KneeMiss));Assert.AreEqual(1,run.SlipStrikes);Assert.AreEqual(.45f,run.Chase.Pressure,.001f);
+            run.Slip(SlipSource.Banana);Assert.AreEqual(2,run.SlipStrikes);Assert.IsTrue(run.SlipPursuit);
+            run.Reset();run.Slip(SlipSource.Banana);run.Slip(SlipSource.KneeMiss);Assert.IsTrue(run.SlipPursuit);
+        }
+        [Test] public void ShieldAbsorbsAKneeMissWithoutAStrike()
+        {
+            var run=Running();run.Items.Activate(ItemKind.Shield);
+            Assert.IsFalse(run.Slip(SlipSource.KneeMiss));Assert.AreEqual(0,run.SlipStrikes);Assert.AreEqual(1,run.ShieldSaves);
         }
         [Test] public void RepeatedPuddlesDoNotCountAsBananas()
         {
             var run=Running();for(int i=0;i<3;i++){run.Slip();run.Tick(.1f);}
-            Assert.AreEqual(0,run.BananaHits);Assert.IsFalse(run.BananaPursuit);Assert.AreEqual(GameFlowState.Running,run.Flow.State);
+            Assert.AreEqual(0,run.SlipStrikes);Assert.IsFalse(run.SlipPursuit);Assert.AreEqual(GameFlowState.Running,run.Flow.State);
         }
         [Test] public void CartLeanSwitchesAcrossCenterWithoutLeavingSingleTrack()
         {
@@ -145,9 +193,8 @@ namespace Muhanok.Tests
         }
         [Test] public void FullExerciseRowsRequireDistinctActions()
         {
-            Assert.IsFalse(SafePatternValidator.Avoided(ObstacleKind.Stair,1.8f,false,false));
-            Assert.IsFalse(SafePatternValidator.Avoided(ObstacleKind.Pipe,1.8f,false,true));
-            foreach(var kind in new[]{ObstacleKind.Crate,ObstacleKind.Pipe,ObstacleKind.Stair})Assert.IsTrue(SafePatternValidator.IsActionRowSafe(7,kind));
+            Assert.IsFalse(SafePatternValidator.Avoided(ObstacleKind.Pipe,1.8f,false));
+            foreach(var kind in new[]{ObstacleKind.Crate,ObstacleKind.Pipe})Assert.IsTrue(SafePatternValidator.IsActionRowSafe(7,kind));
             Assert.IsFalse(SafePatternValidator.IsActionRowSafe(7,ObstacleKind.Barrier));
         }
         [Test] public void ScoreWithoutExerciseIsTheRoundedDistance()
@@ -175,10 +222,9 @@ namespace Muhanok.Tests
         }
         [Test] public void EachActionMatchesItsHazard()
         {
-            Assert.IsTrue(SafePatternValidator.Avoided(ObstacleKind.Crate, 1.1f, false, false));
-            Assert.IsTrue(SafePatternValidator.Avoided(ObstacleKind.Pipe, 0, true, false));
-            Assert.IsTrue(SafePatternValidator.Avoided(ObstacleKind.Stair, 0, false, true));
-            Assert.IsFalse(SafePatternValidator.Avoided(ObstacleKind.Laser, 2, true, true));
+            Assert.IsTrue(SafePatternValidator.Avoided(ObstacleKind.Crate, 1.1f, false));
+            Assert.IsTrue(SafePatternValidator.Avoided(ObstacleKind.Pipe, 0, true));
+            Assert.IsFalse(SafePatternValidator.Avoided(ObstacleKind.Laser, 2, true));
         }
         [Test] public void RouterClearsTitleCommands()
         {

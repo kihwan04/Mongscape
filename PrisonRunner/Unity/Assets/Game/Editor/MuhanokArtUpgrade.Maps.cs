@@ -15,7 +15,7 @@ namespace Muhanok.Editor
     {
         private static void Hazards()
         {
-            foreach(string id in new[]{"OBS_Crate_Low","OBS_LowPipe","OBS_Barrier_Left","OBS_Barrier_Right","OBS_Cart_Crossing","OBS_LaserGate","OBS_Stair_HighKnee"})
+            foreach(string id in new[]{"OBS_Crate_Low","OBS_LowPipe","OBS_Barrier_Left","OBS_Barrier_Right","OBS_Cart_Crossing","OBS_LaserGate"})
             {
                 var root=EditPrefab(id); Transform t=root.transform;
                 if(id=="OBS_Crate_Low") Prop("survival-kit","box-large",t,Vector3.zero,.83f,0,wood);
@@ -23,10 +23,6 @@ namespace Muhanok.Editor
                 {
                     Beam("Pipe",t,new Vector3(-.97f,1.52f,0),new Vector3(.97f,1.52f,0),.35f,iron);
                     for(int side=-1;side<=1;side+=2) { Shape("Collar",t,new Vector3(side*.75f,1.52f,0),Vector3.one*.44f,pale,true); Beam("Leg",t,new Vector3(side*.97f,0,0),new Vector3(side*.97f,1.52f,0),.23f,iron); }
-                }
-                else if(id=="OBS_Stair_HighKnee")
-                {
-                    for(int i=0;i<4;i++) { Shape("Tread",t,new Vector3(0,.075f*(i+1),i*.2f),new Vector3(1.9f,.15f*(i+1),.32f),concrete); Shape("Nosing",t,new Vector3(0,.15f*(i+1),i*.2f-.15f),new Vector3(1.91f,.045f,.05f),brass); }
                 }
                 else if(id=="OBS_LaserGate")
                 {
@@ -60,6 +56,7 @@ namespace Muhanok.Editor
             rng=new System.Random(723+index*71);
             if(index==1||index==2) CartCavern(env,index);
             else if(index<3) {Mine(env,0,24,index);CartDock(env,false);}
+            else if(index==RouteSurface.MineStair) MineStairLights(env);
             else if(index==3)
             {
                 Mine(env,0,12,index); CartDock(env,true); PrisonShell(env,12,24,index);
@@ -67,30 +64,49 @@ namespace Muhanok.Editor
                 Portal(env,12,wood); Portal(env,15,iron); Label("SERVICE ACCESS",env,new Vector3(0,4.05f,15.15f),.16f,cream.color);
                 Prop("factory-kit","pipe-large-valve",env,new Vector3(3.6f,.3f,13),1.4f,-90,iron);
             }
+            else if(index==RouteSurface.ZooStair) ZooStairProps(env);
             else if(index>=11) Outdoors(env,index);
             else if(index==6){PrisonShell(env,0,16,index);RoomDetails(env,index);ServiceExit(env);}
             else { PrisonShell(env,0,24,index); RoomDetails(env,index); }
             // Identical floor height, width and clear runner envelope at every 24m boundary.
-            for(int segment=0;segment<24&&index!=1&&index!=2;segment++)
+            for(int segment=0;segment<24&&index!=1&&index!=2&&!HasStairMesh(index);segment++)
             {
-                if(!File.Exists(Authoring+"/"+id+".prefab")) ProBuilderBox("ContinuousFloor",env,new Vector3(0,-.19f,segment+.5f),new Vector3(9.8f,.38f,1.002f),index<4?rock:concrete);
-                for(int side=-1;side<=1;side+=2) Shape("BoundaryCurb",env,new Vector3(side*3.53f,.075f,segment+.5f),new Vector3(.14f,.15f,1.002f),index<4?rockLight:iron);
+                if(!File.Exists(Authoring+"/"+id+".prefab")) ProBuilderBox("ContinuousFloor",env,new Vector3(0,-.19f,segment+.5f),new Vector3(9.8f,.38f,1.002f),RouteSurface.IsMine(index)?rock:concrete);
+                for(int side=-1;side<=1;side+=2) Shape("BoundaryCurb",env,new Vector3(side*3.53f,.075f,segment+.5f),new Vector3(.14f,.15f,1.002f),RouteSurface.IsMine(index)?rockLight:iron);
             }
-            AddBoundaryConnectors(env,index);
+            if(!HasStairMesh(index)) AddBoundaryConnectors(env,index);
             AddPrisonGates(root,index);
             AddZooHazards(root,index);
             MatchWalkingMotions(root,index);
             AddClosingPrisonEntry(root,index);
+            ResetStairObstacles(root,index);
             AddRailGaps(root,index);
             AddFloorItems(root,index);
             var collider=root.GetComponent<BoxCollider>(); if(collider==null) collider=root.AddComponent<BoxCollider>(); collider.center=new Vector3(0,-.19f,12); collider.size=new Vector3(9.8f,.38f,24);collider.enabled=index!=1&&index!=2;
             AssetDatabase.StartAssetEditing();
             try { BakeEnvironment(env,id); ApplyRouteSurface(root,index); }
             finally { AssetDatabase.StopAssetEditing(); }
-            AddBakedAuthoringRoute(root,id);
+            AddStairMesh(env,index);
+            if(HasStairMesh(index)) Node("RouteStructure",root.transform,Vector3.zero); // the Blender mesh owns the whole stair surface
+            else AddBakedAuthoringRoute(root,id);
             AddCellActors(root,index);
             MuhanokGameplayUpgrade.Configure(root,index);
             Save(root);
+        }
+        // Stair chunks keep the six obstacle sockets of the chunk contract, but nothing sits in them: the old stair hazard
+        // instances are replaced by inert, inactive controllers.
+        private static void ResetStairObstacles(GameObject root,int type)
+        {
+            if(!RouteSurface.IsStair(type))return;
+            var chunk=root.GetComponent<MuhanokMapChunk>();
+            for(int i=0;i<chunk.Obstacles.Length;i++)
+            {
+                var socket=chunk.Obstacles[i].transform.parent;
+                Object.DestroyImmediate(chunk.Obstacles[i].gameObject);
+                var inert=new GameObject("NoHazard_"+i);inert.transform.SetParent(socket,false);
+                var obstacle=inert.AddComponent<ObstacleController>();obstacle.Kind=ObstacleKind.Barrier;inert.SetActive(false);
+                chunk.Obstacles[i]=obstacle;
+            }
         }
         private static void Mine(Transform env,float begin,float end,int variation)
         {
@@ -320,7 +336,7 @@ namespace Muhanok.Editor
                 }
             }
             Portal(env,.16f,pale); Portal(env,23.84f,pale);
-            Label(index==11?"ANIMAL ENCLOSURES / NIGHT ROUTE":"MINE SERVICE RETURN",env,new Vector3(0,4.4f,23.5f),.15f,cream.color);
+            Label(index==11?"ANIMAL ENCLOSURES / NIGHT ROUTE":index==RouteSurface.ZooStair?"OVERLOOK STAIR / KEEP STEPPING":"MINE SERVICE RETURN",env,new Vector3(0,4.4f,23.5f),.15f,cream.color);
             if(index==12) { Shape("ReturnCanopy",env,new Vector3(0,5.1f,20),new Vector3(9,.24f,8),concrete); Lantern(env,new Vector3(3.8f,3.4f,22),true); }
         }
         private static void AmbientMotes(Transform parent,Vector3 pos,float length,bool warm)

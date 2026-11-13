@@ -21,7 +21,7 @@ namespace Muhanok.Editor
             for(int end=0;end<2;end++)
             {
                 float z=end==0?.10f:23.90f;
-                Portal(env,z,type<4?wood:iron);
+                Portal(env,z,RouteSurface.IsMine(type)?wood:iron);
                 for(int side=-1;side<=1;side+=2)
                 {
                     Shape("ServiceFoot",env,new Vector3(side*3.9f,.16f,z),new Vector3(.45f,.32f,.5f),iron);
