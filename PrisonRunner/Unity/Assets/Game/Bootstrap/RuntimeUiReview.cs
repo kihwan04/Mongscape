@@ -53,7 +53,8 @@ namespace Muhanok.Bootstrap
             yield return Shot("01_Title");
             game.OpenLogin(); yield return Shot("02_Login");
             hud.ShowPage(MenuPage.SignUp); yield return Shot("03_SignUp_Consent");
-            hud.SignUp.Agree(); yield return Shot("03b_SignUp_Nickname");
+            hud.SignUp.Toggle(ConsentItem.Biometric); yield return Shot("03a_SignUp_ConsentPartial");
+            hud.SignUp.ToggleAll(); hud.SignUp.Agree(); yield return Shot("03b_SignUp_Nickname");
             game.OpenMainMenu(); yield return Shot("03c_MainMenu_Guest");
             hud.ShowPage(MenuPage.Shop); yield return Shot("03d_Shop_Guest");
 
