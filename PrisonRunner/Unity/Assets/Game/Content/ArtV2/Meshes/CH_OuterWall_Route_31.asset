@@ -1,0 +1,180 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!43 &4300000
+Mesh:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: CH_OuterWall_Route_31
+  serializedVersion: 12
+  m_SubMeshes:
+  - serializedVersion: 2
+    firstByte: 0
+    indexCount: 60
+    topology: 0
+    baseVertex: 0
+    firstVertex: 0
+    vertexCount: 60
+    localAABB:
+      m_Center: {x: -0.04141727, y: 0.0350131, z: 0.000000002561137}
+      m_Extent: {x: 0.0043536536, y: 0.0043967916, z: 0.0050000045}
+  m_Shapes:
+    vertices: []
+    shapes: []
+    channels: []
+    fullWeights: []
+  m_BindPose: []
+  m_BoneNameHashes: 
+  m_RootBoneNameHash: 0
+  m_BonesAABB: []
+  m_VariableBoneCountWeights:
+    m_Data: 
+  m_MeshCompression: 0
+  m_IsReadable: 0
+  m_KeepVertices: 1
+  m_KeepIndices: 1
+  m_IndexFormat: 0
+  m_IndexBuffer: 00000100020003000400050006000700080009000a000b000c000d000e000f0010001100120013001400150016001700180019001a001b001c001d001e001f0020002100220023002400250026002700280029002a002b002c002d002e002f0030003100320033003400350036003700380039003a003b00
+  m_VertexData:
+    serializedVersion: 3
+    m_VertexCount: 60
+    m_Channels:
+    - stream: 0
+      offset: 0
+      format: 0
+      dimension: 3
+    - stream: 0
+      offset: 12
+      format: 0
+      dimension: 3
+    - stream: 0
+      offset: 24
+      format: 0
+      dimension: 4
+    - stream: 0
+      offset: 0
+      format: 0
+      dimension: 0
+    - stream: 0
+      offset: 40
+      format: 0
+      dimension: 2
+    - stream: 0
+      offset: 0
+      format: 0
+      dimension: 0
+    - stream: 0
+      offset: 0
+      format: 0
+      dimension: 0
+    - stream: 0
+      offset: 0
+      format: 0
+      dimension: 0
+    - stream: 0
+      offset: 0
+      format: 0
+      dimension: 0
+    - stream: 0
+      offset: 0
+      format: 0
+      dimension: 0
+    - stream: 0
+      offset: 0
+      format: 0
+      dimension: 0
+    - stream: 0
+      offset: 0
+      format: 0
+      dimension: 0
+    - stream: 0
+      offset: 0
+      format: 0
+      dimension: 0
+    - stream: 0
+      offset: 0
+      format: 0
+      dimension: 0
+    m_DataSize: 2880
+    _typelessdata: 48a529bd1f6a0f3d0fd7a3bb733539be996512bf70d74cbf587873bf0f389e3e00000000000080bfc32e3a3e00000000e39623bd2051fb3c258b12bb733539be996512bf70d74cbf587873bf0f389e3e00000000000080bf062fba3d753d213eebbb37bd9f07043d258b12bb733539be996512bf70d74cbf587873bf0f389e3e00000000000080bf01a38b3e753d213eebbb37bd9f07043d258b12bbfff11dbf66819abcf16849bf000000000000803f00000000000080bf01a38b3e753d213ee86838bd78221a3d238b12bbfff11dbf66819abcf16849bf000000000000803f00000000000080bf41bae83e753d213e48a529bd1f6a0f3d0fd7a3bbfff11dbf66819abcf16849bf000000000000803f00000000000080bfa12eba3e0000000048a529bd1f6a0f3d0fd7a3bb12d7023f93a5a9be1b084bbfa87916bf541b4fbf00000000000080bf30ba683f0000000005d017bdffd20f3d248b12bb12d7023f93a5a9be1b084bbfaa7916bf541b4fbf00000000000080bf6074513f753d213ee39623bd2051fb3c258b12bb12d7023f93a5a9be1b084bbfa87916bf541b4fbf00000000000080bf0000803f753d213e48a529bd1f6a0f3d0fd7a3bbf2dcfc3ea2deb83e64804abfa879163f541b4fbf00000000000080bf902e3a3f00000000d9ad24bd446c213d228b12bbf2dcfc3ea2deb83e64804abfa879163f541b4fbf00000000000080bfc0e8223f753d213e05d017bdffd20f3d248b12bbf2dcfc3ea2deb83e64804abfaa79163f541b4fbf00000000000080bf6074513f753d213e48a529bd1f6a0f3d0fd7a3bb853254be4b9d0f3fba2c4dbf5878733f0f389e3e00000000000080bff0a20b3f00000000e86838bd78221a3d238b12bb853254be4b9d0f3fba2c4dbf5878733f0f389e3e00000000000080bf41bae83e753d213ed9ad24bd446c213d228b12bb853254be4b9d0f3fba2c4dbf5878733f0f389e3e00000000000080bfc0e8223f753d213eebbb37bd9f07043d258b12bb38917bbfd616f6bc07393bbe000000000000803f00000000000080bf01a38b3e753d213e4b7a3bbd0a010f3d3a8b123b38917bbfd616f6bc07393bbe000000000000803f00000000000080bfa12eba3e533da13ee86838bd78221a3d238b12bb38917bbfd616f6bc07393bbe000000000000803f00000000000080bf41bae83e753d213ee39623bd2051fb3c258b12bb538d97be19966fbff2a543be587873bf0f389e3e00000000000080bf062fba3d753d213e2d9c2ebd0dcffa3c398b123b538d97be19966fbff2a543be587873bf0d389e3e00000000000080bfc32e3a3e533da13eebbb37bd9f07043d258b12bb538d97be19966fbff2a543be587873bf0d389e3e00000000000080bf01a38b3e753d213e05d017bdffd20f3d248b12bb0c09533f56d008bf66153fbea87916bf541b4fbf00000000000080bf6074513f753d213ea7e11abdc6b1043d398b123b0c09533f56d008bf66153fbea87916bf541b4fbf00000000000080bf30ba683f533da13ee39623bd2051fb3c258b12bb0c09533f56d008bf66153fbeaa7916bf541b4fbf00000000000080bf0000803f753d213ed9ad24bd446c213d228b12bbe7134b3fa778143fe0ce3dbeaa79163f541b4fbf00000000000080bfc0e8223f753d213e078e1bbd1acc1a3d3c8b123be7134b3fa778143fe0ce3dbea879163f541b4fbf00000000000080bf902e3a3f533da13e05d017bdffd20f3d248b12bbe7134b3fa778143fe0ce3dbea879163f541b4fbf00000000000080bf6074513f753d213ee86838bd78221a3d238b12bbac1caebe40ad6b3fb68444be5878733f0d389e3e00000000000080bf41bae83e753d213e83b32fbd8a2b213d3c8b123bac1caebe40ad6b3fb68444be5878733f0d389e3e00000000000080bff0a20b3f533da13ed9ad24bd446c213d228b12bbac1caebe40ad6b3fb68444be5878733f0f389e3e00000000000080bfc0e8223f753d213eebbb37bd9f07043d258b12bb6e134bbf957914bf56cb3d3ea87916bf541b4f3f00000000000080bf01a38b3e753d213e2d9c2ebd0dcffa3c398b123b6e134bbf957914bf56cb3d3eaa7916bf541b4f3f00000000000080bfc32e3a3e533da13e4b7a3bbd0a010f3d3a8b123b6e134bbf957914bf56cb3d3ea87916bf541b4f3f00000000000080bfa12eba3e533da13ee39623bd2051fb3c258b12bb862aae3e04ab6bbf637e443e587873bf0d389ebe00000000000080bf062fba3d753d213ea7e11abdc6b1043d398b123b862aae3e04ab6bbf637e443e587873bf0d389ebe00000000000080bf00000000533da13e2d9c2ebd0dcffa3c398b123b862aae3e04ab6bbf637e443e587873bf0d389ebe00000000000080bfc32e3a3e533da13e05d017bdffd20f3d248b12bb92917b3f933df53cf1353b3e00000000000080bf00000000000080bf6074513f753d213e078e1bbd1acc1a3d3c8b123b92917b3f933df53cf1353b3e00000000000080bf00000000000080bf902e3a3f533da13ea7e11abdc6b1043d398b123b92917b3f933df53cf1353b3e00000000000080bf00000000000080bf30ba683f533da13ed9ad24bd446c213d228b12bb8892973e77956f3f20a2433e5878733f0d389ebe00000000000080bfc0e8223f753d213e83b32fbd8a2b213d3c8b123b8892973e77956f3f20a2433e5878733f0d389ebe00000000000080bff0a20b3f533da13e078e1bbd1acc1a3d3c8b123b8892973e77956f3f20a2433e5878733f0d389ebe00000000000080bf902e3a3f533da13ee86838bd78221a3d238b12bb2d0953bfebce083f63233f3ea879163f541b4f3f00000000000080bf41bae83e753d213e4b7a3bbd0a010f3d3a8b123b2d0953bfebce083f63233f3ea879163f541b4f3f00000000000080bfa12eba3e533da13e83b32fbd8a2b213d3c8b123b2d0953bfebce083f63233f3eaa79163f541b4f3f00000000000080bff0a20b3f533da13e2d9c2ebd0dcffa3c398b123b80ddfcbe9fe0b8bec57f4a3fa87916bf541b4f3f00000000000080bfc32e3a3e533da13e48a529bd1f6a0f3d1ad7a33b80ddfcbe9fe0b8bec57f4a3fa87916bf541b4f3f00000000000080bf01a38b3e0edcf13e4b7a3bbd0a010f3d3a8b123b80ddfcbe9fe0b8bec57f4a3faa7916bf541b4f3f00000000000080bfa12eba3e533da13ea7e11abdc6b1043d398b123b8140543ef7990fbf252e4d3f587873bf0e389ebe00000000000080bf00000000533da13e48a529bd1f6a0f3d1ad7a33b8140543ef7990fbf252e4d3f587873bf0d389ebe00000000000080bf062fba3d0edcf13e2d9c2ebd0dcffa3c398b123b8140543ef7990fbf252e4d3f587873bf0d389ebe00000000000080bfc32e3a3e533da13e078e1bbd1acc1a3d3c8b123b0ff01d3fd3f6993c926a493f00000000000080bf00000000000080bf902e3a3f533da13e48a529bd1f6a0f3d1ad7a33b0ff01d3fd3f6993c926a493f00000000000080bf00000000000080bf6074513f0edcf13ea7e11abdc6b1043d398b123b0ff01d3fd3f6993c926a493f00000000000080bf00000000000080bf30ba683f533da13e83b32fbd8a2b213d3c8b123b443d393e5e66123f73d64c3f5878733f0f389ebe00000000000080bff0a20b3f533da13e48a529bd1f6a0f3d1ad7a33b443d393e5e66123f73d64c3f5878733f0f389ebe00000000000080bfc0e8223f0edcf13e078e1bbd1acc1a3d3c8b123b443d393e5e66123f73d64c3f5878733f10389ebe00000000000080bf902e3a3f533da13e4b7a3bbd0a010f3d3a8b123b04d902bf3ca6a93eb6064b3faa79163f541b4f3f00000000000080bfa12eba3e533da13e48a529bd1f6a0f3d1ad7a33b04d902bf3ca6a93eb6064b3fa879163f541b4f3f00000000000080bf41bae83e0edcf13e83b32fbd8a2b213d3c8b123b04d902bf3ca6a93eb6064b3fa879163f541b4f3f00000000000080bff0a20b3f533da13e
+  m_CompressedMesh:
+    m_Vertices:
+      m_NumItems: 0
+      m_Range: 0
+      m_Start: 0
+      m_Data: 
+      m_BitSize: 0
+    m_UV:
+      m_NumItems: 0
+      m_Range: 0
+      m_Start: 0
+      m_Data: 
+      m_BitSize: 0
+    m_Normals:
+      m_NumItems: 0
+      m_Range: 0
+      m_Start: 0
+      m_Data: 
+      m_BitSize: 0
+    m_Tangents:
+      m_NumItems: 0
+      m_Range: 0
+      m_Start: 0
+      m_Data: 
+      m_BitSize: 0
+    m_Weights:
+      m_NumItems: 0
+      m_Data: 
+      m_BitSize: 0
+    m_NormalSigns:
+      m_NumItems: 0
+      m_Data: 
+      m_BitSize: 0
+    m_TangentSigns:
+      m_NumItems: 0
+      m_Data: 
+      m_BitSize: 0
+    m_FloatColors:
+      m_NumItems: 0
+      m_Range: 0
+      m_Start: 0
+      m_Data: 
+      m_BitSize: 0
+    m_BoneIndices:
+      m_NumItems: 0
+      m_Data: 
+      m_BitSize: 0
+    m_Triangles:
+      m_NumItems: 0
+      m_Data: 
+      m_BitSize: 0
+    m_UVInfo: 0
+  m_LocalAABB:
+    m_Center: {x: -0.04141727, y: 0.0350131, z: 0.000000002561137}
+    m_Extent: {x: 0.0043536536, y: 0.0043967916, z: 0.0050000045}
+  m_MeshUsageFlags: 0
+  m_CookingOptions: 30
+  m_BakedConvexCollisionMesh: 
+  m_BakedTriangleCollisionMesh: 
+  'm_MeshMetrics[0]': 1
+  'm_MeshMetrics[1]': 1
+  m_MeshOptimizationFlags: -1
+  m_StreamData:
+    serializedVersion: 2
+    offset: 0
+    size: 0
+    path: 
+  m_MeshLodInfo:
+    serializedVersion: 2
+    m_LodSelectionCurve:
+      serializedVersion: 1
+      m_LodSlope: 0
+      m_LodBias: 0
+    m_NumLevels: 1
+    m_SubMeshes:
+    - serializedVersion: 2
+      m_Levels:
+      - serializedVersion: 1
+        m_IndexStart: 0
+        m_IndexCount: 0

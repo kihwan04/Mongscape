@@ -1,0 +1,419 @@
+/*
+   Mongscape settings window: the wooden panel and gold accent of the IMGUI screens (Palette in OverlaySkin.cs).
+     ground  #1E140E   panel  #2B1D14   wood  #6B4426   wood-dim  #4A3020
+     gold    #FFC83D   cream  #FFF3DC   sand  #E9D3B0   muted     #9C8467   outline #2A170B
+   Reference resolution 1920x1080. Every element uses the game font (Black Han Sans):
+   MuhanokRuntimeTheme.tss sets it for the panel and SettingsWindow.cs for the window tree.
+*/
+
+.settings-root {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(30, 20, 14, 0.78);
+}
+
+.settings-panel {
+    width: 1320px;
+    height: 860px;
+    background-color: rgb(43, 29, 20);
+    border-radius: 14px;
+    border-width: 4px;
+    border-color: rgb(107, 68, 38);
+}
+
+.settings-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    height: 104px;
+    padding: 0 40px;
+    border-bottom-width: 2px;
+    border-color: rgb(74, 48, 32);
+}
+
+.settings-title {
+    font-size: 52px;
+    color: rgb(255, 200, 61);
+}
+
+.settings-body {
+    flex-direction: row;
+    flex-grow: 1;
+    min-height: 0;
+}
+
+/* Left rail: one tab per page, the scroll buttons at the bottom for hand pointing. */
+.settings-tab-bar {
+    width: 260px;
+    padding: 24px 20px;
+    background-color: rgb(30, 20, 14);
+    border-right-width: 2px;
+    border-color: rgb(74, 48, 32);
+}
+
+.settings-tab {
+    height: 76px;
+    margin: 0 0 12px 0;
+    padding-left: 24px;
+    font-size: 32px;
+    -unity-text-align: middle-left;
+    color: rgb(233, 211, 176);
+    background-color: rgba(0, 0, 0, 0);
+    border-radius: 10px;
+    border-width: 0;
+}
+
+.settings-tab:hover {
+    background-color: rgb(58, 39, 26);
+}
+
+.settings-tab--selected,
+.settings-tab--selected:hover {
+    color: rgb(42, 23, 11);
+    background-color: rgb(255, 200, 61);
+}
+
+.settings-tab-spacer {
+    flex-grow: 1;
+}
+
+.settings-scroll {
+    height: 64px;
+    margin: 10px 0 0 0;
+    font-size: 26px;
+    color: rgb(255, 243, 220);
+    background-color: rgb(43, 29, 20);
+    border-width: 2px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 10px;
+}
+
+.settings-scroll:hover {
+    background-color: rgb(74, 48, 32);
+}
+
+.settings-content {
+    flex-grow: 1;
+}
+
+.settings-page {
+    padding: 12px 48px 24px 44px;
+}
+
+/* One setting per row: label on the left, control on the right, a divider under it. */
+.settings-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: 84px;
+    margin: 0;
+    border-bottom-width: 2px;
+    border-color: rgb(74, 48, 32);
+}
+
+.settings-root .settings-row > .unity-base-field__label,
+.settings-root .settings-row > Label {
+    flex-grow: 1;
+    flex-shrink: 1;
+    width: auto;
+    min-width: 0;
+    font-size: 28px;
+    color: rgb(255, 243, 220);
+    -unity-text-align: middle-left;
+}
+
+.settings-root .settings-row > .unity-base-field__input {
+    flex-grow: 0;
+    flex-shrink: 0;
+    width: 440px;
+    min-width: 440px;
+}
+
+/* Toggle: a wooden box that fills gold when on, at the right end of the row. */
+.settings-root .settings-row.unity-toggle > .unity-base-field__input {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    justify-content: center;
+}
+
+.settings-root .settings-row .unity-toggle__checkmark {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    background-color: rgb(30, 20, 14);
+    border-width: 3px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 8px;
+    -unity-background-image-tint-color: rgba(0, 0, 0, 0);
+}
+
+.settings-root .settings-row.unity-toggle:checked .unity-toggle__checkmark {
+    background-color: rgb(255, 200, 61);
+    border-color: rgb(255, 200, 61);
+    -unity-background-image-tint-color: rgb(42, 23, 11);
+}
+
+/* Dropdown: same wooden box as the toggle and buttons. The default theme paints the input gray in its
+   normal, hover, focus and pressed states, so every state is overridden here. */
+.settings-root .settings-row .unity-base-popup-field__input,
+.settings-root .settings-row.unity-base-field:hover > .unity-base-popup-field__input,
+.settings-root .settings-row.unity-base-field:focus > .unity-base-popup-field__input,
+.settings-root .settings-row.unity-base-field:active > .unity-base-popup-field__input,
+.settings-root .settings-row .unity-base-popup-field__input:hover,
+.settings-root .settings-row .unity-base-popup-field__input:focus,
+.settings-root .settings-row .unity-base-popup-field__input:active {
+    flex-grow: 0;
+    height: 56px;
+    padding: 0 18px;
+    color: rgb(255, 243, 220);
+    background-color: rgb(30, 20, 14);
+    background-image: none;
+    border-width: 2px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 10px;
+}
+
+.settings-root .settings-row.unity-base-field:hover > .unity-base-popup-field__input,
+.settings-root .settings-row .unity-base-popup-field__input:hover {
+    background-color: rgb(58, 39, 26);
+    border-color: rgb(255, 200, 61);
+}
+
+.settings-root .settings-row.unity-base-field:focus > .unity-base-popup-field__input,
+.settings-root .settings-row.unity-base-field:active > .unity-base-popup-field__input,
+.settings-root .settings-row .unity-base-popup-field__input:active {
+    border-color: rgb(255, 200, 61);
+}
+
+.settings-root .settings-row .unity-base-popup-field__text,
+.settings-root .settings-row.unity-base-field:hover .unity-base-popup-field__text,
+.settings-root .settings-row.unity-base-field:focus .unity-base-popup-field__text {
+    font-size: 26px;
+    color: rgb(255, 243, 220);
+    -unity-text-align: middle-left;
+}
+
+.settings-root .settings-row .unity-base-popup-field__arrow,
+.settings-root .settings-row.unity-base-field:hover .unity-base-popup-field__arrow,
+.settings-root .settings-row.unity-base-field:focus .unity-base-popup-field__arrow {
+    width: 20px;
+    height: 20px;
+    -unity-background-image-tint-color: rgb(255, 200, 61);
+}
+
+/* Keep the row label cream when the field is hovered or focused (the theme turns it white/blue). */
+.settings-root .settings-row.unity-base-field:hover > .unity-base-field__label,
+.settings-root .settings-row.unity-base-field:focus > .unity-base-field__label {
+    color: rgb(255, 243, 220);
+}
+
+/* Slider */
+.settings-row .unity-base-slider__tracker {
+    height: 10px;
+    margin-top: -5px;
+    background-color: rgb(30, 20, 14);
+    border-width: 2px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 5px;
+}
+
+.settings-row .unity-base-slider__dragger {
+    width: 30px;
+    height: 40px;
+    margin-top: -20px;
+    background-color: rgb(255, 200, 61);
+    border-width: 3px;
+    border-color: rgb(42, 23, 11);
+    border-radius: 8px;
+}
+
+.settings-row .unity-base-slider__dragger-border {
+    display: none;
+}
+
+/* Body page: camera preview first so it is visible without scrolling. */
+.settings-preview-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 20px 0 24px 0;
+    border-bottom-width: 2px;
+    border-color: rgb(74, 48, 32);
+}
+
+.settings-preview {
+    width: 360px;
+    height: 270px;
+    background-color: rgb(18, 11, 7);
+    border-width: 3px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.settings-preview-side {
+    flex-grow: 1;
+    margin-left: 32px;
+    align-items: flex-start;
+}
+
+.settings-status {
+    font-size: 28px;
+    color: rgb(233, 211, 176);
+    margin-bottom: 20px;
+    white-space: normal;
+}
+
+.settings-row--actions {
+    justify-content: flex-start;
+}
+
+.settings-row--actions > .settings-button {
+    margin: 0 16px 0 0;
+}
+
+.settings-guide {
+    padding: 20px 24px;
+    margin: 16px 0;
+    background-color: rgb(30, 20, 14);
+    border-radius: 10px;
+}
+
+.settings-guide-title {
+    font-size: 26px;
+    -unity-font-style: normal;
+    color: rgb(255, 200, 61);
+    margin: 6px 0;
+}
+
+.settings-guide-text {
+    font-size: 24px;
+    color: rgb(255, 243, 220);
+    white-space: normal;
+    margin-bottom: 10px;
+}
+
+.settings-guide-text--muted {
+    color: rgb(156, 132, 103);
+}
+
+/* Buttons: wooden outline; the primary action is gold with dark text like the IMGUI screens. */
+.settings-footer {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    height: 112px;
+    padding: 0 40px;
+    border-top-width: 2px;
+    border-color: rgb(74, 48, 32);
+}
+
+.settings-button {
+    min-width: 200px;
+    height: 64px;
+    margin: 0;
+    padding: 0 28px;
+    font-size: 28px;
+    color: rgb(255, 243, 220);
+    background-color: rgb(30, 20, 14);
+    border-width: 3px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 12px;
+}
+
+.settings-button:hover {
+    background-color: rgb(58, 39, 26);
+    border-color: rgb(255, 200, 61);
+}
+
+.settings-button--primary {
+    min-width: 260px;
+    color: rgb(42, 23, 11);
+    background-color: rgb(255, 200, 61);
+    border-color: rgb(255, 200, 61);
+}
+
+.settings-button--primary:hover {
+    background-color: rgb(255, 214, 110);
+}
+
+/* The dropdown list opens on the panel root; the window adds this sheet there too.
+   The visible gray box is the theme's container-inner, so both containers, the items, their labels and the
+   scroller are themed. Selectors start at .unity-base-dropdown to outrank the theme's state rules. */
+.unity-base-dropdown .unity-base-dropdown__container-outer {
+    background-color: rgb(43, 29, 20);
+    border-width: 3px;
+    border-color: rgb(107, 68, 38);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.unity-base-dropdown .unity-base-dropdown__container-inner {
+    background-color: rgb(43, 29, 20);
+    border-width: 0;
+    border-radius: 8px;
+    padding: 6px 0;
+}
+
+.unity-base-dropdown .unity-base-dropdown__item,
+.unity-base-dropdown .unity-base-dropdown__item:enabled {
+    height: 56px;
+    padding: 0 16px;
+    font-size: 26px;
+    color: rgb(255, 243, 220);
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.unity-base-dropdown .unity-base-dropdown__item:hover,
+.unity-base-dropdown .unity-base-dropdown__item:hover:enabled,
+.unity-base-dropdown .unity-base-dropdown__item:focus,
+.unity-base-dropdown .unity-base-dropdown__item:focus:enabled {
+    background-color: rgb(74, 48, 32);
+}
+
+.unity-base-dropdown .unity-base-dropdown__item:checked,
+.unity-base-dropdown .unity-base-dropdown__item:checked:hover {
+    background-color: rgb(58, 39, 26);
+}
+
+.unity-base-dropdown .unity-base-dropdown__label,
+.unity-base-dropdown .unity-base-dropdown__item:hover .unity-base-dropdown__label,
+.unity-base-dropdown .unity-base-dropdown__item:focus .unity-base-dropdown__label {
+    font-size: 26px;
+    color: rgb(255, 243, 220);
+    -unity-text-align: middle-left;
+}
+
+.unity-base-dropdown .unity-base-dropdown__item:checked .unity-base-dropdown__label {
+    color: rgb(255, 200, 61);
+}
+
+.unity-base-dropdown .unity-base-dropdown__checkmark {
+    -unity-background-image-tint-color: rgb(255, 200, 61);
+}
+
+.unity-base-dropdown .unity-base-dropdown__separator {
+    background-color: rgb(74, 48, 32);
+}
+
+/* Scrollbar of a long list (webcam names): wooden track, gold thumb, no gray arrow buttons. */
+.unity-base-dropdown .unity-scroller,
+.unity-base-dropdown .unity-scroller .unity-base-slider__tracker {
+    background-color: rgb(30, 20, 14);
+    border-width: 0;
+}
+
+.unity-base-dropdown .unity-scroller .unity-base-slider__dragger {
+    background-color: rgb(107, 68, 38);
+    border-width: 0;
+    border-radius: 4px;
+}
+
+.unity-base-dropdown .unity-scroller .unity-base-slider__dragger:hover {
+    background-color: rgb(255, 200, 61);
+}
+
+.unity-base-dropdown .unity-scroller .unity-repeat-button {
+    display: none;
+}

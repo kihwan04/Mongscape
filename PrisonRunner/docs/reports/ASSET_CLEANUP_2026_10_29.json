@@ -1,0 +1,106 @@
+{
+  "date": "2026-10-29",
+  "baseDevelop": "622a81ca3fd816817c8749710692d18e27f720d4",
+  "sourceFiles": 2572,
+  "removedTrackedFiles": 1512,
+  "removedTrackedBytes": 34332522,
+  "localGeneratedFilesRemoved": 149,
+  "removed": {
+    "kenneyFbx": 708,
+    "png": 13,
+    "unusedRouteMeshes": 7,
+    "supersededReports": 6,
+    "oldBlockoutPrefabs": 25,
+    "obsoleteTools": 9
+  },
+  "retained": {
+    "png": [
+      "PrisonRunner/Unity/Assets/External/Staging/GeneratedV6/HandPaintedAtlas.png",
+      "PrisonRunner/Unity/Assets/Game/Content/ArtV2/Textures/MuhanokLogo.png",
+      "PrisonRunner/Unity/Assets/External/Staging/ReferenceUI/LoadingReference.png",
+      "PrisonRunner/Unity/Assets/External/Staging/Kenney/survival-kit/Models/FBX format/Textures/colormap.png",
+      "PrisonRunner/Unity/Assets/Game/Content/ArtV2/Textures/stone.png",
+      "PrisonRunner/Unity/Assets/Game/Content/ArtV2/Textures/cloth.png",
+      "PrisonRunner/Unity/Assets/External/Staging/Kenney/factory-kit/Models/FBX format/Textures/colormap.png",
+      "PrisonRunner/Unity/Assets/Game/Content/ArtV2/Textures/wood.png"
+    ],
+    "kenneyFbx": 24,
+    "kenneyLicenses": 5,
+    "latestScreenPlan": "V13 (unchanged DOCX with 30 embedded figures)",
+    "blenderSources": true,
+    "poseModels": true
+  },
+  "dependencyAudit": {
+    "unchangedDependencySets": {
+      "runtimeRoots": 13,
+      "authoringRoots": 44,
+      "recipeRoots": 24,
+      "literalRoots": 9,
+      "runtimeDependencies": 664,
+      "authoringDependencies": 738,
+      "recipeDependencies": 27,
+      "literalDependencies": 721
+    },
+    "assetsBefore": 1919,
+    "assetsAfter": 1193
+  },
+  "validation": {
+    "editMode": {
+      "passed": 178,
+      "failed": 0,
+      "exitCode": 0,
+      "result": "Passed"
+    },
+    "playMode": {
+      "passed": 74,
+      "failed": 0,
+      "exitCode": 0,
+      "result": "Passed"
+    },
+    "build": {
+      "exitCode": 0,
+      "contentReferencesPassed": true
+    },
+    "smoke": {
+      "passed": true,
+      "exitCode": 0,
+      "marker": "MUHANOK_RUNTIME_SMOKE_PASS: loading intro/direct gameplay/floor slip/120 chunks/single fatal hit/result/retry"
+    },
+    "publicHumanoidOverrides": {
+      "humanoidOverrides": 18,
+      "passed": true,
+      "exitCode": 0
+    },
+    "deletedGuidReferences": 0,
+    "missingMetas": 0,
+    "orphanMetas": 0,
+    "brokenDocumentationLinks": 0,
+    "importerFixtures": {
+      "retainedModelAndTexture": true,
+      "unusedAndDuplicateSkipped": true,
+      "licensePreserved": true,
+      "absentArchiveManifestPreserved": true,
+      "repeatImportStable": true,
+      "archiveTraversalRejected": true
+    },
+    "pythonSyntaxFiles": 10,
+    "v13Package": {
+      "docxSha256": "c6051ba2605f2fc10e3aea7cf2575b93f8e2ec252492d7f73715ab5a827528c6",
+      "embeddedFigures": 30,
+      "tables": 4,
+      "renderedPagesChecked": false
+    },
+    "sensitiveMatches": 0,
+    "remainingWarnings": [
+      "Existing obsolete Physics.BakeMesh and hidden camera member warnings",
+      "Existing Unity/AI inference graphics buffer and native allocation diagnostics at player shutdown"
+    ]
+  },
+  "sourcePayloadOnly": true,
+  "fpsImprovementMeasured": false,
+  "buildSizeImprovementMeasured": false,
+  "originalGitStatePreserved": true,
+  "releaseOrTagCreated": false,
+  "serverDeployment": false,
+  "personalDatabaseUsedOrMigrated": false
+}

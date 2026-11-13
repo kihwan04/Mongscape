@@ -1,0 +1,7 @@
+@import url("unity-theme://default");
+
+/* One font for the whole settings panel, including dropdown popups that live outside the window tree. */
+:root {
+    -unity-font-definition: resource("MuhanokUI/BlackHanSans-Regular");
+    -unity-font-style: normal;
+}

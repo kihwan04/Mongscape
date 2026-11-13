@@ -1,0 +1,110 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 050e0b685f23339448216fe31b7ccca6, type: 3}
+  m_Name: GameSettings
+  m_EditorClassIdentifier: Muhanok.Content::Muhanok.Content.GameSettings
+  Run:
+    LaneSpacing: 2.2
+    LaneSeconds: 0.2
+    BaseSpeed: 9
+    MaxSpeed: 17
+    JumpHeight: 1.8
+    Gravity: 24
+    CrouchSeconds: 0.8
+    KneeStepGap: 0.7
+    LightHit: 0.18
+    HeavyHit: 0.35
+    Recovery: 0.018
+    StumbleSeconds: 0.8
+    CleanBonus: 25
+    SlipSeconds: 2.4
+    SlipSpeedMultiplier: 0.5
+    CartSpeed: 9
+    BananaCatchSeconds: 1.2
+    SpeedRampDistance: 120
+    InputBufferSeconds: 0.2
+    IntervalMode: 1
+    SprintSpeed: 6
+    SprintSpeedStep: 0.75
+    MaxSprintSpeed: 12
+    RestSpeed: 5
+    SprintSeconds: 40
+    RestSeconds: 20
+    SpeedChangeRate: 2.5
+    RandomizeLayout: 1
+    ExtendedRoutes: 1
+    DifficultyGraceDistance: 150
+    DifficultyFullDistance: 2000
+    MaxRestSpeed: 7
+    ObstacleChanceStart: 0.25
+    ObstacleChanceMax: 0.9
+    BlockerChanceStart: 0.72
+    BlockerChanceMax: 0.72
+    DoubleBlockerStart: 0.3
+    DoubleBlockerMax: 0.85
+    BananaChanceStart: 0.3
+    BananaChanceMax: 0.82
+  Camera:
+    DeviceName: 
+    Width: 640
+    Height: 480
+    Fps: 30
+    FullLandmarkModel: 1
+    DetectionThreshold: 0.55
+    ConvertToSrgb: 0
+  Motion:
+    MinVisibility: 0.5
+    UpperMinVisibility: 0.3
+    Smoothing: 0.85
+    FilterMinCutoff: 0.05
+    FilterBeta: 80
+    FilterDerivateCutoff: 1
+    LostGraceSeconds: 0.5
+    DuckHoldSeconds: 1.5
+    LaneHoldSeconds: 0.15
+    ActionVisibility: 0.6
+    RefractorySeconds: 0.3
+    ReacquireLockSeconds: 0.25
+    CalibrationFrames: 20
+    CalibrationStillness: 0.12
+    LaneEnter: 0.65
+    LaneExit: 0.38
+    CartLeanEnter: 0.25
+    CartLeanExit: 0.14
+    CrouchDrop: 0.4
+    CrouchConfirmSeconds: 0.2
+    LandingGraceSeconds: 0.3
+    CrouchJumpCancelSeconds: 0.35
+    JumpAttemptSpeed: 0.8
+    JumpRise: 0.15
+    HighKneeLift: 0.22
+    StepLift: 0.06
+    UpperLaneEnter: 0.75
+    UpperLaneExit: 0.42
+    UpperCrouchDrop: 0.35
+    UpperCrouchConfirmSeconds: 0.12
+    UpperHandsAboveNose: 0.2
+    UpperLeanEnterDegrees: 12
+    ArmPumpAmplitude: 0.6
+    ArmSwingAmplitude: 0.3
+    LostSeconds: 2.5
+    BaselineDrift: 0.01
+  Render:
+    LookAhead: 72
+    SmallPropSize: 1.2
+    SmallPropShadows: 0
+    DetailDistance: 45
+    LightAhead: 55
+    LightBehind: 12
+  ItemChancePerChunk: 0.35
+  MusicVolume: 0.35
+  EffectsVolume: 0.7

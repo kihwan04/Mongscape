@@ -1,0 +1,203 @@
+using System;
+using System.Globalization;
+using Muhanok.Application;
+using Muhanok.Domain;
+using UnityEngine;
+
+namespace Muhanok.Presentation
+{
+    public enum SignUpStep { Consent, Nickname, Settings, Capture }
+    // Every item is required; the face features are sensitive data and get their own separate consent.
+    public enum ConsentItem { Age, Personal, Biometric }
+
+    // Sign-up steps without drawing: consent, nickname (server check), weight and style (skippable), face capture.
+    // A failed capture stays on the capture step and keeps every earlier answer.
+    public sealed class SignUpFlow
+    {
+        public SignUpStep Step { get; private set; }
+        // The nickname the server accepted; the capture step enrolls with it.
+        public string Nickname { get; private set; } = "";
+        public string NameMessage { get; private set; } = "";
+        public bool Checking { get; private set; }
+        public string Validation { get; private set; } = "";
+        public AccountSettings Settings { get; private set; } = new AccountSettings();
+        private readonly bool[] agreed = new bool[3];
+        public bool Agreed(ConsentItem item) => agreed[(int)item];
+        public bool AllAgreed => agreed[0] && agreed[1] && agreed[2];
+        public void Toggle(ConsentItem item) { if (Step == SignUpStep.Consent) agreed[(int)item] = !agreed[(int)item]; }
+        // "전체 동의": checks every item, or clears them all when every item is already checked.
+        public void ToggleAll() { if (Step != SignUpStep.Consent) return; bool on = !AllAgreed; for (int i = 0; i < agreed.Length; i++) agreed[i] = on; }
+        private IIdentityData identity;
+        private int ticket;
+
+        public void Open(IIdentityData account)
+        {
+            identity = account; Step = SignUpStep.Consent; Nickname = NameMessage = Validation = ""; Checking = false; Settings = new AccountSettings(); ticket++;
+            Array.Clear(agreed, 0, agreed.Length);
+        }
+        // Moves on only with every required item checked.
+        public bool Agree() { if (Step != SignUpStep.Consent || !AllAgreed) return false; Step = SignUpStep.Nickname; return true; }
+        public void SubmitNickname(string name)
+        {
+            if (Step != SignUpStep.Nickname || Checking) return;
+            string problem = AccountSession.NicknameProblem(name);
+            if (problem != null) { NameMessage = problem; return; }
+            if (identity == null) return;
+            string trimmed = name.Trim(); int mine = ++ticket;
+            Checking = true; NameMessage = "닉네임 확인 중…";
+            identity.CheckNickname(trimmed, (available, reason) =>
+            {
+                // A reply after leaving the step (back, reopen) is ignored.
+                if (mine != ticket || Step != SignUpStep.Nickname) return;
+                Checking = false;
+                if (available) { Nickname = trimmed; NameMessage = ""; Step = SignUpStep.Settings; }
+                else NameMessage = string.IsNullOrEmpty(reason) ? "사용할 수 없는 닉네임입니다." : reason;
+            });
+        }
+        // Empty weight means 65 kg; a typed weight must be 10-350 kg so the member can always start a run.
+        public bool SubmitSettings(string weight, PlayStyle style)
+        {
+            if (Step != SignUpStep.Settings) return false;
+            string text = weight?.Trim() ?? "";
+            if (!new WorkoutEstimate().SetWeight(text)) { Validation = "몸무게는 10~350kg 숫자로 입력해 주세요."; return false; }
+            double kg = text.Length == 0 ? AccountSettings.DefaultWeight : double.Parse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture);
+            Settings = new AccountSettings { Weight = kg, Style = style }; Validation = ""; Step = SignUpStep.Capture; return true;
+        }
+        public void SkipSettings() { if (Step != SignUpStep.Settings) return; Settings = new AccountSettings(); Validation = ""; Step = SignUpStep.Capture; }
+        public void Capture(Action<bool> done)
+        {
+            if (Step != SignUpStep.Capture || identity == null || identity.IdentityBusy) return;
+            identity.FaceEnroll(Nickname, Settings.Clone(), done);
+        }
+        // One step back; false on the consent step (the screen then leaves sign-up).
+        public bool Back()
+        {
+            ticket++; Checking = false; Validation = "";
+            if (Step == SignUpStep.Consent) return false;
+            Step = (SignUpStep)((int)Step - 1); return true;
+        }
+        public static string Summary(string nickname, AccountSettings settings) =>
+            "닉네임 " + nickname + ", 몸무게 " + settings.Weight.ToString("0.##", CultureInfo.InvariantCulture) + "kg, " + PlayStyleInfo.Label(settings.Style);
+    }
+
+    // Draws the sign-up steps; the capture step is the shared face capture screen.
+    internal sealed class SignUpScreen
+    {
+        private static readonly string[] StepNames = { "개인정보 동의", "닉네임", "몸무게·방식", "얼굴 등록" };
+        private readonly HudSkin skin;
+        private readonly IdentityScreen capture;
+        private string nameText = "", weightText = "";
+        private PlayStyle style = PlayStyle.FullBody;
+        private bool focusName;
+        private GUIStyle paragraph, detail;
+        public SignUpScreen(HudSkin hudSkin, IdentityScreen captureScreen) { skin = hudSkin; capture = captureScreen; }
+        public void Open() { nameText = weightText = ""; style = PlayStyle.FullBody; focusName = true; }
+
+        // enroll: starts the face capture; leave: back to the login gate.
+        public void Draw(IHudData data, IIdentityData identity, SignUpFlow flow, Action enroll, Action leave)
+        {
+            if (flow.Step == SignUpStep.Capture)
+            {
+                capture.Draw(data, identity, "회원가입: 얼굴 등록",
+                    SignUpFlow.Summary(flow.Nickname, flow.Settings) + "\n정면을 보고 틀 안에 얼굴을 맞춘 뒤 등록하세요.\n촬영에 실패해도 입력한 내용은 그대로 남습니다.",
+                    "얼굴 등록하기", enroll, () => flow.Back());
+                return;
+            }
+            paragraph ??= new GUIStyle(skin.Style(22, FontStyle.Normal)) { wordWrap = true };
+            skin.Card(new Rect(0, 0, 1280, 720), Palette.A(Palette.Ground, .9f));
+            skin.Panel(new Rect(150, 60, 980, 600), .97f);
+            GUI.color = Palette.Gold; GUI.Label(new Rect(195, 82, 500, 50), "회원가입", skin.Style(36, FontStyle.Bold)); GUI.color = Color.white;
+            for (int i = 0; i < StepNames.Length; i++)
+            {
+                bool on = i == (int)flow.Step;
+                GUI.color = on ? Palette.Gold : new Color(1, 1, 1, i < (int)flow.Step ? .8f : .4f);
+                GUI.Label(new Rect(195 + i * 225, 140, 220, 30), (i + 1) + ". " + StepNames[i], skin.Style(18, on ? FontStyle.Bold : FontStyle.Normal));
+            }
+            GUI.color = Color.white;
+            var body = new Rect(195, 190, 890, 330);
+            if (flow.Step == SignUpStep.Consent) Consent(body, flow);
+            else if (flow.Step == SignUpStep.Nickname) Nickname(body, flow);
+            else Settings(body, flow);
+            GUI.color = new Color(1, 1, 1, .7f);
+            GUI.Label(new Rect(195, 610, 700, 30), GesturePointer.Hint("Enter를 누르세요."), skin.Style(16, FontStyle.Normal)); GUI.color = Color.white;
+            if (skin.FlatButton(new Rect(940, 600, 150, 46), flow.Step == SignUpStep.Consent ? "뒤로" : "이전", false) && !flow.Back()) leave?.Invoke();
+        }
+        // Notice per item: items, purpose, retention; then the right to refuse and what refusing costs.
+        // The sensitive (biometric) item is highlighted and kept apart from the ordinary personal data.
+        private void Consent(Rect r, SignUpFlow flow)
+        {
+            detail ??= new GUIStyle(skin.Style(16, FontStyle.Normal)) { wordWrap = true };
+            if (Check(new Rect(r.x, r.y - 14, r.width, 36), flow.AllAgreed, "전체 동의 (아래 필수 항목에 모두 동의합니다)", 22, true)) flow.ToggleAll();
+            Fill(new Rect(r.x, r.y + 30, r.width, 2), Palette.A(Palette.Cream, .3f));
+            if (Check(new Rect(r.x, r.y + 40, r.width, 30), flow.Agreed(ConsentItem.Age), "[필수] 만 14세 이상입니다.", 19, false)) flow.Toggle(ConsentItem.Age);
+            Detail(new Rect(r.x + 40, r.y + 68, r.width - 40, 22), "만 14세 미만은 회원가입 없이 게스트로 플레이할 수 있습니다.", .7f);
+            if (Check(new Rect(r.x, r.y + 98, r.width, 30), flow.Agreed(ConsentItem.Personal), "[필수] 개인정보 수집·이용 동의", 19, false)) flow.Toggle(ConsentItem.Personal);
+            Detail(new Rect(r.x + 40, r.y + 126, r.width - 40, 44), "항목: 닉네임, 몸무게, 칼로리 목표, 기본 플레이 방식, 플레이 기록·코인·아이템  ·  목적: 회원 식별, 기록·랭킹·상점 제공\n저장: 연결된 얼굴 서버  ·  보유기간: 회원 탈퇴 시까지 (탈퇴 즉시 삭제, 백업본은 14일 안에 삭제)", .85f);
+            if (Check(new Rect(r.x, r.y + 178, r.width, 30), flow.Agreed(ConsentItem.Biometric), "[필수] 민감정보(생체인식정보) 수집·이용 동의", 19, false, Palette.Gold)) flow.Toggle(ConsentItem.Biometric);
+            GUI.color = Palette.Gold;
+            GUI.Label(new Rect(r.x + 40, r.y + 206, r.width - 40, 44), "항목: 얼굴 특징값(얼굴 사진에서 계산한 숫자, 사진·영상은 저장하지 않음)  ·  목적: 얼굴 로그인 시 본인 확인\n저장: 연결된 얼굴 서버  ·  보유기간: 회원 탈퇴 시까지 (탈퇴 즉시 삭제, 백업본은 14일 안에 삭제)", detail); GUI.color = Color.white;
+            Detail(new Rect(r.x, r.y + 258, r.width, 44), "동의를 거부할 수 있습니다. 거부하면 회원가입과 얼굴 로그인은 이용할 수 없지만 게스트로 플레이할 수 있습니다.\n동의 철회는 내 정보 > 회원 탈퇴에서 언제든 할 수 있습니다.", .85f);
+            Detail(new Rect(r.x, r.y + 306, r.width, 24), "사진·영상 위조를 막는 보안 인증 기능은 없으므로 금융 등 보안 인증에는 쓰지 않습니다.", .6f);
+            bool wasEnabled = GUI.enabled; GUI.enabled = wasEnabled && flow.AllAgreed;
+            if ((skin.PrimaryButton(new Rect(r.x, 540, 450, 58), flow.AllAgreed ? "동의하고 계속" : "필수 항목에 동의해 주세요") || IdentityScreen.Enter()) && flow.Agree()) focusName = true;
+            GUI.enabled = wasEnabled;
+        }
+        private static void Fill(Rect r, Color color)
+        {
+            var before = GUI.color; GUI.color = color; GUI.DrawTexture(r, Texture2D.whiteTexture); GUI.color = before;
+        }
+        private void Detail(Rect r, string text, float alpha)
+        {
+            GUI.color = new Color(1, 1, 1, alpha); GUI.Label(r, text, detail); GUI.color = Color.white;
+        }
+        // A check box row; the whole row is the click (or gesture) target. True when pressed.
+        private bool Check(Rect row, bool on, string text, int size, bool bold, Color? tint = null)
+        {
+            var box = new Rect(row.x, row.y + (row.height - 26) / 2, 26, 26);
+            // Square box: cream frame, dark inside when off, gold with a dark centre mark when on.
+            Fill(box, on ? Palette.Gold : Palette.Cream); Fill(new Rect(box.x + 3, box.y + 3, 20, 20), on ? Palette.Gold : Palette.Outline);
+            if (on) Fill(new Rect(box.x + 7, box.y + 7, 12, 12), Palette.Outline);
+            GUI.color = tint ?? Color.white;
+            GUI.Label(new Rect(row.x + 40, row.y, row.width - 40, row.height), text, skin.Style(size, bold || tint.HasValue ? FontStyle.Bold : FontStyle.Normal)); GUI.color = Color.white;
+            return GUI.Button(row, GUIContent.none, GUIStyle.none) || GesturePointer.Activate(row, text);
+        }
+        private void Nickname(Rect r, SignUpFlow flow)
+        {
+            GUI.Label(new Rect(r.x, r.y, r.width, 40), "랭킹과 메뉴에 표시될 닉네임 (1~10자)", skin.Label);
+            bool enter = IdentityScreen.Enter();
+            skin.Panel(new Rect(r.x, r.y + 50, 420, 56), 1f);
+            GUI.SetNextControlName("MongscapeSignUpName");
+            bool wasEnabled = GUI.enabled; GUI.enabled = wasEnabled && !flow.Checking;
+            nameText = GUI.TextField(new Rect(r.x, r.y + 50, 420, 56), nameText, AccountSession.MaxNicknameInput, skin.Input);
+            GUI.enabled = wasEnabled;
+            if (focusName && Event.current.type == EventType.Repaint) { GUI.FocusControl("MongscapeSignUpName"); focusName = false; }
+            GUI.color = flow.Checking ? Color.white : Palette.Error;
+            GUI.Label(new Rect(r.x, r.y + 120, r.width, 34), flow.NameMessage, skin.Small); GUI.color = Color.white;
+            GUI.enabled = wasEnabled && !flow.Checking;
+            if (skin.PrimaryButton(new Rect(r.x, 540, 450, 58), flow.Checking ? "확인 중…" : "중복 확인 후 다음") || enter && !flow.Checking) flow.SubmitNickname(nameText);
+            GUI.enabled = wasEnabled;
+        }
+        private void Settings(Rect r, SignUpFlow flow)
+        {
+            GUI.Label(new Rect(r.x, r.y, 400, 34), "몸무게 (선택)", skin.Label);
+            bool enter = IdentityScreen.Enter();
+            skin.Panel(new Rect(r.x, r.y + 40, 300, 52), 1f); GUI.SetNextControlName("MongscapeSignUpWeight");
+            weightText = GUI.TextField(new Rect(r.x, r.y + 40, 300, 52), weightText, 5, skin.Input);
+            GUI.Label(new Rect(r.x + 315, r.y + 47, 60, 40), "kg", skin.Label);
+            GUI.Label(new Rect(r.x + 390, r.y + 50, 500, 34), "비우면 65kg으로 계산합니다. 10~350kg", skin.Small);
+            GUI.Label(new Rect(r.x, r.y + 120, 400, 34), "기본 플레이 방식", skin.Label);
+            for (int i = 0; i < 3; i++)
+            {
+                var option = (PlayStyle)i; var rect = new Rect(r.x + i * 136, r.y + 160, 128, 48);
+                skin.Card(rect, option == style ? Palette.Gold : Palette.Panel);
+                GUI.color = option == style ? Palette.Outline : Palette.Cream;
+                bool pressed = GUI.Button(rect, GUIContent.none, GUIStyle.none) || GesturePointer.Activate(rect, PlayStyleInfo.Label(option));
+                GUI.Label(rect, PlayStyleInfo.Label(option), skin.Centered(22, FontStyle.Bold)); GUI.color = Color.white;
+                if (pressed) style = option;
+            }
+            GUI.color = Palette.Error; GUI.Label(new Rect(r.x, r.y + 230, r.width, 34), flow.Validation, skin.Small); GUI.color = Color.white;
+            if (skin.PrimaryButton(new Rect(r.x, 540, 300, 58), "다음") || enter) flow.SubmitSettings(weightText, style);
+            if (skin.FlatButton(new Rect(r.x + 320, 540, 300, 58), "건너뛰기 (65kg, 전신)", false)) { weightText = ""; style = PlayStyle.FullBody; flow.SkipSettings(); }
+        }
+    }
+}

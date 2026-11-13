@@ -1,0 +1,8 @@
+# Repository-root local Unity artifacts
+/Assets/
+/Distribution/
+/DistributionVerify/
+/build/
+/Builds/
+/Deliverables/
+*.log

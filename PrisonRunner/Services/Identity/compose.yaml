@@ -1,0 +1,75 @@
+name: mongscape-identity
+services:
+  postgres:
+    image: postgres:17-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mongscape
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_admin_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    secrets:
+      - db_admin_password
+      - db_app_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-postgres.sh:/docker-entrypoint-initdb.d/10-mongscape.sh:ro
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d mongscape"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+  identity:
+    build: .
+    restart: unless-stopped
+    environment:
+      IDENTITY_HOST: 0.0.0.0
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: mongscape
+      PGUSER: mongscape
+      PGPASSWORD_FILE: /run/secrets/db_app_password
+      IDENTITY_ALLOWED_HOSTS: "127.0.0.1:8765,localhost:8765,${IDENTITY_DOMAIN:-localhost},${IDENTITY_DOMAIN:-localhost}:443"
+    ports:
+      - "127.0.0.1:${IDENTITY_LOCAL_PORT:-8765}:8765"
+    secrets:
+      - db_app_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+    read_only: true
+    tmpfs:
+      - /tmp
+    # Bound one bad request (or a leak) to this container instead of the whole host.
+    mem_limit: 1g
+    pids_limit: 256
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json,urllib.request; r=json.load(urllib.request.urlopen('http://127.0.0.1:8765/health',timeout=3)); assert r['ok']"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+volumes:
+  postgres-data:
+secrets:
+  db_admin_password:
+    file: ./secrets/db_admin_password
+  db_app_password:
+    file: ./secrets/db_app_password

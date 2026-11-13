@@ -1,0 +1,18 @@
+{
+  "date": "2026-10-29",
+  "sourcePr": 20,
+  "sourceHead": "6880a3365fa902dd3e023be116d76f9a4f48d5ed",
+  "localEditMode": 178,
+  "localPlayMode": 74,
+  "serverTests": 27,
+  "publicPlayMode": 74,
+  "publicMotionOverrides": 18,
+  "compileErrors": 0,
+  "localUiCaptures": 19,
+  "localBuildExitCode": 0,
+  "localSmokeExitCode": 0,
+  "personalDbMigrated": false,
+  "releaseCreated": false,
+  "tagCreated": false,
+  "serverDeployed": false
+}

@@ -1,0 +1,5 @@
+{
+  "name": "Muhanok.PlayModeTests",
+  "references": ["Muhanok.Domain", "Muhanok.Application", "Muhanok.Infrastructure", "Muhanok.Presentation", "Muhanok.Bootstrap", "Muhanok.Content", "Unity.Cinemachine", "Unity.Timeline", "Unity.InputSystem", "Unity.RenderPipelines.Universal.Runtime"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "kit": "factory-kit",
+    "source": "https://kenney.nl/assets/factory-kit",
+    "license": "CC0",
+    "models": 6,
+    "archive_sha256": "7e31fb2308e90304672bd15cd18fa9d9f02c03731a8cbc57a8e3e1c181dfb0a7",
+    "original_models": 143,
+    "retained_assets": [
+      "Models/FBX format/Textures/colormap.png",
+      "Models/FBX format/catwalk-stairs.fbx",
+      "Models/FBX format/machine-fortified.fbx",
+      "Models/FBX format/machine-window-bar.fbx",
+      "Models/FBX format/pipe-large-valve.fbx",
+      "Models/FBX format/scanner-high.fbx",
+      "Models/FBX format/screen-panel-wide.fbx"
+    ],
+    "cleanup_date": "2026-10-29"
+  },
+  {
+    "kit": "furniture-kit",
+    "source": "https://kenney.nl/assets/furniture-kit",
+    "license": "CC0",
+    "models": 8,
+    "archive_sha256": "e67652d0932cee41683f74711c03d3e192a2af9979ef8e6b237711f5482d46b0",
+    "original_models": 140,
+    "retained_assets": [
+      "Models/FBX format/bedBunk.fbx",
+      "Models/FBX format/bench.fbx",
+      "Models/FBX format/hoodLarge.fbx",
+      "Models/FBX format/kitchenFridgeLarge.fbx",
+      "Models/FBX format/kitchenSink.fbx",
+      "Models/FBX format/kitchenStove.fbx",
+      "Models/FBX format/washer.fbx",
+      "Models/FBX format/washerDryerStacked.fbx"
+    ],
+    "cleanup_date": "2026-10-29"
+  },
+  {
+    "kit": "modular-cave-kit",
+    "source": "https://kenney.nl/assets/modular-cave-kit",
+    "license": "CC0",
+    "models": 0,
+    "archive_sha256": "48f37a6d4f241124cd7da17da1c6d4ed1bf1820bb149dcb233fbd5ebdd8ba996",
+    "original_models": 40,
+    "retained_assets": [],
+    "cleanup_date": "2026-10-29"
+  },
+  {
+    "kit": "nature-kit",
+    "source": "https://kenney.nl/assets/nature-kit",
+    "license": "CC0",
+    "models": 6,
+    "archive_sha256": "fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d",
+    "original_models": 329,
+    "retained_assets": [
+      "Models/FBX format/grass_leafsLarge.fbx",
+      "Models/FBX format/plant_bush.fbx",
+      "Models/FBX format/plant_bushDetailed.fbx",
+      "Models/FBX format/stone_largeA.fbx",
+      "Models/FBX format/tree_detailed_dark.fbx",
+      "Models/FBX format/tree_palmDetailedTall.fbx"
+    ],
+    "cleanup_date": "2026-10-29"
+  },
+  {
+    "kit": "survival-kit",
+    "source": "https://kenney.nl/assets/survival-kit",
+    "license": "CC0",
+    "models": 4,
+    "archive_sha256": "c3586341b5932c87eb43d75d915434f47daed168b17ed36a03e8ca9977c7443e",
+    "original_models": 80,
+    "retained_assets": [
+      "Models/FBX format/Textures/colormap.png",
+      "Models/FBX format/barrel.fbx",
+      "Models/FBX format/box-large.fbx",
+      "Models/FBX format/tool-pickaxe-upgraded.fbx",
+      "Models/FBX format/workbench.fbx"
+    ],
+    "cleanup_date": "2026-10-29"
+  }
+]

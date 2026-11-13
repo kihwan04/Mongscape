@@ -1,0 +1,11 @@
+{
+  "name": "Muhanok.Infrastructure",
+  "autoReferenced": true,
+  "references": [
+    "Muhanok.Application",
+    "Muhanok.Domain",
+    "Muhanok.LegacyCore",
+    "Unity.InputSystem"
+  ],
+  "noEngineReferences": false
+}

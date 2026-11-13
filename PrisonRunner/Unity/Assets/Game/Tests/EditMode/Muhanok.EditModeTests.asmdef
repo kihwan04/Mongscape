@@ -1,0 +1,6 @@
+{
+  "name": "Muhanok.EditModeTests",
+  "references": ["Muhanok.Domain", "Muhanok.Application", "Muhanok.Infrastructure", "Muhanok.Presentation"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

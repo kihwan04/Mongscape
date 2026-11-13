@@ -1,0 +1,92 @@
+[
+  {
+    "clip": "AN_Monkey_Run",
+    "source": "Locally authored Blender action",
+    "frames": 21
+  },
+  {
+    "clip": "AN_Monkey_SprintStart",
+    "source": "Locally authored Blender action",
+    "frames": 21
+  },
+  {
+    "clip": "AN_Monkey_HighKnee",
+    "source": "Locally authored Blender action",
+    "frames": 21
+  },
+  {
+    "clip": "AN_Monkey_LaneStep_L",
+    "source": "Locally authored Blender action",
+    "frames": 21
+  },
+  {
+    "clip": "AN_Monkey_LaneStep_R",
+    "source": "Locally authored Blender action",
+    "frames": 21
+  },
+  {
+    "clip": "AN_Monkey_MinePickaxe_Loop",
+    "source": "Locally authored Blender action",
+    "frames": 37
+  },
+  {
+    "clip": "AN_Monkey_StopWork",
+    "source": "Locally authored Blender action",
+    "frames": 37
+  },
+  {
+    "clip": "AN_Monkey_LookCart",
+    "source": "Locally authored Blender action",
+    "frames": 37
+  },
+  {
+    "clip": "AN_Monkey_IdeaReact",
+    "source": "Locally authored Blender action",
+    "frames": 37
+  },
+  {
+    "clip": "AN_Monkey_Jump",
+    "source": "Locally authored Blender action",
+    "frames": 37
+  },
+  {
+    "clip": "AN_Monkey_CrouchSlide",
+    "source": "Locally authored Blender action",
+    "frames": 37
+  },
+  {
+    "clip": "AN_Monkey_Stumble",
+    "source": "Locally authored Blender action",
+    "frames": 37
+  },
+  {
+    "clip": "AN_Monkey_Caught",
+    "source": "Locally authored Blender action",
+    "frames": 37
+  },
+  {
+    "clip": "AN_Monkey_CartRide",
+    "source": "Locally authored Blender action",
+    "frames": 37
+  },
+  {
+    "clip": "AN_Monkey_CellIdle",
+    "source": "Locally authored Blender action",
+    "frames": 37
+  },
+  {
+    "clip": "AN_Guard_Notice",
+    "source": "Locally authored Blender action",
+    "frames": 37
+  },
+  {
+    "clip": "AN_Guard_ChaseRun",
+    "source": "Locally authored Blender action",
+    "frames": 21
+  },
+  {
+    "clip": "AN_Guard_Catch",
+    "source": "Locally authored Blender action",
+    "frames": 37
+  }
+]

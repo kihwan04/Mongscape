@@ -1,0 +1,39 @@
+{
+  "format": "FBX for Unity",
+  "motions": [
+    {
+      "sha256": "954A05B2472AEB5B0EF0798F87511C9041A0A37EF237A2FCD1B0E93E13AABEA9",
+      "description": "Running With Intention",
+      "name": "Running",
+      "file": "Run.fbx",
+      "inPlace": true
+    },
+    {
+      "sha256": "78D86D2DF6896155D44D1A54FA5986A3A04672ADE3B3DCE9E8C06D503B96F9E8",
+      "description": "Jumping In Place",
+      "name": "Jump",
+      "file": "Jump.fbx",
+      "inPlace": null
+    },
+    {
+      "sha256": "A5642E249717208EF6611FAE9E582C2A16467B3594E7683CF81A7CE5B34EFE6A",
+      "description": "Low Crouching Idle",
+      "name": "Crouching Idle",
+      "file": "Crouch.fbx",
+      "inPlace": null
+    },
+    {
+      "sha256": "AE495373D682CC333F72CE6BBF0BA104918DBF61849B6D9F20C0A19ACA4809A1",
+      "description": "Brief Stumble While Jogging",
+      "name": "Jogging Stumble",
+      "file": "Stumble.fbx",
+      "inPlace": true
+    }
+  ],
+  "character": "Default Character / X Bot",
+  "fps": 30,
+  "skin": "Without Skin",
+  "keyframeReduction": "none",
+  "downloadDate": "2026-10-03",
+  "source": "https://www.mixamo.com/"
+}

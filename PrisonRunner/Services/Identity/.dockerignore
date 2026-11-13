@@ -1,0 +1,11 @@
+*
+!Dockerfile
+!requirements.txt
+!server.py
+!storage.py
+!schema.postgres.sql
+!migrate_account.py
+!setup_models.py
+!models/
+models/*
+!models/provenance.json

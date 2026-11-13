@@ -1,0 +1,15 @@
+{
+  "name": "Muhanok.Bootstrap",
+  "autoReferenced": true,
+  "references": [
+    "Muhanok.Application",
+    "Muhanok.Domain",
+    "Muhanok.Infrastructure",
+    "Muhanok.Presentation",
+    "Muhanok.Content",
+    "Muhanok.LegacyCore",
+    "Unity.Timeline",
+    "Unity.Cinemachine"
+  ],
+  "noEngineReferences": false
+}

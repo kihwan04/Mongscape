@@ -35,6 +35,39 @@ venv/
 *.key
 
 # Generated artifacts
+Builds/
+References/AssetDownloads/
 dist/
 build/
 *.log
+Tools/BlenderDownloads/
+Tools/BlenderRuntime/
+Tools/DocumentRuntime/
+docs/document-qa/
+docs/previews/
+
+# Local distribution staging and backup files
+*.blend1
+*.blend2
+
+# Legacy local Python pose environment; current tracking runs inside Unity.
+/PoseServer/
+
+# Mixamo raw files cannot be redistributed publicly
+References/MixamoDownloads/*.fbx
+Unity/Assets/External/Staging/Mixamo/Animations/*.fbx
+Unity/Assets/External/Staging/Mixamo/Animations/*.fbx.meta
+
+# Local voluntary face profiles and downloaded Python runtime
+Services/Identity/data/
+Services/Identity/.runtime/
+Services/Identity/models/*.onnx
+
+Services/Identity/python/
+
+# Per-installation identity server address; use the tracked example as a template.
+identity-server.json
+Services/Identity/*.sqlite3*
+Services/Identity/secrets/
+Services/Identity/*.dump
+Services/*.tar.gz

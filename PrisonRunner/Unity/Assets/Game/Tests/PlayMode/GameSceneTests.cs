@@ -1,0 +1,273 @@
+using System.Collections;
+using Muhanok.Bootstrap;
+using Muhanok.Domain;
+using Muhanok.Infrastructure;
+using Muhanok.Presentation.Map;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
+
+namespace Muhanok.Tests
+{
+    public sealed class GameSceneTests
+    {
+        private float oldBestDistance;
+        private int oldBestScore;
+        [SetUp] public void PreserveRecords() { oldBestDistance = PlayerPrefs.GetFloat("Muhanok.BestDistance", 0); oldBestScore = PlayerPrefs.GetInt("Muhanok.BestScore", 0); }
+        [TearDown] public void RestoreRecords() { PlayerPrefs.SetFloat("Muhanok.BestDistance", oldBestDistance); PlayerPrefs.SetInt("Muhanok.BestScore", oldBestScore); PlayerPrefs.Save(); }
+        [UnityTest] public IEnumerator TitleClickAndKeyboardUseRealInputRouter()
+        {
+            yield return SceneManager.LoadSceneAsync("GameScene"); yield return null;
+            var game = Object.FindFirstObjectByType<GameBootstrap>();
+            var background = InputSystem.settings.backgroundBehavior;
+            var editorBehavior = InputSystem.settings.editorInputBehaviorInPlayMode;
+            InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+            InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            var mouse = InputSystem.AddDevice<Mouse>(); var keys = InputSystem.AddDevice<Keyboard>();
+            mouse.MakeCurrent(); keys.MakeCurrent(); InputSystem.EnableDevice(mouse); InputSystem.EnableDevice(keys);
+            try
+            {
+                InputSystem.Update();
+                InputState.Change(mouse, new MouseState().WithButton(MouseButton.Left)); game.TickInput();
+                Assert.IsTrue(game.MenuOpen, "Clicking the title opens the login gate"); Assert.AreEqual(Muhanok.Presentation.MenuPage.Login, game.GetComponent<Muhanok.Presentation.HUDPresenter>().Page); Assert.AreEqual(GameFlowState.TitleIdle,game.Session.Flow.State);
+                InputState.Change(mouse, new MouseState());
+                game.Session.Config.ExtendedRoutes=false;game.BeginRun(""); yield return new WaitForSecondsRealtime(1.1f);
+                Assert.AreEqual(GameFlowState.Running,game.Session.Flow.State);
+                yield return new WaitUntil(()=>!game.IsRevealing);
+                // Layout seed 2 opens with the duck row, which the crouch below passes while the run keeps going.
+                game.Map.Reset(2);
+                Assert.AreEqual(0,game.Intro.Elapsed,"Loading image is the intro; a second timeline must not run");
+                InputState.Change(keys, new KeyboardState(Key.A)); game.TickInput();
+                Assert.AreEqual(-1, game.Session.Runner.Lane);
+                InputState.Change(keys, new KeyboardState(Key.S, Key.W)); game.TickInput();
+                Assert.IsTrue(game.Session.Runner.Crouching && game.Session.Runner.KneeStepping);
+                InputState.Change(keys, new KeyboardState()); yield return new WaitForSeconds(1.1f);
+                Assert.IsFalse(game.Session.Runner.Crouching || game.Session.Runner.KneeStepping);
+                InputState.Change(keys, new KeyboardState(Key.Space)); game.TickInput(); game.Session.Tick(.1f);
+                Assert.Greater(game.Session.Runner.Y, 0);
+                game.Session.Runner.SetStartZ(36);
+                InputState.Change(keys,new KeyboardState(Key.A));game.TickInput();Assert.AreEqual(-1,game.Session.Runner.Lane);
+                InputState.Change(keys,new KeyboardState(Key.C));game.TickInput();Assert.AreEqual(0,game.Session.Runner.Lane,"C must allow the middle hidden route from a side rail");
+            }
+            finally { InputSystem.RemoveDevice(mouse); InputSystem.RemoveDevice(keys); InputSystem.settings.backgroundBehavior = background; InputSystem.settings.editorInputBehaviorInPlayMode = editorBehavior; }
+        }
+        [UnityTest] public IEnumerator FullFlowPoolRetryAndFirstPerson()
+        {
+            yield return SceneManager.LoadSceneAsync("GameScene"); yield return null;
+            var game = Object.FindFirstObjectByType<GameBootstrap>(); Assert.IsNotNull(game);
+            Assert.AreEqual(GameFlowState.TitleIdle, game.Session.Flow.State);
+            Assert.IsNotNull(game.IntroTimeline); game.StartIntro();
+            for (int i = 0; i < 82; i++) game.Intro.Tick(.1f);
+            Assert.AreEqual(GameFlowState.Running, game.Session.Flow.State);
+            Assert.Less(Vector3.Distance(game.CameraRig.FirstPerson.transform.position, game.Hero.Head), .001f);
+            Assert.AreEqual(80, game.CameraRig.FirstPerson.Lens.FieldOfView);
+            game.Session.Runner.Command(MotionCommand.Left);
+            game.Session.Tick(.2f); Assert.AreEqual(-2.2f, game.Session.Runner.X, .0001f);
+            game.Session.Runner.Command(MotionCommand.Jump); game.Session.Tick(.1f); Assert.Greater(game.Session.Runner.Y, .5f);
+            for (int i = 0; i < 20; i++) game.Session.Tick(.1f);
+            game.Session.Runner.SetStartZ(80);game.Session.Runner.Command(MotionCommand.Crouch); game.Session.Runner.Command(MotionCommand.KneeStep);
+            Assert.IsTrue(game.Session.Runner.Crouching && game.Session.Runner.KneeStepping);
+            for (int i = 0; i < 11; i++) game.Session.Tick(.1f); Assert.IsFalse(game.Session.Runner.Crouching || game.Session.Runner.KneeStepping);
+            int created = game.Map.CreatedCount;
+            for (int n = 0; n < 120; n++)
+            {
+                game.Map.Tick(n * 24f + 2);
+                var active = game.Map.Active;
+                Assert.GreaterOrEqual(active.Count, 4);
+                for (int i = 0; i < active.Count; i++)
+                {
+                    var chunk = active[i].Chunk; Assert.AreEqual(24, chunk.Exit.position.z - chunk.Entry.position.z, .001f);
+                    if (i > 0) Assert.Less(Vector3.Distance(active[i - 1].Chunk.Exit.position,chunk.Entry.position),.001f);
+                    Assert.AreEqual(RouteSurface.BaseHeight(chunk.Sequence),chunk.Entry.position.y,.001f);
+                    for (int row = 0; row < 2; row++)
+                    {
+                        int count = 0; for (int lane = 0; lane < 3; lane++) if (chunk.Obstacles[row * 3 + lane].gameObject.activeSelf) count++;
+                        Assert.IsTrue(count<=1||count==3&&SafePatternValidator.IsActionRowSafe(7,chunk.Obstacles[row*3].Kind));
+                    }
+                }
+                Assert.AreEqual(created, game.Map.CreatedCount);
+            }
+            for (int i = 0; i < 3; i++) { game.Session.Tick(.7f); game.Session.Hit(true); }
+            Assert.AreEqual(GameFlowState.Caught, game.Session.Flow.State);
+            yield return new WaitForSecondsRealtime(4.1f); Assert.AreEqual(GameFlowState.Result, game.Session.Flow.State);
+            game.Retry(); Assert.AreEqual(GameFlowState.TitleIdle, game.Session.Flow.State);
+            Assert.AreEqual(0, game.Session.Score.Score); Assert.AreEqual(0, game.Session.Chase.Pressure); Assert.AreEqual(2, game.Session.Runner.Z);
+            Assert.AreEqual(created, game.Map.CreatedCount); Assert.AreEqual(0, game.Map.Active[0].Chunk.Entry.position.z);
+            game.StartIntro(); for (int i = 0; i < 82; i++) game.Intro.Tick(.1f);
+            Assert.AreEqual(GameFlowState.Running, game.Session.Flow.State);
+        }
+        [UnityTest] public IEnumerator CoinsUseSweptCrossingAndResetWhenPooled()
+        {
+            yield return SceneManager.LoadSceneAsync("GameScene"); yield return null;
+            var game=Object.FindFirstObjectByType<GameBootstrap>();
+            var node=new GameObject("Coin crossing regression"); var coin=node.AddComponent<CoinController>();
+            try
+            {
+                node.transform.position=new Vector3(0,1,2.1f);
+                coin.Evaluate(game.Session,0); Assert.AreEqual(0,game.Session.Score.Coins);
+                game.StartIntro(); for(int i=0;i<82;i++) game.Intro.Tick(.1f);
+                float before=game.Session.Runner.Z; node.transform.position=new Vector3(0,1,before+.1f);
+                game.Session.Tick(.4f); int score=game.Session.Score.Score;
+                coin.Evaluate(game.Session,before);
+                Assert.AreEqual(1,game.Session.Score.Coins); Assert.AreEqual(score,game.Session.Score.Score,"Coins do not score");
+                coin.Evaluate(game.Session,before); Assert.AreEqual(1,game.Session.Score.Coins);
+                coin.ResetCoin(); node.SetActive(true);
+                node.transform.position=new Vector3(4.4f,1,game.Session.Runner.Z+.1f);
+                before=game.Session.Runner.Z; game.Session.Tick(.4f); coin.Evaluate(game.Session,before);
+                Assert.AreEqual(1,game.Session.Score.Coins,"Wrong lane must not collect");
+                coin.ResetCoin(); node.SetActive(true);
+                before=game.Session.Runner.Z; node.transform.position=new Vector3(0,1,before+.1f);
+                game.Session.Tick(.4f); coin.Evaluate(game.Session,before);
+                Assert.AreEqual(2,game.Session.Score.Coins,"Reused coin must award again");
+                game.Session.Flow.Transition(GameFlowState.Caught);
+                game.Session.Flow.Transition(GameFlowState.Result);
+                game.Retry(); Assert.AreEqual(0,game.Session.Score.Coins);
+            }
+            finally { Object.Destroy(node); }
+        }
+        [UnityTest] public IEnumerator MagnetPullsFarLaneCoinsOnlyWhileActive()
+        {
+            yield return SceneManager.LoadSceneAsync("GameScene"); yield return null;
+            var game=Object.FindFirstObjectByType<GameBootstrap>();
+            game.StartIntro(); for(int i=0;i<82;i++) game.Intro.Tick(.1f);
+            Assert.AreEqual(GameFlowState.Running,game.Session.Flow.State);
+            game.enabled=false;
+            var run=game.Session; var node=new GameObject("Magnet coin"); var coin=node.AddComponent<CoinController>();
+            try
+            {
+                run.Runner.SetStartZ(4); run.Runner.Command(MotionCommand.Left); run.Tick(.25f); Assert.AreEqual(-1,run.Runner.Lane);
+                for(int pass=0;pass<2;pass++)
+                {
+                    bool magnet=pass==1;
+                    if(magnet) run.Items.Activate(ItemKind.Magnet);
+                    // The coin waits on the opposite outer lane, 4.4m to the side of the runner.
+                    run.Runner.SetStartZ(4); coin.ResetCoin(); node.SetActive(true);
+                    RouteSurface.Sample(10,out float x,out float y); node.transform.position=new Vector3(x+2.2f,y+1,10);
+                    float deadline=Time.realtimeSinceStartup+6;
+                    while(run.Score.Coins==0&&run.Runner.Z<14&&Time.realtimeSinceStartup<deadline)
+                    {
+                        yield return null;
+                        float prior=run.Runner.Z; run.Tick(Mathf.Min(Time.deltaTime,.05f)); coin.Evaluate(run,prior);
+                    }
+                    Assert.AreEqual(GameFlowState.Running,run.Flow.State);
+                    if(magnet) { Assert.AreEqual(1,run.Score.Coins,"The magnet pulls a coin from the far lane"); Assert.IsFalse(node.activeSelf); }
+                    else { Assert.AreEqual(0,run.Score.Coins,"Without the magnet a far-lane coin stays"); Assert.IsFalse(coin.Pulled); }
+                }
+            }
+            finally { Object.Destroy(node); }
+        }
+        [UnityTest] public IEnumerator ItemAurasShowWhileActiveAndShieldBreaksOnHit()
+        {
+            yield return SceneManager.LoadSceneAsync("GameScene"); yield return null;
+            var game=Object.FindFirstObjectByType<GameBootstrap>();
+            game.StartIntro(); for(int i=0;i<82;i++) game.Intro.Tick(.1f);
+            game.enabled=false;
+            var aura=game.GetComponent<Muhanok.Presentation.PowerUpAuraView>(); Assert.IsNotNull(aura);
+            yield return null; Assert.IsFalse(aura.ShieldVisible||aura.MagnetVisible);
+            game.Session.Items.Activate(ItemKind.Shield); game.Session.Items.Activate(ItemKind.Magnet); yield return null;
+            Assert.IsTrue(aura.ShieldVisible,"Shield bubble"); Assert.IsTrue(aura.MagnetVisible,"Magnet sparks");
+            Assert.IsFalse(game.Session.Hit(true)); Assert.IsFalse(game.Session.Items.IsActive(ItemKind.Shield)); yield return null;
+            Assert.IsTrue(aura.ShieldVisible,"The used shield bursts visibly before disappearing");
+            yield return new WaitForSecondsRealtime(Muhanok.Presentation.PowerUpAuraView.BurstSeconds+.3f);
+            Assert.IsFalse(aura.ShieldVisible); Assert.IsTrue(aura.MagnetVisible);
+        }
+        [UnityTest] public IEnumerator MagnetPulledChunkCoinReturnsToItsSpotWhenPooled()
+        {
+            yield return SceneManager.LoadSceneAsync("GameScene"); yield return null;
+            var game=Object.FindFirstObjectByType<GameBootstrap>();
+            game.StartIntro(); for(int i=0;i<82;i++) game.Intro.Tick(.1f);
+            game.enabled=false;
+            CoinController coin=null; MuhanokMapChunk owner=null;
+            foreach(var active in game.Map.Active)
+            {
+                if(coin!=null||active.Chunk.Sequence==0||active.Chunk.Coins==null||active.Type==1||active.Type==2) continue;
+                foreach(var candidate in active.Chunk.Coins) if(candidate.gameObject.activeSelf) { coin=candidate; owner=active.Chunk; break; }
+            }
+            Assert.IsNotNull(coin,"A walking chunk with coins is spawned ahead");
+            var run=game.Session; var spot=coin.transform.localPosition;
+            run.Items.Activate(ItemKind.Magnet); run.Runner.SetStartZ(coin.transform.position.z-5);
+            for(int i=0;i<3&&coin.gameObject.activeSelf;i++) { yield return null; coin.Evaluate(run,run.Runner.Z); }
+            Assert.IsTrue(coin.Pulled); Assert.AreNotEqual(spot.z,coin.transform.localPosition.z,"The magnet moved the coin");
+            // Reusing the chunk from the pool prepares it again: the pulled height and depth must not leak.
+            owner.Prepare(owner.Sequence,new HazardOdds(0,.72f,.85f,.82f),new System.Random(5));
+            Assert.AreEqual(spot.y,coin.transform.localPosition.y,.0001f); Assert.AreEqual(spot.z,coin.transform.localPosition.z,.0001f);
+            Assert.IsFalse(coin.Pulled); Assert.IsTrue(coin.gameObject.activeSelf);
+        }
+        [UnityTest] public IEnumerator OnlyUnlockedItemsSpawnAwayFromBananaRows()
+        {
+            yield return SceneManager.LoadSceneAsync("GameScene"); yield return null;
+            var game=Object.FindFirstObjectByType<GameBootstrap>(); game.SetDeveloperMode(false,false);
+            try
+            {
+                game.StartIntro(); for(int i=0;i<82;i++) game.Intro.Tick(.1f);
+                game.enabled=false;
+                foreach(var allowed in new[]{new ItemKind[0],new[]{ItemKind.Shield}})
+                {
+                    // Items come from the member's unlocks: a synthetic member in memory, no server calls.
+                    var ids=new int[allowed.Length]; for(int i=0;i<ids.Length;i++) ids[i]=(int)allowed[i];
+                    game.Account.SignInMember(new Muhanok.Application.AccountProfile{id="items-qa",name="아이템",unlocked=ids},"");
+                    game.Map.Reset(); int found=0;
+                    for(int n=0;n<80;n++)
+                    {
+                        game.Map.Tick(n*24f+2);
+                        foreach(var active in game.Map.Active) foreach(var pickup in active.Chunk.Pickups)
+                        {
+                            found++; CollectionAssert.Contains(allowed,pickup.Kind);
+                            float z=pickup.transform.position.z;
+                            foreach(var peel in active.Chunk.DynamicFloorItems) Assert.GreaterOrEqual(Mathf.Abs(peel.transform.position.z-z),2.99f,"Items stay clear of banana rows");
+                        }
+                    }
+                    if(allowed.Length==0) Assert.AreEqual(0,found,"Nothing unlocked: no items appear");
+                    else Assert.Greater(found,0,"Unlocked items appear on the map");
+                }
+            }
+            finally { game.Account.SignOut(); }
+        }
+        [UnityTest] public IEnumerator AuthoredCoinsAndRunnerFollowCurvesAndStairElevation()
+        {
+            yield return SceneManager.LoadSceneAsync("GameScene"); yield return null;
+            var game=Object.FindFirstObjectByType<GameBootstrap>(); game.StartIntro();
+            for(int i=0;i<82;i++) game.Intro.Tick(.1f);
+            game.enabled=false;
+            foreach(int sequence in new[]{1,4,5,8})
+            {
+                int type=RouteSurface.TypeAt(sequence);
+                for(float z=game.Map.Active[0].Chunk.Entry.position.z;z<=sequence*24;z+=12) game.Map.Tick(z+2);
+                MuhanokMapChunk chunk=null;
+                foreach(var active in game.Map.Active) if(active.Type==type) { chunk=active.Chunk; break; }
+                Assert.IsNotNull(chunk); var coin=chunk.Coins[2]; Vector3 position=coin.transform.position;
+                RouteSurface.Sample(position.z,out float offsetX,out float offsetY);
+                int lane=Mathf.RoundToInt((position.x-offsetX)/2.2f);
+                while(game.Session.Runner.Lane<lane) game.Session.Runner.Command(MotionCommand.Right);
+                while(game.Session.Runner.Lane>lane) game.Session.Runner.Command(MotionCommand.Left);
+                game.Session.Runner.Tick(.3f,0); game.Session.Runner.SetStartZ(position.z);
+                game.Hero.Apply(game.Session.Runner);
+                Assert.AreEqual(offsetY+(game.Session.Runner.Riding?.25f:0),game.Hero.transform.position.y,.001f);
+                Assert.AreEqual(position.x,game.Hero.transform.position.x,.001f);
+                // Stair coins hang at knee height and only count while the runner is stepping.
+                if(RouteSurface.IsStair(type))game.Session.Runner.Command(MotionCommand.KneeStep);
+                int before=game.Session.Score.Coins; coin.Evaluate(game.Session,position.z-1);
+                Assert.AreEqual(before+1,game.Session.Score.Coins,"Authored coin on curved or elevated route must collect");
+                coin.Evaluate(game.Session,position.z-1); Assert.AreEqual(before+1,game.Session.Score.Coins);
+            }
+        }
+        [UnityTest] public IEnumerator MissingCharacterAssetsUseFallback()
+        {
+            // Disable this scene's composition before loading a copy with empty art references.
+            yield return SceneManager.LoadSceneAsync("GameScene"); yield return null;
+            var template = Object.FindFirstObjectByType<GameBootstrap>();
+            var copy = new GameObject("Fallback Test"); copy.SetActive(false);
+            var game = copy.AddComponent<GameBootstrap>(); game.Settings = template.Settings; game.ChunkPrefabs = template.ChunkPrefabs;
+            game.CameraRig = template.CameraRig; game.OutputCamera = template.OutputCamera; game.IntroTimeline = template.IntroTimeline;
+            Object.Destroy(template.gameObject); yield return null;
+            copy.SetActive(true); yield return null;
+            Assert.AreEqual(GameFlowState.TitleIdle, game.Session.Flow.State); Assert.IsNotNull(game.Hero);
+            game.StartIntro(); for (int i = 0; i < 82; i++) game.Intro.Tick(.1f);
+            Assert.AreEqual(GameFlowState.Running, game.Session.Flow.State);
+            Object.Destroy(copy); yield return null;
+        }
+    }
+}
