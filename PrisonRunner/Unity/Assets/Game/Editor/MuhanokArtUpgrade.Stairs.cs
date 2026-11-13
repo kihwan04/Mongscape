@@ -28,6 +28,32 @@ namespace Muhanok.Editor
             AssetDatabase.SaveAssets(); AssetDatabase.Refresh();
             Debug.Log("MUHANOK_STAIR_CHUNKS_PASS: prison, mine and zoo stair chunks without hazards, registered in the scene");
         }
+        // Regenerates every chunk that carried text signs or zoo ceilings, adds the prison-to-mine exit chunk (15) and registers it with the scene.
+        [MenuItem("Mongscape/Rebuild Route Branch Chunks")]
+        public static void RebuildRouteChunks()
+        {
+            Prepare(); IndexModels(); EnsureExitBlockout(RouteSurface.PrisonExit); BuildEditableRoutes();
+            for(int type=0;type<MuhanokContentBuilder.ChunkIds.Length;type++)
+            {
+                if(type==RouteSurface.MineStair||type==RouteSurface.ZooStair) continue; // stair meshes own those chunks and carry no signs
+                UpgradeChunk(type);
+                string path=Root+"/Prefabs/"+MuhanokContentBuilder.ChunkIds[type]+".prefab";
+                var chunk=PrefabUtility.LoadPrefabContents(path);MuhanokVisualPolish.ConfigureShadows(chunk);
+                PrefabUtility.SaveAsPrefabAsset(chunk,path);PrefabUtility.UnloadPrefabContents(chunk);
+            }
+            RegisterChunkPrefabs();
+            AssetDatabase.SaveAssets(); AssetDatabase.Refresh();
+            Debug.Log("MUHANOK_ROUTE_BRANCH_PASS: signs removed, zoo walk chunks open to the sky, prison exit chunk registered");
+        }
+        // The exit starts as a copy of the mine/prison transition chunk (same walking hazards); the art pass rebuilds its environment.
+        private static void EnsureExitBlockout(int index)
+        {
+            string id=MuhanokContentBuilder.ChunkIds[index], path=Root+"/Prefabs/"+id+".prefab";
+            if(AssetDatabase.LoadAssetAtPath<GameObject>(path)!=null) return;
+            if(!AssetDatabase.CopyAsset(Root+"/Prefabs/"+MuhanokContentBuilder.ChunkIds[3]+".prefab",path)) throw new System.InvalidOperationException("Cannot create "+path);
+            var root=PrefabUtility.LoadPrefabContents(path); root.name=id; root.GetComponent<MuhanokMapChunk>().AssetId=id;
+            PrefabUtility.SaveAsPrefabAsset(root,path); PrefabUtility.UnloadPrefabContents(root);
+        }
         // ---- Blender stair meshes (chunk-local, entry at the origin, walkable surface already on the route curve) ----
         private static bool HasStairMesh(int index)=>index==RouteSurface.MineStair||index==RouteSurface.ZooStair;
         private static string StairModelPath(int index)=>"Assets/External/Staging/Blender/"+(index==RouteSurface.MineStair?"MineStair":"ZooStair")+".fbx";

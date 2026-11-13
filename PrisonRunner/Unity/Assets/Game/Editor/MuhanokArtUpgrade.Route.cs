@@ -21,7 +21,7 @@ namespace Muhanok.Editor
             for(int end=0;end<2;end++)
             {
                 float z=end==0?.10f:23.90f;
-                Portal(env,z,RouteSurface.IsMine(type)?wood:iron);
+                if(type!=12) Portal(env,z,RouteSurface.IsMine(type)?wood:iron); // no gate frame on every zoo walk chunk
                 for(int side=-1;side<=1;side+=2)
                 {
                     Shape("ServiceFoot",env,new Vector3(side*3.9f,.16f,z),new Vector3(.45f,.32f,.5f),iron);
@@ -40,10 +40,20 @@ namespace Muhanok.Editor
                 for(int i=12;i<18;i++) for(int lane=-1;lane<=1;lane++) for(int side=-1;side<=1;side+=2)
                     Shape("RailTermination",env,new Vector3(lane*2.2f+side*.53f,.04f,i+.5f),new Vector3(.085f,.065f,1.002f),iron);
             }
+            if(type==RouteSurface.PrisonExit)
+            {
+                // Mirror of the mine-to-prison transition: concrete gives way to rock towards the mine portal at the exit end.
+                for(int side=-1;side<=1;side+=2) for(int i=0;i<5;i++)
+                {
+                    float z=16-i*2;
+                    Shape("ConcreteToRock",env,new Vector3(side*4.65f,1.0f+i*.32f,z),new Vector3(.3f,2+i*.64f,1.95f),concrete);
+                    Shape("TransitionPipe",env,new Vector3(side*4.25f,3.75f,z),new Vector3(.16f,.16f,2.02f),red);
+                }
+                Portal(env,14,wood); Lantern(env,new Vector3(-3.35f,3.1f,13),false);
+            }
             if(type==6||type==10)
             {
                 Shape("OpenServiceExit",env,new Vector3(0,5.0f,22),new Vector3(9.7f,.27f,4),concrete);
-                Label("ANIMAL ENCLOSURES / SERVICE EXIT",env,new Vector3(0,4.15f,23.2f),.13f,cream.color);
             }
             if(type==11)
             {
@@ -56,7 +66,6 @@ namespace Muhanok.Editor
             }
             if(type==4)
             {
-                Label("CELL BLOCK / KEEPERS RETURN",env,new Vector3(0,4.1f,1.1f),.13f,cream.color);
                 for(int side=-1;side<=1;side+=2) Prop("nature-kit","plant_bush",env,new Vector3(side*4.0f,0,.7f),.42f);
             }
         }

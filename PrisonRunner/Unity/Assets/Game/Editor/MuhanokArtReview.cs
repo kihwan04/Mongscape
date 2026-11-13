@@ -75,7 +75,7 @@ namespace Muhanok.Editor
                 var position=new Vector3(RouteSurface.LocalX(index,z),RouteSurface.LocalHeight(index,z)+1.65f,z);
                 var tangent=new Vector3(RouteSurface.LocalX(index,z+.25f)-RouteSurface.LocalX(index,z),RouteSurface.LocalHeight(index,z+.25f)-RouteSurface.LocalHeight(index,z),.25f);
                 game.OutputCamera.transform.SetPositionAndRotation(position,Quaternion.LookRotation(tangent));
-                var atmosphere=game.OutputCamera.GetComponent<WorldAtmosphere>(); if(atmosphere.Moon!=null) atmosphere.Moon.gameObject.SetActive(index>=11);
+                var atmosphere=game.OutputCamera.GetComponent<WorldAtmosphere>(); if(atmosphere.Moon!=null) atmosphere.Moon.gameObject.SetActive(RouteSurface.IsOutdoor(index));
                 Capture(MuhanokContentBuilder.ChunkIds[index]+(boundary?"_Boundary":""),game.OutputCamera); Advance(step);
             }
             else if(step>=4+RouteSurface.SequenceLength*2) EditorApplication.isPlaying=false;

@@ -61,11 +61,18 @@ namespace Muhanok.Editor
             {
                 Mine(env,0,12,index); CartDock(env,true); PrisonShell(env,12,24,index);
                 for(int slab=12;slab<24;slab++)Shape("ServiceFloorSlab",env,new Vector3(0,.008f,slab+.5f),new Vector3(9.8f,.016f,1.002f),concrete);
-                Portal(env,12,wood); Portal(env,15,iron); Label("SERVICE ACCESS",env,new Vector3(0,4.05f,15.15f),.16f,cream.color);
+                Portal(env,12,wood); Portal(env,15,iron);
                 Prop("factory-kit","pipe-large-valve",env,new Vector3(3.6f,.3f,13),1.4f,-90,iron);
             }
             else if(index==RouteSurface.ZooStair) ZooStairProps(env);
-            else if(index>=11) Outdoors(env,index);
+            else if(index==RouteSurface.PrisonExit)
+            {
+                PrisonShell(env,0,12,index); Mine(env,12,24,0);
+                for(int slab=0;slab<12;slab++)Shape("ServiceFloorSlab",env,new Vector3(0,.008f,slab+.5f),new Vector3(9.8f,.016f,1.002f),concrete);
+                for(int slab=12;slab<24;slab++)Shape("MineFloorSlab",env,new Vector3(0,.008f,slab+.5f),new Vector3(9.8f,.016f,1.002f),rock);
+                Portal(env,12,wood);
+            }
+            else if(RouteSurface.IsZoo(index)) Outdoors(env,index);
             else if(index==6){PrisonShell(env,0,16,index);RoomDetails(env,index);ServiceExit(env);}
             else { PrisonShell(env,0,24,index); RoomDetails(env,index); }
             // Identical floor height, width and clear runner envelope at every 24m boundary.
@@ -111,7 +118,6 @@ namespace Muhanok.Editor
         private static void Mine(Transform env,float begin,float end,int variation)
         {
             float middle=(begin+end)*.5f, length=end-begin;
-            if(begin>=0&&(variation==1||variation==2))Label(variation==1?"CART ROUTE / STEER":"SERVICE LANDING / EXIT",env,new Vector3(0,4.05f,variation==1?3:21),.14f,cream.color);
             Shape("DarkRoof",env,new Vector3(0,5.6f,middle),new Vector3(10.8f,.6f,length),rock);
             for(int side=-1;side<=1;side+=2)
             {
@@ -158,7 +164,7 @@ namespace Muhanok.Editor
                 for(float z=begin+.6f;z<end;z+=2.8f) Shape("GroundGravel",env,new Vector3(lane*2.2f+.18f,.03f,z),new Vector3(.25f,.065f,.18f),rockLight,true);
             }
             Prop("survival-kit","barrel",env,new Vector3(-3.98f,0,begin+4),.95f,12,wood);
-            Prop("survival-kit","workbench",env,new Vector3(4.0f,0,begin+10),.9f,-90,wood);
+            if(begin+10<end-1) Prop("survival-kit","workbench",env,new Vector3(4.0f,0,begin+10),.9f,-90,wood);
             AmbientMotes(env,new Vector3(0,2,middle),length,true);
             if(variation==1&&begin>=0)
             {
@@ -246,7 +252,6 @@ namespace Muhanok.Editor
             Shape("CellBench",room,new Vector3(side*6.8f,.38f,z+.7f),new Vector3(1.6f,.16f,.48f),wood);
             Shape("WaterBowl",room,new Vector3(side*5.1f,.08f,z+.55f),new Vector3(.28f,.12f,.28f),pale,true);
             Shape("NumberPlate",room,new Vector3(side*3.84f,3.65f,z+2),new Vector3(.06f,.3f,.7f),navy);
-            Label(number.ToString("000"),room,new Vector3(side*3.78f,3.65f,z+2),.1f,cream.color,side<0?-90:90);
             Lantern(room,new Vector3(side*7.55f,2.85f,z+2),false);
         }
         private static void RoomDetails(Transform env,int index)
@@ -254,11 +259,9 @@ namespace Muhanok.Editor
             if(index==4||index==5)
             {
                 for(int side=-1;side<=1;side+=2) for(int z=4;z<20;z+=6) Cell(env,side,z,100+index*20+z+(side>0?10:0));
-                Label(index==4?"CELL BLOCK A":"CELL BLOCK B",env,new Vector3(0,4.25f,23.8f),.18f,cream.color);
             }
             else if(index==6)
             {
-                Label("SECURITY CHECKPOINT",env,new Vector3(0,4.15f,18),.17f,cream.color);
                 Prop("factory-kit","screen-panel-wide",env,new Vector3(-3.85f,.15f,7),1.4f,-90);
                 // The kit door includes a solid panel; an open frame preserves all three lanes.
                 Portal(env,14,iron);
@@ -284,23 +287,21 @@ namespace Muhanok.Editor
                     for(int z=3;z<24;z+=5) { Shape("RedServicePipe",env,new Vector3(side*3.8f,3.6f,z),new Vector3(.27f,.27f,4.9f),red); Lantern(env,new Vector3(side*3.30f,2.6f,z),false); }
                 }
                 for(int side=-1;side<=1;side+=2) { Prop("factory-kit","catwalk-stairs",env,new Vector3(side*4.10f,0,8),2.8f,side<0?-90:90,iron); Beam("LandingRail",env,new Vector3(side*3.7f,1.1f,3),new Vector3(side*3.7f,3.8f,12),.10f,pale); }
-                Label("UTILITY LEVEL / KEEP MOVING",env,new Vector3(0,4.2f,22),.14f,cream.color);
             }
             else if(index==8)
             {
                 for(int side=-1;side<=1;side+=2) for(int z=3;z<23;z+=4) { bool stacked=(z/4)%2==0; Prop("furniture-kit",stacked?"washerDryerStacked":"washer",env,new Vector3(side*4.05f,0,z),stacked?2.4f:1.35f,side<0?-90:90); Shape("Backsplash",env,new Vector3(side*4.72f,1.0f,z),new Vector3(.07f,1.9f,3.8f),tile); }
-                Prop("furniture-kit","bench",env,new Vector3(-4.0f,0,18),.65f,-90); Label("LAUNDRY 08",env,new Vector3(0,4.2f,22),.19f,cream.color);
+                Prop("furniture-kit","bench",env,new Vector3(-4.0f,0,18),.65f,-90);
             }
             else if(index==9)
             {
                 for(int side=-1;side<=1;side+=2) for(int z=3;z<23;z+=4) { Prop("furniture-kit",z%3==0?"kitchenStove":"kitchenSink",env,new Vector3(side*4.15f,0,z),1.10f,side<0?-90:90); Prop("furniture-kit","hoodLarge",env,new Vector3(side*4.2f,2.0f,z),.7f,side<0?-90:90); }
-                Prop("furniture-kit","kitchenFridgeLarge",env,new Vector3(-4.2f,0,17),2.1f,-90); Label("KITCHEN / MESS HALL",env,new Vector3(0,4.2f,22),.17f,cream.color);
+                Prop("furniture-kit","kitchenFridgeLarge",env,new Vector3(-4.2f,0,17),2.1f,-90);
             }
             else if(index==10)
             {
                 for(int side=-1;side<=1;side+=2) for(int z=3;z<24;z+=5)
                 { Prop("factory-kit","pipe-large-valve",env,new Vector3(side*4.18f,.15f,z),1.4f,side<0?-90:90,iron); Prop("factory-kit",z%2==0?"machine-window-bar":"machine-fortified",env,new Vector3(side*4.24f,0,z+1.4f),2.0f,side<0?-90:90); }
-                Label("MAINTENANCE / YARD ACCESS",env,new Vector3(0,4.2f,22),.15f,cream.color);
             }
         }
         private static void Outdoors(Transform env,int index)
@@ -335,9 +336,8 @@ namespace Muhanok.Editor
                     Shape("TowerRoof",env,new Vector3(side*7.5f,10.1f,17),new Vector3(3.9f,.3f,3.9f),iron);
                 }
             }
-            Portal(env,.16f,pale); Portal(env,23.84f,pale);
-            Label(index==11?"ANIMAL ENCLOSURES / NIGHT ROUTE":index==RouteSurface.ZooStair?"OVERLOOK STAIR / KEEP STEPPING":"MINE SERVICE RETURN",env,new Vector3(0,4.4f,23.5f),.15f,cream.color);
-            if(index==12) { Shape("ReturnCanopy",env,new Vector3(0,5.1f,20),new Vector3(9,.24f,8),concrete); Lantern(env,new Vector3(3.8f,3.4f,22),true); }
+            // Only the zoo entry (11) keeps a gate frame; walking chunks stay open to the sky.
+            if(index==11){ Portal(env,.16f,pale); Portal(env,23.84f,pale); }
         }
         private static void AmbientMotes(Transform parent,Vector3 pos,float length,bool warm)
         {

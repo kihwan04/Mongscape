@@ -39,7 +39,8 @@ namespace Muhanok.Tests
             Assert.AreEqual(lane,p.ChoiceAt(6));
             int count=0;for(int i=CartFork.DestinationChunk;i<RoutePlan.ExtendedLapChunks;i++)if(p.TypeAt(i)==4||p.TypeAt(i)==5)count++;
             int destination=p.DestinationAt(6);
-            Assert.AreEqual(destination==0?14:0,count);
+            int extraStairs=0;for(int i=CartFork.DestinationChunk+1;i<RoutePlan.ExtendedLapChunks;i++)if(p.TypeAt(i)==7)extraStairs++;
+            Assert.AreEqual(destination==0?22:0,count+(destination==0?extraStairs:0),"The prison corridor fills indices 8..29, minus stairs placed in it");
             Assert.AreEqual(destination<0?12:destination>0?0:7,p.TypeAt(CartFork.DestinationChunk),"The three destinations must enter three actual biomes");
             for(int i=0;i<2*RoutePlan.ExtendedLapChunks-1;i++)Assert.AreEqual(p.BaseHeight(i)+RouteSurface.Rise(p.TypeAt(i)),p.BaseHeight(i+1),.001f);
             Assert.AreEqual(0,p.CycleAt(RoutePlan.ExtendedLapChunks-1)); Assert.AreEqual(1,p.CycleAt(RoutePlan.ExtendedLapChunks));
@@ -56,10 +57,15 @@ namespace Muhanok.Tests
                 if(destination==0)
                 {
                     var expected=new System.Collections.Generic.List<int>{0,1,2,1,2,1,3,7};
-                    for(int i=0;i<14;i++)expected.Add(4+i%2);
-                    expected.Add(6);expected.Add(11);for(int i=0;i<7;i++)expected.Add(12);expected.Add(3);
+                    for(int i=0;i<22;i++)expected.Add(4+i%2);
+                    expected.Add(6);expected.Add(RouteSurface.PrisonExit);
                     Assert.AreEqual(32,expected.Count);
-                    for(int i=0;i<32;i++)Assert.AreEqual(expected[i],p.TypeAt(i),"prison chunk "+i);
+                    // Corridor stairs (type 7) may replace corridor chunks; everything else is fixed.
+                    for(int i=0;i<32;i++)
+                    {
+                        if(i>7&&i<30&&p.TypeAt(i)==7)continue;
+                        Assert.AreEqual(expected[i],p.TypeAt(i),"prison chunk "+i);
+                    }
                 }
                 else
                 {
@@ -73,6 +79,36 @@ namespace Muhanok.Tests
                     }
                     Assert.AreEqual(1,stairs);
                 }
+            }
+        }
+        [Test] public void PrisonBranchHasNoZooAndEndsAtCheckpointAndMineExit()
+        {
+            for(int seed=1;seed<=40;seed++)
+            {
+                for(int lap=0;lap<3;lap++)for(int lane=-1;lane<=1;lane++)
+                {
+                    var q=new RoutePlan(new RunConfig(),seed);q.UpdateChoice(lap*RoutePlan.ExtendedLapChunks*RouteSurface.Length+CartFork.Decision+1,lane);
+                    int start=lap*RoutePlan.ExtendedLapChunks;
+                    if(q.DestinationAt(start)!=0)continue;
+                    for(int i=0;i<RoutePlan.ExtendedLapChunks;i++){int t=q.TypeAt(start+i);Assert.AreNotEqual(11,t);Assert.AreNotEqual(12,t);Assert.AreNotEqual(RouteSurface.ZooStair,t);Assert.IsFalse(RouteSurface.IsOutdoor(t),"seed "+seed+" chunk "+i);}
+                    Assert.AreEqual(6,q.TypeAt(start+30));Assert.AreEqual(RouteSurface.PrisonExit,q.TypeAt(start+31));
+                    Assert.AreEqual(0f,RouteSurface.Rise(RouteSurface.PrisonExit));
+                    Assert.IsFalse(RouteSurface.IsOutdoor(RouteSurface.PrisonExit));Assert.IsFalse(RouteSurface.IsZoo(RouteSurface.PrisonExit));
+                }
+            }
+        }
+        [Test] public void EveryBranchHoldsOneBiomeAfterTheSharedStart()
+        {
+            var mine=new System.Collections.Generic.HashSet<int>{0,RouteSurface.MineStair};
+            var zoo=new System.Collections.Generic.HashSet<int>{12,RouteSurface.ZooStair};
+            var prison=new System.Collections.Generic.HashSet<int>{4,5,6,7,RouteSurface.PrisonExit};
+            for(int seed=1;seed<=30;seed++)for(int lane=-1;lane<=1;lane++)
+            {
+                var p=new RoutePlan(new RunConfig(),seed);p.UpdateChoice(CartFork.Decision+1,lane);
+                int d=p.DestinationAt(6);var allowed=d<0?zoo:d>0?mine:prison;
+                for(int i=CartFork.DestinationChunk;i<RoutePlan.ExtendedLapChunks;i++)
+                    if(!(i==RoutePlan.ExtendedLapChunks-1&&d<0&&p.TypeAt(i)==3))Assert.IsTrue(allowed.Contains(p.TypeAt(i)),"seed "+seed+" branch "+d+" chunk "+i+" type "+p.TypeAt(i));
+                Assert.AreEqual(1,p.CycleAt(RoutePlan.ExtendedLapChunks),"Every branch lap is exactly "+RoutePlan.ExtendedLapChunks+" chunks");
             }
         }
         [Test] public void ForkChunksStayInsideTheShortenedLap()

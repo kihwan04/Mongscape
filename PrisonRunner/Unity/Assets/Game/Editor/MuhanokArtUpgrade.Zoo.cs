@@ -77,6 +77,7 @@ namespace Muhanok.Editor
             ZooLowLog();
             for(int type=11;type<MuhanokContentBuilder.ChunkIds.Length;type++)
             {
+                if(!RouteSurface.IsZoo(type))continue;
                 string path=Root+"/Prefabs/"+MuhanokContentBuilder.ChunkIds[type]+".prefab";
                 var root=PrefabUtility.LoadPrefabContents(path);
                 try { MuhanokGameplayUpgrade.Configure(root,type); PrefabUtility.SaveAsPrefabAsset(root,path); }
@@ -121,7 +122,7 @@ namespace Muhanok.Editor
         }
         private static void AddZooHazards(GameObject root,int type)
         {
-            if(type<11||RouteSurface.IsStair(type))return;
+            if(!RouteSurface.IsZoo(type)||RouteSurface.IsStair(type))return;
             foreach(var obstacle in root.GetComponent<MuhanokMapChunk>().Obstacles)
             {
                 Clear(obstacle.transform);var old=obstacle.GetComponent<DescendingGate>();if(old!=null)Object.DestroyImmediate(old);
@@ -145,7 +146,7 @@ namespace Muhanok.Editor
         {
             var old=root.transform.Find("FloorItems");if(old!=null)Object.DestroyImmediate(old.gameObject);
             var chunk=root.GetComponent<MuhanokMapChunk>();chunk.FloorItems=new FloorItemController[type==11?1:type==12?2:0];
-            if(type<11||type==RouteSurface.MineStair)return;
+            if(!RouteSurface.IsZoo(type))return;
             var group=Node("FloorItems",root.transform,Vector3.zero);
             for(int index=0;index<chunk.FloorItems.Length;index++)
             {
@@ -170,7 +171,6 @@ namespace Muhanok.Editor
                 Prop("nature-kit","tree_palmDetailedTall",env,new Vector3(side*7.0f,0,21),4.6f);
             }
             Shape("ExitAwning",env,new Vector3(0,4.8f,18),new Vector3(9.5f,.22f,4),iron);
-            Label("ANIMAL ENCLOSURES",env,new Vector3(0,4.20f,20),.16f,cream.color);
         }
     }
 }

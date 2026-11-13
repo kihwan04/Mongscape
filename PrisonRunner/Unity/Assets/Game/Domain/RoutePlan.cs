@@ -5,7 +5,7 @@ namespace Muhanok.Domain
 {
     // Chunk order for one run. The first lap keeps the authored order; later laps form intervals:
     // a mine-cart rest followed by a sprint whose length follows the configured sprint time.
-    // Height rules: 0-3 ground, 7 climbs, 4/5/6 stay up, 11 descends, 12 ground.
+    // Height rules: 0-3 ground, 7 climbs, 4/5/6 stay up, 11 descends, 12 ground, 15 (prison exit) stays up.
     public sealed class RoutePlan
     {
         public static readonly int[] AuthoredLap = { 0, 1, 2, 3, 7, 4, 5, 6, 11, 12 };
@@ -110,19 +110,18 @@ namespace Muhanok.Domain
                 while(lap.Count<ExtendedLapChunks-1)lap.Add(lane<0?12:0);
                 lap.Add(lane<0?3:0);return lap.ToArray();
             }
+            // Prison branch: entrance stair, corridor up to the checkpoint, then the prison-to-mine exit. No outdoor chunk follows.
             lap.Add(7);
-            int prison = 14;
-            for (int i = 0; i < prison; i++) lap.Add(4 + i % 2);
-            lap.Add(6); lap.Add(11);
-            while (lap.Count < ExtendedLapChunks-1) lap.Add(12);
-            lap.Add(3); // Covered outdoor-to-mine return, rather than an abrupt biome cut at the next lap.
+            for (int i = 0; lap.Count < ExtendedLapChunks - 2; i++) lap.Add(4 + i % 2);
+            lap.Add(6); lap.Add(RouteSurface.PrisonExit);
             return lap.ToArray();
         }
-        // Stair chunks per lap follow the difficulty curve: 1, then 2, then 3. The prison entrance stair counts as one.
+        // Stair chunks per lap follow the difficulty curve: 1, then 2, then 3. The prison entrance stair counts as one;
+        // extra prison stairs reuse the type-7 stair chunk inside the corridor.
         public const int MinStairSpacing = 6;
         public static int StairsPerLap(float progress) => progress < 1f / 3f ? 1 : progress < 2f / 3f ? 2 : 3;
-        private static bool Transition(int type) => type == 3 || type == 6 || type == 7 || type == 11;
-        // Turns some walking chunks of the chosen branch into the biome's stair (mine 0 -> 13, zoo 12 -> 14). Corridor chunks stay corridors.
+        private static bool Transition(int type) => type == 3 || type == 6 || type == 7 || type == 11 || type == RouteSurface.PrisonExit;
+        // Turns some walking chunks of the chosen branch into the biome's stair (mine 0 -> 13, zoo 12 -> 14, prison corridor 4/5 -> 7).
         // Seeded from (seed, lap), so the same seed and choices always give the same layout; chunks before the destination entrance,
         // the lap's return chunk and neighbours of transition chunks are never used.
         private void PlaceStairs(int lapIndex, int lapStart, int[] lap)
@@ -135,7 +134,7 @@ namespace Muhanok.Domain
             var rng = new Random(unchecked(seed * 486187739 + lapIndex * 1013904223 + 12345));
             var candidates = new List<int>();
             for (int i = CartFork.DestinationChunk + 1; i < lap.Length - 1; i++)
-                if ((lap[i] == 0 || lap[i] == 12) && !Transition(lap[i - 1]) && !Transition(lap[i + 1])) candidates.Add(i);
+                if ((lap[i] == 0 || lap[i] == 12 || lap[i] == 4 || lap[i] == 5) && !Transition(lap[i - 1]) && !Transition(lap[i + 1])) candidates.Add(i);
             for (int i = candidates.Count - 1; i > 0; i--) { int j = rng.Next(i + 1); int swap = candidates[i]; candidates[i] = candidates[j]; candidates[j] = swap; }
             foreach (int i in candidates)
             {
@@ -143,7 +142,7 @@ namespace Muhanok.Domain
                 bool apart = true;
                 foreach (int other in stairs) apart &= Math.Abs(other - i) >= MinStairSpacing;
                 if (!apart) continue;
-                lap[i] = lap[i] == 0 ? RouteSurface.MineStair : RouteSurface.ZooStair; stairs.Add(i);
+                lap[i] = lap[i] == 0 ? RouteSurface.MineStair : lap[i] == 12 ? RouteSurface.ZooStair : 7; stairs.Add(i);
             }
         }
         public RoutePlan(RunConfig tuning, int seed)
