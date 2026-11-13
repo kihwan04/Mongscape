@@ -53,4 +53,4 @@ Mongscape 1.0.0을 GitHub Releases에 ZIP으로 올리기 전에 위에서부터
 ## 다음 버전에서 고려할 것
 
 - **IL2CPP 빌드:** Unity는 출시용 Windows 빌드에 IL2CPP를 권장합니다. C# DLL 대신 네이티브 코드로 나가서 시작이 빠르고 디컴파일이 어렵습니다. Unity Hub의 **Windows Build Support (IL2CPP)** 모듈과 Visual Studio의 **C++를 사용한 데스크톱 개발** 워크로드가 필요하며, 빌드 시간이 길어집니다. 리플렉션을 쓰는 코드(Newtonsoft.Json 등)는 코드 제거 설정을 확인해야 합니다.
-- **코드 서명:** 서명하지 않은 `Mongscape.exe`는 처음 실행할 때 Windows SmartScreen이 "Windows의 PC 보호" 경고를 띄웁니다. 코드 서명 인증서(유료)로 서명하면 경고가 줄어듭니다. 그 전까지는 실행 안내에 "추가 정보 → 실행"을 적어 둡니다.
+- **코드 서명:** 1.0.0은 서명 없이 출시합니다(2026-11-14 결정). 서명하지 않은 `Mongscape.exe`는 처음 실행할 때 Windows SmartScreen이 "Windows의 PC 보호" 경고를 띄웁니다. 코드 서명 인증서(유료)로 서명하면 경고가 줄어듭니다. 그 전까지는 실행 안내에 "추가 정보 → 실행"을 적어 둡니다.
