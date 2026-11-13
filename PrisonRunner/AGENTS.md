@@ -3,9 +3,9 @@
 ## 현재 기준
 
 - 게임 이름은 **Mongscape(몽스케이프)**, 이전 이름은 무한옥이다. 내부 Muhanok/PrisonRunner 네임스페이스, GUID, 저장 키와 과거 문서 제목은 기존 참조를 유지한다.
-- 작업 대상은 이 체크아웃과 개인 저장소 `kihwan04/PrisonRunner`다. 별도 `leewono/muhanok` 저장소는 수정하지 않는다. 현재 소스는 `6e50060` 기반이며 이전 구현으로 되돌리지 않는다.
-- **2026-10-29 최신 사용자 지시: PR #20 통합 소스 및 미사용 문서·이미지·리소스 정리를 develop에 반영하는 것만 승인한다. 새 릴리스·태그·실행 파일/영상 게시·서버 배포와 기존 개인 DB 마이그레이션은 금지한다. 이전의 업로드 금지는 이 소스 병합 범위에 한해 변경됐다.**
-- 새 Windows 빌드의 기본 경로는 `Builds/Mongscape/Windows/Mongscape.exe`다. StartGame은 완료된 새 빌드를 우선하고 없으면 현재 소스를 Unity에서 실행한다. 이전 Muhanok.exe로 돌아가지 않는다.
+- 작업 대상은 이 체크아웃과 저장소 `kihwan04/Mongscape`(예전 이름 `kihwan04/PrisonRunner`)다. 별도 `leewono/muhanok` 저장소는 수정하지 않는다. 현재 소스는 `6e50060` 기반이며 이전 구현으로 되돌리지 않는다.
+- **2026-11-14 기준: 1.0.0 정식 출시를 준비한다.** 출시 작업은 `deploy-test` 브랜치에 모으고 나중에 `main`에 머지한다. `develop`은 전시용으로 유지하므로 출시 전용 변경(전시 모드 제거, Release/Dev 빌드 분리)을 넣지 않는다. 릴리스·태그 생성, GitHub 업로드, 저장소 공개 전환, 서버 배포, 개인 DB 마이그레이션은 그때마다 사용자 승인을 받는다. 순서는 [출시 체크리스트](docs/RELEASE_CHECKLIST.md)를 따른다.
+- 배포용 Release 빌드는 `Builds/Mongscape/Windows/Mongscape.exe`, 검수용 Dev 빌드는 `Builds/Mongscape/WindowsDev/Mongscape.exe`다. 개발자(전시) 모드와 검수용 실행 인수는 에디터와 Dev 빌드에서만 동작한다. StartGame은 완료된 새 빌드를 우선하고 없으면 현재 소스를 Unity에서 실행한다. 이전 Muhanok.exe로 돌아가지 않는다.
 
 ## 먼저 읽을 문서
 
@@ -32,7 +32,7 @@
 
 - 중앙 서버는 Caddy HTTPS → Docker Python/OpenCV/Psycopg API → PostgreSQL 17 volume 구성이다. 몸동작 추론은 각 게임 PC에서 유지한다.
 - 주소 우선순위는 MONGSCAPE_IDENTITY_URL → EXE 옆 identity-server.json → 기존 loopback 기본값이다. 원격 HTTPS와 잘못된 설정의 오류 처리를 유지한다.
-- 얼굴 등록 동의 화면은 연결된 서버 저장을 안내한다. 실제 DB·얼굴·토큰·.env·설치별 설정을 Git/공개 ZIP에 넣지 않는다.
+- 얼굴 특징값은 민감정보다. 회원가입 동의 화면은 만 14세 이상 확인, 개인정보, 민감정보를 따로 필수 동의받고 항목·목적·저장 위치·보유기간을 안내한다. 문구를 바꾸면 [개인정보 처리방침](docs/PRIVACY_POLICY.md)과 서버의 `CONSENT_VERSION`을 함께 고친다. 실제 DB·얼굴·토큰·.env를 Git/공개 ZIP에 넣지 않는다. 출시 ZIP의 `identity-server.json`에는 운영 서버 주소만 들어간다.
 - Docker build context는 .dockerignore 허용 목록으로 제한한다. 기존 로컬 DB를 중앙 서버에 자동 업로드하지 않는다.
 - 기존 2026-10-25 ZIP은 localhost 전용이다. 중앙 주소 설정에는 2026-10-26 새 클라이언트를 사용한다.
 
