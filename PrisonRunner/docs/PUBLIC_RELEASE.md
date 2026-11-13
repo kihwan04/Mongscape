@@ -2,7 +2,7 @@
 
 웹캠 앞에서 몸을 움직여 달리는 Windows 운동 러너 게임입니다. 웹캠이 없으면 키보드로 플레이할 수 있습니다.
 
-> 이 문서는 GitHub 릴리스 본문으로 쓰입니다(`Tools/Distribution/publish_github.ps1`). 출시 전 확인 순서는 [출시 체크리스트](RELEASE_CHECKLIST.md)를 따릅니다.
+<!-- 이 문서는 GitHub 릴리스 본문으로 쓰입니다(`Tools/Distribution/publish_github.ps1`). 출시 전 확인 순서는 [출시 체크리스트](RELEASE_CHECKLIST.md)를 따릅니다. -->
 
 ## 다운로드와 실행
 
