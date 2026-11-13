@@ -24,6 +24,9 @@ namespace Muhanok.Domain
         // 2024 Adult Compendium: 22240 total-body active game 4 MET; upper-body active game about 2.5 MET; seated play 1.3 MET.
         public static double Met(PlayStyle style) => style == PlayStyle.FullBody ? 4 : style == PlayStyle.UpperBody ? 2.5 : 1.3;
         public static bool UsesCamera(PlayStyle style) => style != PlayStyle.Keyboard;
+        // Without a connected camera only the keyboard can be played. Developer mode keeps every style for testing.
+        public static bool Allowed(PlayStyle style, bool cameraConnected, bool developer) => developer || cameraConnected || !UsesCamera(style);
+        public static PlayStyle Playable(PlayStyle style, bool cameraConnected, bool developer) => Allowed(style, cameraConnected, developer) ? style : PlayStyle.Keyboard;
         // PlayStyle value of a saved label; -1 when the label is missing or unknown.
         public static int ModeOf(string label) => label == "전신" ? 0 : label == "상체" ? 1 : label == "키보드" ? 2 : -1;
     }
