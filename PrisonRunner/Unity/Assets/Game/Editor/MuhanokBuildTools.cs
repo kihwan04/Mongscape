@@ -43,10 +43,17 @@ namespace Muhanok.Editor
             if(icon==null)throw new Exception("App icon missing");
             PlayerSettings.SetIcons(NamedBuildTarget.Unknown,new[]{icon},IconKind.Any);
             PlayerSettings.defaultScreenWidth = OutputResolution.Width; PlayerSettings.defaultScreenHeight = OutputResolution.Height;
+            // Per-flavor player settings are restored after the build so ProjectSettings stays unchanged.
+            var screenBefore = PlayerSettings.fullScreenMode; var traceBefore = PlayerSettings.GetStackTraceLogType(LogType.Log);
             // The saved settings decide the mode after launch; this is only the first frame before they load.
             PlayerSettings.fullScreenMode = release ? FullScreenMode.FullScreenWindow : FullScreenMode.Windowed;
             // Ordinary logs keep no stack traces in a release player; warnings and errors keep theirs for bug reports.
             PlayerSettings.SetStackTraceLogType(LogType.Log, release ? StackTraceLogType.None : StackTraceLogType.ScriptOnly);
+            try { BuildPlayer(release); }
+            finally { PlayerSettings.fullScreenMode = screenBefore; PlayerSettings.SetStackTraceLogType(LogType.Log, traceBefore); AssetDatabase.SaveAssets(); }
+        }
+        private static void BuildPlayer(bool release)
+        {
             string folder = release ? "Windows" : "WindowsDev";
             string destination = Path.GetFullPath(Path.Combine(UnityEngine.Application.dataPath, "../../Builds/Mongscape/" + folder + "/Mongscape.exe"));
             Directory.CreateDirectory(Path.GetDirectoryName(destination));

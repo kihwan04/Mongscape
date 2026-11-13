@@ -158,6 +158,8 @@ namespace Muhanok.Bootstrap
             };
             settingsDefaults.ApplyPreset(QualityPreset.Balanced);
             userSettings = UserSettingsStore.Load(settingsDefaults);
+            // A release player never runs in developer mode, even if an exhibition PC saved it on. Not saved back.
+            if (!ToolingFlags.DeveloperModeAvailable && userSettings.DeveloperMode) { userSettings.DeveloperMode = false; Debug.Log("Developer mode is not available in release builds."); }
             graphics = new GraphicsSettingsApplier();
             overlay = gameObject.AddComponent<PerformanceOverlay>();
             // Pose diagnostics are a developer-mode tool; regular play never shows them.
@@ -421,6 +423,7 @@ namespace Muhanok.Bootstrap
         // Developer (exhibition) mode: per-run names and every item unlocked. Switching it starts from a clean player.
         public void SetDeveloperMode(bool on, bool save = true)
         {
+            if (on && !ToolingFlags.DeveloperModeAvailable) return;
             userSettings.DeveloperMode = on;
             if (save) UserSettingsStore.Save(userSettings);
             player = on ? new PlayerProfile { Style = Account.Settings.Style } : Account.Profile.Clone();

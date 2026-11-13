@@ -9,6 +9,13 @@ namespace Muhanok.Bootstrap
         public const string Smoke = "--muhanok-smoke", UiCapture = "--muhanok-uicapture", Capture = "--muhanok-capture",
             Review = "--mongscape-review", Tests = "--mongscape-tests", Recording = "--mongscape-recording";
 
+        // Developer (exhibition) mode and its operator keys: Editor and development builds only.
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        public static bool DeveloperModeAvailable => true;
+#else
+        public static bool DeveloperModeAvailable => false;
+#endif
+
         public static bool Has(string flag)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
