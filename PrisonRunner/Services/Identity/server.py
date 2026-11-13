@@ -19,7 +19,7 @@ LIMIT_WINDOW=60; FACE_LIMIT=15; FACE_LIMIT_ALL=60; NAME_CHECK_LIMIT=60; NAME_CHE
 LEADERBOARD_LIMIT=120; RUNS_LIMIT=20 # per client IP / per account
 ITEM_PRICES={0:30,1:60,2:100} # ItemKind: magnet, coin x2, shield; same as client ItemCatalog
 MODES=range(3) # PlayStyle: 0 full body, 1 upper body, 2 keyboard
-DEFAULT_WEIGHT=65; WEIGHT_MIN,WEIGHT_MAX=10,350; LEADERBOARD_SIZE=50; CONSENT_VERSION='account-v2' # weight range = the game's WorkoutEstimate
+DEFAULT_WEIGHT=65; WEIGHT_MIN,WEIGHT_MAX=10,350; LEADERBOARD_SIZE=50; CONSENT_VERSION='account-v3' # weight range = the game's WorkoutEstimate
 KST=9*3600
 def kst_midnight(now): return (int(now)+KST)//86400*86400-KST
 def number(data,key,low,high,integer=False,message=None):

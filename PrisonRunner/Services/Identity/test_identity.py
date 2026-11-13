@@ -69,7 +69,7 @@ class IdentityTests(PostgresCase):
   first=self.enroll(weight=72.5,style=1,goal=30);self.assertTrue(first['ok']);self.assertTrue(first['avatar']);self.assertNotEqual(first['token'],'')
   self.assertEqual(first['profile'],dict(id=first['id'],name='Tester',weight=72.5,style=1,goal=30.0,coins=0,unlocked=[],tutorial_done=False))
   self.assertNotIn('avatar',self.store.columns('profiles'))
-  self.assertEqual(self.store.db.execute('SELECT consent_version FROM profiles').fetchone()[0],'account-v2')
+  self.assertEqual(self.store.db.execute('SELECT consent_version FROM profiles').fetchone()[0],'account-v3')
   self.store.db.close();self.store=self.make_store();self.app=App(self.store,self.faces)
   login=self.app.handle('/login',dict(images=self.images));self.assertEqual(first['id'],login['profile']['id']);self.assertNotEqual(first['token'],login['token'])
   # The badge photo comes from this request's frames, so it is returned although nothing was stored.
