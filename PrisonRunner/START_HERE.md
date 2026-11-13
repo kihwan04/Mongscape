@@ -4,7 +4,7 @@
 
 ## 현재 소스로 실행
 
-Unity Hub에서 `Unity/`를 **6000.3.10f1**로 열고 패키지 복원 후 **Mongscape → Play GameScene**을 실행합니다. Windows 실행 파일은 **Mongscape → Build Windows Demo**로 만듭니다. 출력은 `Builds/Mongscape/Windows/Mongscape.exe`입니다.
+Unity Hub에서 `Unity/`를 **6000.3.10f1**로 열고 패키지 복원 후 **Mongscape → Play GameScene**을 실행합니다. 배포용 Windows 실행 파일은 **Mongscape → Build Windows Release**로 만듭니다. 출력은 `Builds/Mongscape/Windows/Mongscape.exe`입니다. QA 스크립트·캡처·녹화는 **Build Windows Dev (QA)**의 `Builds/Mongscape/WindowsDev/Mongscape.exe`를 사용합니다.
 
 이 작업 PC에는 통합본의 로컬 빌드를 검수해 두었습니다. 저장소 맨 위 또는 이 폴더의 `StartGame.cmd`는 완료된 빌드를 우선 실행하고 없으면 Unity에서 현재 소스를 엽니다. 다른 PC에서 소스를 새로 받은 경우 빌드를 포함하지 않으므로 Unity 실행/빌드가 필요합니다. 기존 v2026.10.26 공개 ZIP에는 계정 v2 통합 기능이 없습니다.
 
@@ -31,7 +31,7 @@ Unity Hub에서 `Unity/`를 **6000.3.10f1**로 열고 패키지 복원 후 **Mon
 {"url":"https://faces.your-domain.com"}
 ```
 
-개발 PC에서는 Unity 메뉴 **Mongscape → Identity Server Address…**에서 주소를 한 번 저장하면 됩니다. `Unity/identity-server.json`(Git 제외)에 저장되고, **Build Windows Demo**가 빌드할 때마다 `Builds/Mongscape/Windows/identity-server.json`으로 복사하므로 환경 변수를 설정하거나 Unity를 다시 켤 필요가 없습니다. 명령줄 빌드는 `-identityUrl https://…` 인수로도 지정할 수 있습니다. 주소가 잘못되면 빌드가 시작 전에 멈춥니다.
+개발 PC에서는 Unity 메뉴 **Mongscape → Identity Server Address…**에서 주소를 한 번 저장하면 됩니다. `Unity/identity-server.json`(Git 제외)에 저장되고, 두 빌드 메뉴가 빌드할 때마다 출력 폴더의 `identity-server.json`으로 복사하므로 환경 변수를 설정하거나 Unity를 다시 켤 필요가 없습니다. 명령줄 빌드는 `-identityUrl https://…` 인수로도 지정할 수 있습니다. 주소가 잘못되면 빌드가 시작 전에 멈춥니다.
 
 환경 변수 `MONGSCAPE_IDENTITY_URL`이 파일보다 우선합니다(Unity Editor는 실행할 때의 환경 변수만 읽습니다). 원격 연결은 HTTPS, 테스트 loopback은 HTTP를 사용합니다. 주소를 바꾼 뒤 게임을 다시 실행합니다. 얼굴 사진은 서버에 보관하지 않고 인식 특징값·계정·기록을 PostgreSQL에 저장합니다.
 

@@ -14,6 +14,10 @@ def package():
     for required in ("Mongscape.exe", "UnityPlayer.dll", "Mongscape_Data/boot.config", "MonoBleedingEdge"):
         if not (build / required).exists():
             raise RuntimeError(f"Required game component missing: {required}")
+    marker = build / "Mongscape.complete"
+    flavor = marker.read_text(encoding="utf-8").split() if marker.is_file() else []
+    if not flavor or flavor[0] != "release":
+        raise RuntimeError("Release build required: run Mongscape > Build Windows Release (Dev/QA builds are not shipped)")
     entries = {}
     for path in build.rglob("*"):
         if not path.is_file() or any("DoNotShip" in part for part in path.parts):

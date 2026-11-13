@@ -8,7 +8,7 @@ Unity 6000.3.10f1 / C# 기반 Windows 운동 러너입니다. 현재 소스는 `
 
 - 플레이: [START_HERE.md](START_HERE.md). 작업 폴더의 `StartGame.cmd`는 최신 완료 빌드를 실행합니다.
 - 개발: Unity Hub에서 `Unity/`를 **6000.3.10f1**로 열고 **Mongscape → Play GameScene**을 실행합니다. `PlayInUnity.cmd`도 같은 씬을 엽니다.
-- 빌드: **Mongscape → Build Windows Demo**. 출력은 `Builds/Mongscape/Windows/Mongscape.exe`입니다.
+- 빌드: 배포용은 **Mongscape → Build Windows Release**(`Builds/Mongscape/Windows/Mongscape.exe`), QA·캡처용은 **Build Windows Dev (QA)**(`Builds/Mongscape/WindowsDev/Mongscape.exe`, 검수 명령줄 인수는 이 빌드에서만 동작)입니다.
 - 검증: `Tools/QA/verify_unity_merge.ps1`, `Tools/QA/verify_short_fork.ps1`. 실행 환경은 [기술 스택](docs/TECH_STACK.md)을 확인하세요.
 
 키보드와 몸동작 플레이는 얼굴 서버 없이 사용할 수 있습니다. 몸동작은 Unity 내부 BlazePose 추론으로 처리하고, 얼굴 로그인·개인 기록은 선택한 로컬/중앙 서버에 저장합니다.
