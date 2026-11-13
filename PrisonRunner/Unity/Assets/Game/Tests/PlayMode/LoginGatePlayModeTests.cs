@@ -68,7 +68,12 @@ namespace Muhanok.Tests
             fake.TakenName="민수";
             game.OpenLogin();hud.ChooseLogin(LoginAction.SignUp);
             Assert.AreEqual(MenuPage.SignUp,hud.Page);var flow=hud.SignUp;Assert.AreEqual(SignUpStep.Consent,flow.Step);
-            flow.Agree();Assert.AreEqual(SignUpStep.Nickname,flow.Step);
+            Assert.IsFalse(flow.Agree(),"Nothing checked: stays on consent");Assert.AreEqual(SignUpStep.Consent,flow.Step);
+            flow.Toggle(ConsentItem.Age);flow.Toggle(ConsentItem.Personal);
+            Assert.IsFalse(flow.Agree(),"The separate biometric consent is required");Assert.AreEqual(SignUpStep.Consent,flow.Step);
+            flow.Toggle(ConsentItem.Biometric);Assert.IsTrue(flow.AllAgreed);
+            flow.ToggleAll();Assert.IsFalse(flow.Agreed(ConsentItem.Age)||flow.Agreed(ConsentItem.Personal)||flow.Agreed(ConsentItem.Biometric),"All checked: 전체 동의 clears them");
+            flow.ToggleAll();Assert.IsTrue(flow.Agree());Assert.AreEqual(SignUpStep.Nickname,flow.Step);
             flow.SubmitNickname("   ");Assert.AreEqual(SignUpStep.Nickname,flow.Step);StringAssert.Contains("입력",flow.NameMessage);
             flow.SubmitNickname("민수");Assert.AreEqual(SignUpStep.Nickname,flow.Step);StringAssert.Contains("사용 중",flow.NameMessage);
             flow.SubmitNickname(" 새회원 ");Assert.AreEqual(SignUpStep.Settings,flow.Step);Assert.AreEqual("새회원",flow.Nickname);
@@ -92,7 +97,7 @@ namespace Muhanok.Tests
         {
             yield return Open();
             game.OpenLogin();hud.ChooseLogin(LoginAction.SignUp);var flow=hud.SignUp;
-            flow.Agree();flow.SubmitNickname("기본값");flow.SkipSettings();Assert.AreEqual(SignUpStep.Capture,flow.Step);
+            flow.ToggleAll();flow.Agree();flow.SubmitNickname("기본값");flow.SkipSettings();Assert.AreEqual(SignUpStep.Capture,flow.Step);
             hud.EnrollFace();
             Assert.IsTrue(game.SignedIn);var sent=fake.Enrollments[0];
             Assert.AreEqual(AccountSettings.DefaultWeight,sent.weight);Assert.AreEqual((int)PlayStyle.FullBody,sent.style);
