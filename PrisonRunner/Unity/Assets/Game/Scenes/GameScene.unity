@@ -26276,6 +26276,7 @@ MonoBehaviour:
   - {fileID: 2733621615420726000, guid: 42cc0b817bf320b4499343daf29e048a, type: 3}
   - {fileID: 4934102156688395891, guid: 32ec3897597605c4baea677f9172a9b5, type: 3}
   - {fileID: 3019429327397147692, guid: 6c4ab259fcbc5c045bdfd096a02916a5, type: 3}
+  - {fileID: 8440839310535049228, guid: bf0c236044eb5a744b659715314d5300, type: 3}
   MonkeyPrefab: {fileID: 2600305597835814258, guid: 0031ccc85cbc96e48890b910042b039d, type: 3}
   PolicePrefab: {fileID: 8021463333828462112, guid: a06b8efaed88ff64c97c0392759bd39d, type: 3}
   CartPrefab: {fileID: 3403629705736343575, guid: e58ae0a03e87a3f479b34eeb3e56e99a, type: 3}
