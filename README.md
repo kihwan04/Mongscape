@@ -4,6 +4,14 @@ Unity 6000.3.10f1 기반 Windows 운동 러너입니다. 광산·수레 갈림�
 
 **2026-10-29: PR #20과 기존 개선을 통합한 소스입니다. develop 병합만 진행하며 새 릴리스·태그·서버 배포는 하지 않습니다. 기존 공개 ZIP은 통합 이전 버전입니다.**
 
+## 플레이 화면
+
+광산에서는 세 개의 레일을 오가며 장애물을 피하고 코인을 모읍니다. 화면에서 경찰의 접근 상태와 이동 거리, 점수, 몸동작으로 추정한 소모 칼로리를 확인할 수 있습니다.
+
+| 광산 주행 | 경찰에게 붙잡히는 장면 |
+| --- | --- |
+| [<img src="docs/images/gameplay/mine-run.png" width="460" alt="광산의 세 레일과 코인, 경찰 접근 상태를 보여주는 1인칭 주행 화면">](docs/images/gameplay/mine-run.png) | [<img src="docs/images/gameplay/police-capture.png" width="460" alt="광산에서 경찰이 원숭이 캐릭터를 붙잡는 장면">](docs/images/gameplay/police-capture.png) |
+
 ## 실행
 
 `StartGame.cmd`를 실행합니다. 타이틀 → 로그인 선택 → 얼굴 로그인·회원가입 또는 게스트 → 메인 메뉴 → 게임 시작/튜토리얼 순서입니다. 계정 서버 없이 게스트·키보드 플레이를 사용할 수 있습니다. 몸동작은 각 PC의 Unity에서 처리합니다.
