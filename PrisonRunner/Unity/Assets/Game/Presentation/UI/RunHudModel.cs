@@ -153,7 +153,8 @@ namespace Muhanok.Presentation
             previousPolice = police;
             if (session.Runner.Riding != previousRiding)
             {
-                sectionUntil = now + 1.8f; nextScan = 0;
+                // Only boarding the cart is announced; leaving it shows no "달리기 구간" line.
+                sectionUntil = session.Runner.Riding ? now + 1.8f : 0; nextScan = 0;
                 previousRiding = session.Runner.Riding;
             }
             // Lane changes refresh immediately; otherwise search at most ten times a second.
@@ -173,7 +174,7 @@ namespace Muhanok.Presentation
                 case HudNoticeKind.Fork: Notice = style == PlayStyle.Keyboard ? "A 왼쪽   C 가운데   D 오른쪽" : "← 몸을 옮겨 경로 선택 →"; break;
                 case HudNoticeKind.Police: Notice = "경찰 접근!"; break;
                 case HudNoticeKind.Combo: Notice = comboText; break;
-                case HudNoticeKind.Section: Notice = session.Runner.Riding ? "수레 구간" : "달리기 구간"; break;
+                case HudNoticeKind.Section: Notice = "수레 구간"; break;
             }
         }
 
