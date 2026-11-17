@@ -293,8 +293,8 @@ namespace Muhanok.Bootstrap
         {
             Session.Flow.Transition(GameFlowState.LoadingIntro);
             hud.BeginLoading(); hud.LoadingProgress=.12f;
-            // The player stands still during loading; that is the calibration pose. A fresh result-screen calibration is kept.
-            if (!Pose.CalibrationFresh(Time.realtimeSinceStartupAsDouble)) Pose.Recalibrate();
+            // Every run calibrates again: the player stands still during loading, and the countdown waits for it (WaitForCalibration).
+            Pose.Recalibrate(); runCalibrated = false;
             yield return new WaitForSecondsRealtime(.25f);
             RouteSurface.UsePlan(Session.IsTutorial?TutorialCourse.Plan(Session.Config):new RoutePlan(Session.Config, seed));
             Session.Reset(); keyboard.Clear(); poseInput.Clear(); hud.LoadingProgress=.42f;
@@ -358,6 +358,7 @@ namespace Muhanok.Bootstrap
             if (Session.Flow.State == GameFlowState.IntroTimeline) hud.Fade = Mathf.Clamp01(1 - Intro.Elapsed * 3f);
             if (Session.Flow.State == GameFlowState.Running)
             {
+                if (WaitForCalibration()) return;
                 StartBannerSounds();
                 Tutorial.Tick(Time.realtimeSinceStartup);
                 // The finished tutorial has already gone back to the menu (Retry); nothing of the run may follow this frame.
@@ -394,6 +395,19 @@ namespace Muhanok.Bootstrap
                     if(Capture.Complete)Session.Flow.Transition(GameFlowState.Result);
                 }
             }
+        }
+        // Camera play never starts a run before its own calibration: the runner stands at the start with "바르게 서 주세요"
+        // while the player is found and measured, then the countdown begins. A missing camera or model does not hold the run.
+        private bool runCalibrated = true;
+        private bool WaitForCalibration()
+        {
+            if (runCalibrated) return false;
+            var status = Pose.Status;
+            bool measuring = Pose.UsesCamera && (status == PoseStatus.Starting || status == PoseStatus.Searching || status == PoseStatus.Calibrating);
+            runStartedAt = Time.realtimeSinceStartup;
+            if (measuring) return true;
+            runCalibrated = true; bannerSounded = goSounded = false; Pose.ResetCommands();
+            return false;
         }
         private void StartBannerSounds()
         {
@@ -627,6 +641,7 @@ namespace Muhanok.Bootstrap
         float IHudData.SecondsSinceJump => (float)(Time.realtimeSinceStartupAsDouble - Pose.LastJumpTime);
         float IHudData.SecondsSinceKneeStep => (float)(Time.realtimeSinceStartupAsDouble - Pose.LastKneeStepTime);
         float IHudData.CalibrationProgress => Pose.CalibrationProgress;
+        bool IHudData.PoseKneesMissing => Pose.KneesMissing;
         float IHudData.StepsPerMinute => Pose.StepsPerMinute;
         bool IHudData.BodyActive => Pose.Tracking && Pose.Reading.Active;
         // Developer mode keeps this PC's exhibition wallet with every item open; players see their account.

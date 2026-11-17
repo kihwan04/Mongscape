@@ -42,6 +42,8 @@ namespace Muhanok.Domain
         private int stepIndex;
         public PoseStatus Status { get; private set; } = PoseStatus.Searching;
         public bool Calibrated => calibrated;
+        // Full body calibration is waiting because a knee is out of view.
+        public bool KneesMissing { get; private set; }
         public float CalibrationProgress => calibrated ? 1f : Math.Min(1f, samples / (float)Math.Max(1, tuning.CalibrationFrames));
         public readonly MotionReading Reading = new MotionReading();
         public float StepsPerMinute { get; private set; }
@@ -136,6 +138,9 @@ namespace Muhanok.Domain
             Status = PoseStatus.Calibrating;
             float scale = CurrentScale;
             if (scale < .02f) { samples = 0; return; }
+            // Full body play reads knees (high knee, crouch); a calibration without both knees in view does not count.
+            KneesMissing = style == PlayStyle.FullBody && !KneesSeen;
+            if (KneesMissing) { samples = 0; return; }
             // Restart when the player is still moving: the baseline must be a calm standing pose.
             if (samples > 0)
             {

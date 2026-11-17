@@ -40,14 +40,6 @@ namespace Muhanok.Domain
             : status == PoseStatus.NoModel ? "포즈 모듈 없음" : status == PoseStatus.Searching ? "사람을 찾는 중" : status == PoseStatus.Calibrating ? "가만히 서 주세요 (자세 맞추는 중)" : "인식 완료";
     }
 
-    // A run keeps the standing baseline of a calibration that finished at most a minute ago (result-screen 웹캠 보정)
-    // when tracking has not been lost since; otherwise loading calibrates again.
-    public static class CalibrationReuse
-    {
-        public const double MaxAgeSeconds = 60;
-        public static bool Keep(double now, double calibratedAt, bool lostSince) => calibratedAt >= 0 && !lostSince && now >= calibratedAt && now - calibratedAt <= MaxAgeSeconds;
-    }
-
     [Serializable]
     public sealed class PoseCameraOptions
     {

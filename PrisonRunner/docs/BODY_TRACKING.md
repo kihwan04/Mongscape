@@ -18,7 +18,7 @@
 
 탈출 준비에서 방식을 고르고 카메라 미리보기와 관절선을 확인합니다. 시작하기를 누른 뒤 로딩 중 가운데에 가만히 서면 자동 보정합니다. 움직이면 보정을 다시 시도합니다. 사람이 오래 사라지면 다시 보정하며 R로도 재보정할 수 있습니다.
 
-결과 화면의 웹캠 보정(전신·상체 판만)은 큰 미리보기를 띄우고 바로 재보정합니다. `PoseTracker`는 보정이 끝난 시각(`CalibratedAt`)과 그 뒤 인식이 끊겼는지(`LostSinceCalibration`: 유예 시간을 넘긴 추적 손실, 방식·카메라 변경, 새 보정 시작)를 기록합니다. R·자동 재보정도 끝나면 새 완료 시각이 됩니다. 다음 판의 로딩(`GameBootstrap.PrepareRun`)은 보정이 60초 이내에 끝났고 그 뒤 인식이 끊기지 않았으면 재보정을 건너뛰고 그 기준 자세를 그대로 씁니다. 판단은 `Domain/PoseTypes.cs`의 `CalibrationReuse.Keep(now, calibratedAt, lostSince)`입니다.
+결과 화면의 웹캠 보정(전신·상체 판만)은 큰 미리보기를 띄우고 바로 재보정합니다. 그와 별개로 **모든 판은 로딩 때 다시 보정합니다**(`GameBootstrap.PrepareRun`). 카메라 방식이면 보정이 끝날 때까지 출발 카운트다운을 시작하지 않고 러너를 출발선에 세워 둡니다(`WaitForCalibration`, 배너 "바르게 서 주세요"). 카메라·모델이 없으면 기다리지 않습니다. 전신 방식은 양쪽 무릎이 보여야 보정 샘플이 쌓이고, 무릎이 안 보이면 샘플을 처음부터 다시 모으며 "무릎까지 보이게 뒤로 물러나 주세요"를 표시합니다(`MotionClassifier.KneesMissing`). `PoseTracker`는 보정이 끝난 시각(`CalibratedAt`)과 그 뒤 인식이 끊겼는지(`LostSinceCalibration`)를 기록합니다.
 
 짧은 추적 손실, 숙이기 직전/직후의 동작 충돌, 반복 점프를 처리하는 유지 시간과 신뢰도 조건이 있습니다. 값은 `Unity/Assets/Game/Content/Data/GameSettings.asset`의 **Camera / Motion**에서 조정합니다. 기본 카메라 요청은 640×480, 30fps이며 실제 지원 해상도는 장치에 따라 달라집니다.
 
