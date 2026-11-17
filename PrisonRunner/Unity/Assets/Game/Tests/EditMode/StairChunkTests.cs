@@ -9,8 +9,8 @@ namespace Muhanok.Tests
     {
         private const int Lap = RoutePlan.ExtendedLapChunks;
         [TearDown] public void Reset() => RouteSurface.UsePlan(null);
-        // Grace 0 and full 1536 m put lap 0 / 1 / 2 (starting at 0 / 768 / 1536 m) in the 1 / 2 / 3 stair buckets.
-        private static RunConfig Curve() => new RunConfig { DifficultyGraceDistance = 0f, DifficultyFullDistance = 1536f };
+        // Grace 0 and full distance at the third lap put lap 0 / 1 / 2 (starting at 0 / 432 / 864 m) in the 1 / 2 / 3 stair buckets.
+        private static RunConfig Curve() => new RunConfig { DifficultyGraceDistance = 0f, DifficultyFullDistance = 2f * Lap * RouteSurface.Length };
         private static float DecisionAt(int lap) => lap * Lap * RouteSurface.Length + CartFork.Decision + 1;
         private static bool Transition(int type) => type == 3 || type == 6 || type == 7 || type == 11 || type == RouteSurface.PrisonExit;
         private static int[] Choose(int seed, params int[] lanes)
@@ -55,7 +55,7 @@ namespace Muhanok.Tests
                         {
                             Assert.Contains(7, stairs, note); Assert.AreEqual(7, types[CartFork.DestinationChunk], note);
                             Assert.AreEqual(expected, stairs.Count, "Prison stairs: the entrance plus corridor stairs, " + note);
-                            foreach (int i in stairs) { Assert.AreEqual(7, types[i], "Prison stairs are the type-7 stair chunk: " + note); if (i != 7) Assert.IsTrue(i >= 9 && i <= 28, "Extra prison stair sits in the corridor: " + note); }
+                            foreach (int i in stairs) { Assert.AreEqual(7, types[i], "Prison stairs are the type-7 stair chunk: " + note); if (i != 7) Assert.IsTrue(i >= 9 && i <= 14, "Extra prison stair sits in the corridor: " + note); }
                         }
                         else
                         {
@@ -73,7 +73,7 @@ namespace Muhanok.Tests
                             Assert.IsFalse(Transition(types[i - 1]) || Transition(types[i + 1]), "Next to a transition chunk: " + note);
                         }
                         for (int i = 0; i < CartFork.DestinationChunk; i++) Assert.IsFalse(RouteSurface.IsStair(types[i]), "Shared start: " + note);
-                        for (int i = 0; i < Lap; i++) if (types[i] == 4 || types[i] == 5) Assert.IsTrue(i >= 8 && i <= 29, "Corridor stays corridor: " + note);
+                        for (int i = 0; i < Lap; i++) if (types[i] == 4 || types[i] == 5) Assert.IsTrue(i >= 8 && i <= 15, "Corridor stays corridor: " + note);
                     }
             Assert.AreEqual(9, seen.Count, "Every branch was exercised on every lap");
         }

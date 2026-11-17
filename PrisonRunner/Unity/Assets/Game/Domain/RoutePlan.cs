@@ -25,7 +25,8 @@ namespace Muhanok.Domain
         private readonly Dictionary<int, int> choices = new Dictionary<int, int>();
         private readonly List<int[]> destinations = new List<int[]>();
         public bool Extended => config != null && config.ExtendedRoutes;
-        public const int ExtendedLapChunks = 32;
+        // One lap: the 7-chunk mine start and cart fork, then 11 chunks of the chosen destination.
+        public const int ExtendedLapChunks = 18;
         public int LocalSequence(int sequence) { Ensure(sequence); return sequence - starts[cycles[sequence]]; }
         public bool IsForkTrackChunk(int sequence) => Extended && LocalSequence(sequence) >= CartFork.FirstChunk && LocalSequence(sequence) <= CartFork.LastChunk && ForkCycle(cycles[sequence]);
         public bool RailChoiceLocked(float z)=>Extended&&ForkLocked(z)&&LapDistance(z)>=CartFork.Decision&&LapDistance(z)<CartFork.End;
@@ -117,8 +118,9 @@ namespace Muhanok.Domain
             return lap.ToArray();
         }
         // Stair chunks per lap follow the difficulty curve: 1, then 2, then 3. The prison entrance stair counts as one;
-        // extra prison stairs reuse the type-7 stair chunk inside the corridor.
-        public const int MinStairSpacing = 6;
+        // extra prison stairs reuse the type-7 stair chunk inside the corridor. Three stairs fit the 11-chunk destination
+        // with at least two walking chunks between them.
+        public const int MinStairSpacing = 3;
         public static int StairsPerLap(float progress) => progress < 1f / 3f ? 1 : progress < 2f / 3f ? 2 : 3;
         private static bool Transition(int type) => type == 3 || type == 6 || type == 7 || type == 11 || type == RouteSurface.PrisonExit;
         // Turns some walking chunks of the chosen branch into the biome's stair (mine 0 -> 13, zoo 12 -> 14, prison corridor 4/5 -> 7).
@@ -135,15 +137,25 @@ namespace Muhanok.Domain
             var candidates = new List<int>();
             for (int i = CartFork.DestinationChunk + 1; i < lap.Length - 1; i++)
                 if ((lap[i] == 0 || lap[i] == 12 || lap[i] == 4 || lap[i] == 5) && !Transition(lap[i - 1]) && !Transition(lap[i + 1])) candidates.Add(i);
-            for (int i = candidates.Count - 1; i > 0; i--) { int j = rng.Next(i + 1); int swap = candidates[i]; candidates[i] = candidates[j]; candidates[j] = swap; }
-            foreach (int i in candidates)
+            var shuffled = new List<int>(candidates);
+            for (int i = shuffled.Count - 1; i > 0; i--) { int j = rng.Next(i + 1); int swap = shuffled[i]; shuffled[i] = shuffled[j]; shuffled[j] = swap; }
+            // A random pick can leave no room for the last stair on the short lap; then the stairs go in order from the front.
+            var picked = Pick(shuffled, stairs, want);
+            if (stairs.Count + picked.Count < want) picked = Pick(candidates, stairs, want);
+            foreach (int i in picked) lap[i] = lap[i] == 0 ? RouteSurface.MineStair : lap[i] == 12 ? RouteSurface.ZooStair : 7;
+        }
+        private static List<int> Pick(List<int> order, List<int> fixedStairs, int want)
+        {
+            var all = new List<int>(fixedStairs); var picked = new List<int>();
+            foreach (int i in order)
             {
-                if (stairs.Count >= want) break;
+                if (all.Count >= want) break;
                 bool apart = true;
-                foreach (int other in stairs) apart &= Math.Abs(other - i) >= MinStairSpacing;
+                foreach (int other in all) apart &= Math.Abs(other - i) >= MinStairSpacing;
                 if (!apart) continue;
-                lap[i] = lap[i] == 0 ? RouteSurface.MineStair : lap[i] == 12 ? RouteSurface.ZooStair : 7; stairs.Add(i);
+                all.Add(i); picked.Add(i);
             }
+            return picked;
         }
         public RoutePlan(RunConfig tuning, int seed)
         {
