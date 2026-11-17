@@ -29,7 +29,7 @@ namespace Muhanok.Presentation
             if(Event.current.type!=EventType.Repaint || !GUI.enabled || !Visible || hovered || !rect.Contains(Position))return false;
             hovered=true;
             if(target!=id || targetRect!=rect){dwell.Reset();target=id;targetRect=rect;}
-            return dwell.Tick(id,Time.realtimeSinceStartupAsDouble,true,.75);
+            return dwell.Tick(id,Time.realtimeSinceStartupAsDouble,true);
         }
         public static void Draw()
         {

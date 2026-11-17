@@ -206,10 +206,12 @@ namespace Muhanok.Tests
         }
         [Test] public void DwellCancelsOnTrackingLossAndFiresOnlyOncePerHover()
         {
-            var d=new GestureDwell();Assert.IsFalse(d.Tick("start",0,true));for(int i=1;i<9;i++)Assert.IsFalse(d.Tick("start",i*.1,true));Assert.IsTrue(d.Tick("start",.91,true));
-            Assert.IsFalse(d.Tick("start",1.1,true));d.Tick(null,1.2,false);
-            Assert.IsFalse(d.Tick("start",1.3,true));Assert.IsFalse(d.Tick("start",1.4,false));
-            Assert.IsFalse(d.Tick("start",2,true));for(int i=1;i<9;i++)Assert.IsFalse(d.Tick("start",2+i*.1,true));Assert.IsTrue(d.Tick("start",2.91,true));
+            // A hand click holds for 1.2 s.
+            Assert.AreEqual(1.2,GestureDwell.ClickSeconds,1e-9);
+            var d=new GestureDwell();Assert.IsFalse(d.Tick("start",0,true));for(int i=1;i<12;i++)Assert.IsFalse(d.Tick("start",i*.1,true));Assert.IsTrue(d.Tick("start",1.21,true));
+            Assert.IsFalse(d.Tick("start",1.3,true));d.Tick(null,1.4,false);
+            Assert.IsFalse(d.Tick("start",1.5,true));Assert.IsFalse(d.Tick("start",1.6,false));
+            Assert.IsFalse(d.Tick("start",2,true));for(int i=1;i<12;i++)Assert.IsFalse(d.Tick("start",2+i*.1,true));Assert.IsTrue(d.Tick("start",3.21,true));
         }
         [Test] public void FiveSuccessfulMovesEarnComboAndRetryClearsIt()
         {
