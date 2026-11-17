@@ -27,6 +27,36 @@ namespace Muhanok.Tests
             var run = Running(); run.IsTutorial = true; run.Invincible = true;
             Assert.IsTrue(run.Hit(true)); Assert.AreEqual(1, run.TutorialMisses);
         }
+        // Height when the runner reaches an obstacle after jumping `before` seconds ahead of it.
+        private static float HeightAtObstacle(RunConfig config, float before)
+        {
+            var runner = new RunnerController(config); runner.Command(MotionCommand.Jump);
+            const float dt = 1f / 240f; for (float t = 0; t < before - dt * .5f; t += dt) runner.Tick(dt, 0);
+            return runner.Y;
+        }
+        [TestCase(PlayStyle.Keyboard)] [TestCase(PlayStyle.FullBody)] [TestCase(PlayStyle.UpperBody)]
+        public void ActingOnTheJumpCallClearsTheObstacle(PlayStyle style)
+        {
+            var config = new RunConfig();
+            ActionTiming.JumpClearWindow(config, out float enter, out float exit);
+            Assert.That(enter, Is.GreaterThan(0).And.LessThan(exit));
+            float cue = ActionTiming.JumpCueSeconds(config, style), lead = ActionTiming.Lead(style);
+            // Reacting exactly as expected, a quarter second sooner or later: the take-off still clears.
+            foreach (float reaction in new[] { lead, lead - .2f, lead + .2f })
+                Assert.Greater(HeightAtObstacle(config, cue - reaction), ActionTiming.JumpClearance, style + " reaction " + reaction);
+            // The old call came 1.35 s ahead: an immediate jump landed before the obstacle.
+            Assert.Less(HeightAtObstacle(config, 1.35f - lead), ActionTiming.JumpClearance);
+        }
+        [Test] public void CrouchCallLeavesTheCrouchHeldAtTheObstacle()
+        {
+            var config = new RunConfig();
+            foreach (PlayStyle style in new[] { PlayStyle.Keyboard, PlayStyle.FullBody })
+            {
+                float start = ActionTiming.CrouchCueSeconds(config, style) - ActionTiming.Lead(style);
+                Assert.That(start, Is.GreaterThan(0).And.LessThan(config.CrouchSeconds));
+            }
+            Assert.IsTrue(ActionTiming.Due(5, 9, .6f)); Assert.IsFalse(ActionTiming.Due(6, 9, .6f)); Assert.IsFalse(ActionTiming.Due(-1, 9, .6f));
+        }
         [Test] public void FlowRejectsSkippedStates()
         {
             var flow = new GameFlowController(); Assert.IsFalse(flow.Transition(GameFlowState.Running));

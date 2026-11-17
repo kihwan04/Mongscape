@@ -28,9 +28,9 @@ namespace Muhanok.Presentation
                 else
                 {
                     ConsiderStair(session, active.Chunk.Sequence, style, ref nearest, ref cue);
-                    Consider(session, active.Chunk.Obstacles, ref nearest, ref cue);
-                    Consider(session, active.Chunk.ExerciseObstacles, ref nearest, ref cue);
-                    Consider(session, active.Chunk.DynamicObstacles, ref nearest, ref cue);
+                    Consider(session, active.Chunk.Obstacles, style, ref nearest, ref cue);
+                    Consider(session, active.Chunk.ExerciseObstacles, style, ref nearest, ref cue);
+                    Consider(session, active.Chunk.DynamicObstacles, style, ref nearest, ref cue);
                 }
             }
             return cue;
@@ -46,7 +46,22 @@ namespace Muhanok.Presentation
             nearest = d; cue = StairCue(style);
         }
         public static string StairCue(PlayStyle style) => style == PlayStyle.Keyboard ? "W 연타!" : style == PlayStyle.UpperBody ? "팔 번갈아!" : "무릎 번갈아!";
-        private static void Consider(RunSession session, System.Collections.Generic.IList<ObstacleController> hazards, ref float nearest, ref string cue)
+        public const string JumpCue = "↑  점프!", CrouchCue = "↓  숙이기!", LaneCue = "←  옆으로 피하기  →";
+        public enum CueAction { Lane, Jump, Crouch }
+        public static CueAction ActionOf(ObstacleController hazard) =>
+            hazard.GetComponentInParent<ZooHazard>() != null ? CueAction.Jump : hazard.GetComponent<ClosingSlideGate>() != null ? CueAction.Crouch
+            : hazard.Kind == ObstacleKind.Pipe ? CueAction.Crouch : hazard.Kind == ObstacleKind.Crate || hazard.Kind == ObstacleKind.Cart ? CueAction.Jump : CueAction.Lane;
+        // Jump and crouch calls wait for their timing (ActionTiming); a side step can be called early.
+        public static bool CueDue(RunSession session, PlayStyle style, CueAction action, float distance)
+        {
+            float speed = session.CurrentSpeed > 0 ? session.CurrentSpeed : session.TargetSpeed;
+            if (action == CueAction.Jump) return ActionTiming.Due(distance, speed, ActionTiming.JumpCueSeconds(session.Config, style));
+            if (action == CueAction.Crouch) return ActionTiming.Due(distance, speed, ActionTiming.CrouchCueSeconds(session.Config, style));
+            return distance >= 0 && distance <= Mathf.Max(9f, session.TargetSpeed * 1.35f);
+        }
+        public static string CueText(CueAction action) => action == CueAction.Jump ? JumpCue : action == CueAction.Crouch ? CrouchCue : LaneCue;
+        // The nearest obstacle in the runner's way decides the call; a jump or crouch not yet due shows nothing (not a farther obstacle's call).
+        private static void Consider(RunSession session, System.Collections.Generic.IList<ObstacleController> hazards, PlayStyle style, ref float nearest, ref string cue)
         {
             if (hazards == null) return;
             float lookAhead = Mathf.Max(9f, session.TargetSpeed * 1.35f);
@@ -61,7 +76,8 @@ namespace Muhanok.Presentation
                     if (Mathf.Abs(session.Runner.Lane * session.Config.LaneSpacing + offset - hazard.transform.position.x) > .95f) continue;
                 }
                 nearest = d;
-                cue = hazard.GetComponentInParent<ZooHazard>() != null ? "↑  점프!" : hazard.GetComponent<ClosingSlideGate>() != null ? "↓  숙이기!" : hazard.Kind == ObstacleKind.Pipe ? "↓  숙이기!" :  hazard.Kind == ObstacleKind.Crate || hazard.Kind == ObstacleKind.Cart ? "↑  점프!" : "←  옆으로 피하기  →";
+                var action = ActionOf(hazard);
+                cue = CueDue(session, style, action, d) ? CueText(action) : null;
             }
         }
     }
