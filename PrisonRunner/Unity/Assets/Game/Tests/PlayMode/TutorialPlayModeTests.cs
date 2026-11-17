@@ -47,7 +47,10 @@ namespace Muhanok.Tests
         {
             yield return OpenAsMember();
             game.OpenMainMenu();hud.SelectMenu(MenuAction.Tutorial);
+            Assert.AreEqual(MenuPage.TutorialOffer,hud.Page,"The menu's 튜토리얼 asks for the play style first");
+            hud.ChooseTutorial(TutorialChoice.Start,PlayStyle.Keyboard);
             yield return WaitRunning();
+            Assert.AreEqual(PlayStyle.Keyboard,game.Tutorial.Script.Style);
             CollectionAssert.IsEmpty(game.RunItems(),"No item spawns in the tutorial");
             yield return new WaitForSecondsRealtime(.5f);
             Assert.AreEqual(0,Object.FindObjectsByType<ItemPickup>(FindObjectsSortMode.None).Length);
@@ -82,14 +85,64 @@ namespace Muhanok.Tests
                 var t=game.Tutorial;var step=t.Script.Current;
                 if(!t.Retrying&&game.Session.Flow.State==GameFlowState.Running)
                 {
-                    bool near=t.LessonDistance<=TutorialDirector.ActDistance;
+                    bool near=t.LessonDistance<=TutorialDirector.ShowDistance;
                     if(step==TutorialStep.Lane&&near&&run.Lane==0)run.Command(MotionCommand.Left);
-                    else if(step==TutorialStep.Jump&&near&&!t.Resumed&&run.Y<=.001f)run.Command(MotionCommand.Jump);
-                    else if(step==TutorialStep.Crouch&&near)run.Command(MotionCommand.Crouch);
+                    else if(step==TutorialStep.Jump&&t.Cue==ActionCuePresenter.JumpCue&&run.Y<=.001f)run.Command(MotionCommand.Jump);
+                    else if(step==TutorialStep.Crouch&&t.Cue==ActionCuePresenter.CrouchCue)run.Command(MotionCommand.Crouch);
                 }
                 yield return null;
             }
             Assert.AreEqual(TutorialStep.HighKnee,game.Tutorial.Script.Current,"The warm-up reaches the stair lesson");
+        }
+
+        [UnityTest]
+        public IEnumerator MenuTutorialPicksABodyStyleThatCalibratesFirstAndBackReturnsToTheMenu()
+        {
+            yield return OpenAsMember();
+            game.OpenMainMenu();hud.SelectMenu(MenuAction.Tutorial);
+            hud.ChooseTutorial(TutorialChoice.Skip);Assert.AreEqual(MenuPage.Main,hud.Page,"돌아가기 from the menu's tutorial choice");
+            game.SetDeveloperMode(true,false);// body styles without a camera
+            game.OpenMainMenu();hud.SelectMenu(MenuAction.Tutorial);hud.ChooseTutorial(TutorialChoice.Start,PlayStyle.UpperBody);
+            float deadline=Time.realtimeSinceStartup+10;
+            while((game.IsLoading||game.Session.Flow.State!=GameFlowState.Running)&&Time.realtimeSinceStartup<deadline)yield return null;
+            Assert.AreEqual(PlayStyle.UpperBody,game.Tutorial.Script.Style);
+            CollectionAssert.AreEqual(new TutorialScript(PlayStyle.UpperBody).Steps,game.Tutorial.Script.Steps);
+            Assert.AreEqual(TutorialStep.Calibrate,game.Tutorial.Script.Steps[0],"Body styles calibrate before the first lesson");
+            game.ExitToMenu();game.SetDeveloperMode(false,false);game.FaceLogout(false);
+        }
+
+        [UnityTest]
+        public IEnumerator LessonsRunAtFullSpeedAndAnEarlyJumpPassesAtOnce()
+        {
+            yield return OpenAsMember();
+            hud.OpenMainMenu();hud.SelectMenu(MenuAction.Play);hud.ChooseTutorial(TutorialChoice.Start);
+            yield return WaitRunning();
+            var run=game.Session.Runner;Time.timeScale=2;
+            float deadline=Time.realtimeSinceStartup+60;
+            bool earlyJumped=false;
+            while(game.Tutorial.Active&&game.Tutorial.Script.Current!=TutorialStep.Crouch&&Time.realtimeSinceStartup<deadline)
+            {
+                var t=game.Tutorial;
+                if(!t.Retrying)
+                {
+                    Assert.AreEqual(1f,game.Session.SpeedScale,"No slow motion in front of a lesson");
+                    if(t.Script.Current==TutorialStep.Lane&&t.Waiting&&run.Lane==0)run.Command(MotionCommand.Right);
+                    else if(t.Script.Current==TutorialStep.Jump&&t.Waiting&&!earlyJumped)
+                    {
+                        Assert.IsNull(t.Cue,"The jump call waits for its timing");
+                        StringAssert.StartsWith("「점프!」",t.Message);
+                        // Far too early for the crate: the lesson still completes on the jump itself.
+                        run.Command(MotionCommand.Jump);earlyJumped=true;
+                    }
+                }
+                yield return null;
+            }
+            Assert.IsTrue(earlyJumped);Assert.AreEqual(TutorialStep.Crouch,game.Tutorial.Script.Current,"The jump completed the lesson");
+            // Landing in front of the crate is forgiven: running past it does not restart the jump lesson.
+            float end=(TutorialCourse.JumpChunk+1)*RouteSurface.Length;
+            while(run.Z<end&&Time.realtimeSinceStartup<deadline)yield return null;
+            Assert.IsFalse(game.Tutorial.Retrying);Assert.AreEqual(0,game.Tutorial.Script.TotalRetries);
+            Time.timeScale=1;game.ExitToMenu();game.FaceLogout(false);
         }
 
         [UnityTest]
@@ -111,10 +164,12 @@ namespace Muhanok.Tests
             yield return DriveToStairs();
             var run=game.Session.Runner;var model=hud.RunModel;var fx=game.StairFx;
             bool cue=false,gauge=false,warnSeen=false;float pitch=0,bob=0;
-            float deadline=Time.realtimeSinceStartup+60;
-            while(game.Tutorial.Active&&game.Tutorial.Script.Current==TutorialStep.HighKnee&&Time.realtimeSinceStartup<deadline)
+            float deadline=Time.realtimeSinceStartup+60,stairEnd=(TutorialCourse.StairChunk+1)*RouteSurface.Length;
+            // The first knee step completes the lesson; the climb goes on to the top of the stair chunk.
+            while(game.Tutorial.Active&&run.Z<stairEnd&&Time.realtimeSinceStartup<deadline)
             {
-                if(!game.Tutorial.Retrying&&(game.Tutorial.LessonDistance<=TutorialDirector.ActDistance||StairJudge.StepDue(run))&&run.SinceKneeStep>=.4f)run.Command(MotionCommand.KneeStep);
+                bool atFoot=game.Tutorial.Script.Current==TutorialStep.HighKnee&&game.Tutorial.LessonDistance<=3.6f;
+                if(!game.Tutorial.Retrying&&(atFoot||StairJudge.StepDue(run))&&run.SinceKneeStep>=.4f)run.Command(MotionCommand.KneeStep);
                 cue|=ActionCuePresenter.Find(game.Session,game.Map,PlayStyle.Keyboard)=="W 연타!";
                 gauge|=model.ShowStair&&model.KneeGauge>0f&&model.StairProgress>0f;
                 warnSeen|=model.KneeWarning;
@@ -148,12 +203,12 @@ namespace Muhanok.Tests
                 var t=game.Tutorial;var step=t.Script.Current;
                 if(!t.Retrying&&!t.Script.Finished&&game.Session.Flow.State==GameFlowState.Running)
                 {
-                    bool near=t.LessonDistance<=TutorialDirector.ActDistance;
+                    bool near=t.LessonDistance<=TutorialDirector.ShowDistance;
                     if(step==TutorialStep.Lane&&near&&run.Lane==0)run.Command(MotionCommand.Left);
-                    else if(step==TutorialStep.Jump&&near&&!t.Resumed&&run.Y<=.001f)run.Command(MotionCommand.Jump);
-                    else if(step==TutorialStep.Crouch&&near)run.Command(MotionCommand.Crouch);
+                    else if(step==TutorialStep.Jump&&t.Cue==ActionCuePresenter.JumpCue&&run.Y<=.001f)run.Command(MotionCommand.Jump);
+                    else if(step==TutorialStep.Crouch&&t.Cue==ActionCuePresenter.CrouchCue)run.Command(MotionCommand.Crouch);
                     else if(step==TutorialStep.HighKnee&&(near||StairJudge.StepDue(run))&&run.SinceKneeStep>=.4f)run.Command(MotionCommand.KneeStep);
-                    else if(step==TutorialStep.Rail&&t.LessonDistance<=TutorialDirector.SlowDistance&&run.Lane==0)run.Command(TutorialCourse.RailLean);
+                    else if(step==TutorialStep.Rail&&near&&run.Lane==0)run.Command(TutorialCourse.RailLean);
                     else if(step==TutorialStep.Fork&&(RouteSurface.ActivePlan?.ForkWindow(run.Z)??false)&&run.Lane==0)run.Command(MotionCommand.Left);
                 }
                 yield return null;

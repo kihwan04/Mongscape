@@ -251,7 +251,7 @@ namespace Muhanok.Domain
         // Tutorial runs never end in a capture: a mistake is only counted and the tutorial restarts the step.
         public bool IsTutorial { get => tutorial; set { tutorial = value; TutorialMisses = 0; } }
         public int TutorialMisses {get;private set;}
-        // The tutorial slows the runner in front of a lesson obstacle (1 = normal speed).
+        // The tutorial holds the runner (0) for its calibration step and a retry, and eases it (.5) at the finish; 1 = normal speed.
         public float SpeedScale {get;set;}=1f;
         private bool tutorial;
         // Demo invincibility (development builds only, toggled by the operator): no capture, fall or slip ends or slows the run.

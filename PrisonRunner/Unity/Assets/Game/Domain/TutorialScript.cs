@@ -90,6 +90,15 @@ namespace Muhanok.Domain
                 default: return "기본 동작을 모두 익혔어요!";
             }
         }
+        // Jump and crouch are timed: before their call the line only prepares the player, so nobody acts too early.
+        public static bool Timed(TutorialStep step) => step == TutorialStep.Jump || step == TutorialStep.Crouch;
+        public static string Prepare(TutorialStep step, PlayStyle style)
+        {
+            bool keys = style == PlayStyle.Keyboard, upper = style == PlayStyle.UpperBody;
+            if (step == TutorialStep.Jump) return keys ? "「점프!」 신호가 뜨면 스페이스 키를 누르세요." : upper ? "「점프!」 신호가 뜨면 두 손을 머리 위로 드세요." : "「점프!」 신호가 뜨면 제자리에서 점프하세요.";
+            if (step == TutorialStep.Crouch) return keys ? "「숙이기!」 신호가 뜨면 S(↓) 키를 누르고 있으세요." : upper ? "「숙이기!」 신호가 뜨면 몸을 낮추세요." : "「숙이기!」 신호가 뜨면 무릎을 굽혀 숙이세요.";
+            return Instruction(step, style);
+        }
         // Shown for members who have not finished it and for every guest, once per session.
         public static bool ShouldOffer(bool member, bool tutorialDone, bool offeredThisSession) => !offeredThisSession && (!member || !tutorialDone);
     }

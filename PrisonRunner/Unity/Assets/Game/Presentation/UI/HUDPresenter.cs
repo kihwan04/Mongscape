@@ -28,7 +28,7 @@ namespace Muhanok.Presentation
         public Action StartTutorial;
         public Func<bool> OfferTutorial;
         private TutorialOfferScreen tutorialOffer;
-        private bool offerAfterSignUp;
+        private TutorialOfferScreen.Mode offerMode;
         private IdentityScreen identity;
         private LoginGateScreen gate;
         private SignUpScreen signUp;
@@ -106,12 +106,14 @@ namespace Muhanok.Presentation
         public void LoginWithFace() => Account?.FaceLogin(ok => { if (ok && Page == MenuPage.Identity) OpenMainMenu(); });
         // Sign-up capture: the new member is signed in and is offered the tutorial.
         public void EnrollFace() => SignUp.Capture(ok => { if (ok && Page == MenuPage.SignUp) { OfferTutorial?.Invoke(); ShowTutorialOffer(true); } });
-        public void ShowTutorialOffer(bool afterSignUp) { offerAfterSignUp = afterSignUp; ShowPage(MenuPage.TutorialOffer); }
-        // "튜토리얼 시작" runs it; skipping goes on to where the player was heading.
-        public void ChooseTutorial(TutorialChoice choice)
+        public void ShowTutorialOffer(bool afterSignUp) { offerMode = afterSignUp ? TutorialOfferScreen.Mode.AfterSignUp : TutorialOfferScreen.Mode.BeforePlay; ShowPage(MenuPage.TutorialOffer); }
+        // The main menu's "튜토리얼" opens the same choice of play style; skipping returns to the menu.
+        public void ShowTutorialChoice() { offerMode = TutorialOfferScreen.Mode.FromMenu; ShowPage(MenuPage.TutorialOffer); }
+        // Starting runs it in the chosen style (or the player's current one); skipping goes on to where the player was heading.
+        public void ChooseTutorial(TutorialChoice choice, PlayStyle? style = null)
         {
-            if (choice == TutorialChoice.Start) StartTutorial?.Invoke();
-            else if (choice == TutorialChoice.Skip) { if (offerAfterSignUp) OpenMainMenu(); else ShowPage(MenuPage.Setup); }
+            if (choice == TutorialChoice.Start) { if (style.HasValue) Data?.PreviewStyle(style.Value); StartTutorial?.Invoke(); }
+            else if (choice == TutorialChoice.Skip) { if (offerMode == TutorialOfferScreen.Mode.BeforePlay) ShowPage(MenuPage.Setup); else OpenMainMenu(); }
         }
         public void ChooseLogin(LoginAction action)
         {
@@ -126,7 +128,7 @@ namespace Muhanok.Presentation
         public void SelectMenu(MenuAction action)
         {
             if (action == MenuAction.Play) { if (OfferTutorial?.Invoke() ?? false) ShowTutorialOffer(false); else ShowPage(MenuPage.Setup); }
-            else if (action == MenuAction.Tutorial) StartTutorial?.Invoke();
+            else if (action == MenuAction.Tutorial) ShowTutorialChoice();
             else if (action == MenuAction.Ranking) ShowPage(MenuPage.Ranking);
             else if (action == MenuAction.Shop) ShowPage(MenuPage.Shop);
             else if (action == MenuAction.Profile) ShowPage(MenuPage.Profile);
@@ -244,7 +246,7 @@ namespace Muhanok.Presentation
                     if (Account != null) identity.Draw(Data, Account, "얼굴 로그인", "정면을 보고 틀 안에 얼굴을 맞춘 뒤 [얼굴 로그인]을 누르세요.\n가입한 얼굴이면 이름 입력 없이 로그인됩니다.", "얼굴 로그인", LoginWithFace, OpenLogin);
                     break;
                 case MenuPage.Main: SelectMenu(menu.Draw(Data, TitleLogo)); break;
-                case MenuPage.TutorialOffer: ChooseTutorial(tutorialOffer.Draw(offerAfterSignUp)); break;
+                case MenuPage.TutorialOffer: { var choice = tutorialOffer.Draw(offerMode, Data == null || Data.BodyStylesAllowed, Data?.Player?.Style ?? PlayStyle.Keyboard, out var style); ChooseTutorial(choice, style); break; }
                 case MenuPage.Credits: if (credits.Draw()) CloseCredits(); break;
             }
         }
