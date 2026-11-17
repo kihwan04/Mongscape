@@ -410,6 +410,10 @@ namespace Muhanok.Bootstrap
             if (KeyboardGameInput.RecalibratePressed && !hud.MenuOpen) Pose.Recalibrate();
             if (KeyboardGameInput.DeveloperTogglePressed && Session.Flow.State == GameFlowState.TitleIdle) SetDeveloperMode(!userSettings.DeveloperMode);
             if (KeyboardGameInput.ClearRankingPressed && userSettings.DeveloperMode) { Store.ClearToday(); Debug.Log("Today's ranking cleared."); }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // Demo invincibility: no on-screen indicator by design; the log records each switch.
+            if (KeyboardGameInput.InvinciblePressed) { Session.Invincible = !Session.Invincible; Debug.Log("Invincible " + (Session.Invincible ? "on" : "off")); }
+#endif
         }
         internal HUDPresenter Hud => hud;
         // Development builds can keep player data in another folder (--muhanok-data <dir>) for captures and tests.

@@ -13,6 +13,20 @@ namespace Muhanok.Tests
             run.Flow.Transition(GameFlowState.TitleIdle); run.Flow.Transition(GameFlowState.IntroTimeline);
             run.Flow.Transition(GameFlowState.FirstPersonTakeover); run.Flow.Transition(GameFlowState.Running); return run;
         }
+        [Test] public void InvincibleRunIgnoresHitsFallsAndSlipsUntilSwitchedOff()
+        {
+            var run = Running(); run.Invincible = true;
+            Assert.IsFalse(run.Hit(true)); Assert.IsFalse(run.Fail(CaptureReason.BrokenRail));
+            Assert.IsFalse(run.Slip(SlipSource.Banana)); Assert.IsFalse(run.Slip(SlipSource.KneeMiss));
+            Assert.AreEqual(GameFlowState.Running, run.Flow.State); Assert.AreEqual(0, run.SlipStrikes); Assert.IsFalse(run.Runner.Slowing);
+            run.Reset(); Assert.IsTrue(run.Invincible, "Stays on across runs");
+            run.Invincible = false; Assert.IsTrue(run.Hit(true)); Assert.AreEqual(GameFlowState.Caught, run.Flow.State);
+        }
+        [Test] public void InvincibleTutorialStillCountsMistakes()
+        {
+            var run = Running(); run.IsTutorial = true; run.Invincible = true;
+            Assert.IsTrue(run.Hit(true)); Assert.AreEqual(1, run.TutorialMisses);
+        }
         [Test] public void FlowRejectsSkippedStates()
         {
             var flow = new GameFlowController(); Assert.IsFalse(flow.Transition(GameFlowState.Running));
