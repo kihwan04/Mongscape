@@ -12,6 +12,34 @@ namespace Muhanok.Tests
 {
     public sealed class ExpansionPlayModeTests
     {
+        // Seed 723 turning into the zoo on every lap: one 18-chunk lap holds only ten zoo chunks, so zoo checks span several laps.
+        internal static RoutePlan ZooEveryLap(RunConfig config,int laps)
+        {
+            var choices=new System.Collections.Generic.List<int>();
+            RoutePlan Chosen(int? next)
+            {
+                var plan=new RoutePlan(config,723);int lap=0;
+                foreach(int lane in choices)plan.UpdateChoice(lap++*RoutePlan.ExtendedLapChunks*RouteSurface.Length+CartFork.Decision+1,lane);
+                if(next.HasValue)plan.UpdateChoice(lap*RoutePlan.ExtendedLapChunks*RouteSurface.Length+CartFork.Decision+1,next.Value);
+                return plan;
+            }
+            for(int lap=0;lap<laps;lap++)
+                for(int lane=-1;lane<=1;lane++)
+                    if(Chosen(lane).DestinationAt(lap*RoutePlan.ExtendedLapChunks)<0){choices.Add(lane);break;}
+            Assert.AreEqual(laps,choices.Count,"Every lap offers the zoo");
+            return Chosen(null);
+        }
+        // Zoo walking chunks over three zoo laps.
+        private static IEnumerable ZooChunks(GameBootstrap game)
+        {
+            RouteSurface.UsePlan(ZooEveryLap(game.Session.Config,3));game.Session.Reset();game.Map.Reset();
+            for(float z=2;z<3*RoutePlan.ExtendedLapChunks*RouteSurface.Length;z+=24)
+            {
+                game.Map.Tick(z);game.Session.Runner.SetStartZ(z);
+                if(RouteSurface.TypeAt(RouteSurface.SequenceAt(z))!=12)continue;
+                foreach(var active in game.Map.Active)if(active.Type==12)yield return active.Chunk;
+            }
+        }
         private static IEnumerator Load()
         {
             yield return SceneManager.LoadSceneAsync("GameScene");yield return null;
@@ -77,19 +105,11 @@ namespace Muhanok.Tests
             Assert.AreEqual(created,game.Map.CreatedCount);
         }
         // Zoo chunks hold either an animal or (ZooDuckChance) the duck row, so walk the zoo branch until one shows.
-        private static IEnumerable ZooChunks(GameBootstrap game,int branch)
-        {
-            for(float z=480;z<=720;z+=48)
-            {
-                Seek(game,z,branch);
-                foreach(var active in game.Map.Active)if(active.Type==12)yield return active.Chunk;
-            }
-        }
         [UnityTest] public IEnumerator ZooAnimalRowsRequireAndAcceptARealJump()
         {
-            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();int branch=ZooBranch(game);
+            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();
             int animals=0;
-            foreach(MuhanokMapChunk chunk in ZooChunks(game,branch))
+            foreach(MuhanokMapChunk chunk in ZooChunks(game))
             {
                 foreach(var animal in chunk.GetComponentsInChildren<ZooHazard>())
                 {
@@ -112,9 +132,9 @@ namespace Muhanok.Tests
         }
         [UnityTest] public IEnumerator ZooDuckRowIsALogThatNeedsACrouch()
         {
-            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();int branch=ZooBranch(game);
+            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();
             ObstacleController[] row=null;
-            foreach(MuhanokMapChunk chunk in ZooChunks(game,branch))
+            foreach(MuhanokMapChunk chunk in ZooChunks(game))
             {
                 int on=0;foreach(var obstacle in chunk.ExerciseObstacles)if(obstacle.gameObject.activeSelf)on++;
                 if(on==0)continue;
@@ -201,11 +221,11 @@ namespace Muhanok.Tests
         }
         [UnityTest] public IEnumerator RandomBlockersAndBananasAlwaysLeaveAClearLaneAndResetInPools()
         {
-            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();int branch=ZooBranch(game);Seek(game,480,branch);
+            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();int branch=ZooBranch(game);Seek(game,264,branch);
             int blocks=0,peels=0;
             for(int step=0;step<30;step++)
             {
-                float z=480+step*12;game.Session.Runner.SetStartZ(z);game.Map.Tick(z);
+                float z=264+step*12;game.Session.Runner.SetStartZ(z);game.Map.Tick(z);
                 foreach(var entry in game.Map.Active)
                 {
                     var chunk=entry.Chunk;int mask=0;
@@ -228,7 +248,7 @@ namespace Muhanok.Tests
         }
         [UnityTest] public IEnumerator CaptureHasAnApproachThreeBonksAndThenResultWithoutAdvancingDistance()
         {
-            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();Seek(game,480,ZooBranch(game));
+            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();Seek(game,264,ZooBranch(game));
             float z=game.Session.Runner.Z;game.Session.Hit(true);
             Assert.AreEqual(GameFlowState.Caught,game.Session.Flow.State);Assert.AreEqual(0,game.Capture.Strikes);
             game.enabled=true;yield return new WaitForSecondsRealtime(1.15f);
@@ -259,7 +279,7 @@ namespace Muhanok.Tests
         }
         [UnityTest] public IEnumerator OnePeelShowsOnlySirenAlertAndCapturedFaceFollowsProneHead()
         {
-            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();Seek(game,480,ZooBranch(game));
+            yield return Load();var game=Object.FindFirstObjectByType<GameBootstrap>();Seek(game,264,ZooBranch(game));
             FloorItemController peel=null;foreach(var entry in game.Map.Active)if(entry.Chunk.DynamicFloorItems.Count>0){peel=entry.Chunk.DynamicFloorItems[0];break;}
             Assert.IsNotNull(peel);float z=peel.transform.position.z;RouteSurface.Sample(z,out float x,out _);
             int lane=Mathf.RoundToInt((peel.transform.position.x-x)/2.2f);game.Session.Runner.SetStartZ(z);

@@ -15,13 +15,8 @@ namespace Muhanok.Tests
             yield return SceneManager.LoadSceneAsync("GameScene");yield return null;
             var game=Object.FindFirstObjectByType<GameBootstrap>();game.Pose.SetStyle(PlayStyle.Keyboard);game.BeginRun("70");
             yield return new WaitUntil(()=>!game.IsLoading&&!game.IsRevealing);game.enabled=false;
-            RoutePlan plan=null;
-            for(int lane=-1;lane<=1;lane++)
-            {
-                var candidate=new RoutePlan(game.Session.Config,723);candidate.UpdateChoice(120,lane);
-                if(candidate.DestinationAt(6)<0){plan=candidate;break;}
-            }
-            Assert.IsNotNull(plan);RouteSurface.UsePlan(plan);game.Map.Reset(723);
+            // The zoo on every lap: the scans below cross several 18-chunk laps.
+            RouteSurface.UsePlan(ExpansionPlayModeTests.ZooEveryLap(game.Session.Config,4));game.Map.Reset(723);
         }
         [UnityTest] public IEnumerator NeckAndTrunkStayConnectedToTheAnimalThroughTheWholeMotion()
         {

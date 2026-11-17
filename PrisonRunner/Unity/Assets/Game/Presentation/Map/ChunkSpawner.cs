@@ -19,8 +19,9 @@ namespace Muhanok.Presentation.Map
             for (int i = 0; i < pools.Length; i++)
             {
                 pools[i] = new Queue<MuhanokMapChunk>(3);
-                // Interval laps repeat carts, corridors and the zoo wall; keep three of those warm.
-                int warm = i == 0 || i == 12 ? 7 : i == 1 || i == 2 || i == 4 || i == 5 ? 4 : i == 7 || i == RouteSurface.MineStair || i == RouteSurface.ZooStair ? 2 : 1;
+                // Interval laps repeat carts, corridors and the zoo wall; keep three of those warm. The 18-chunk lap brings the
+                // transition (3) back within view of the zoo return and puts stairs three chunks apart, so those keep more warm.
+                int warm = i == 0 || i == 12 ? 7 : i == 1 || i == 2 || i == 4 || i == 5 ? 4 : i == 7 || i == RouteSurface.MineStair || i == RouteSurface.ZooStair ? 3 : i == 3 ? 2 : 1;
                 for (int j = 0; j < warm; j++) pools[i].Enqueue(Create(i));
             }
         }
