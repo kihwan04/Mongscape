@@ -34,6 +34,7 @@ namespace Muhanok.Tests
                 InputState.Change(mouse, new MouseState().WithButton(MouseButton.Left)); game.TickInput();
                 Assert.IsTrue(game.MenuOpen, "Clicking the title opens the login gate"); Assert.AreEqual(Muhanok.Presentation.MenuPage.Login, game.GetComponent<Muhanok.Presentation.HUDPresenter>().Page); Assert.AreEqual(GameFlowState.TitleIdle,game.Session.Flow.State);
                 InputState.Change(mouse, new MouseState());
+                ((Muhanok.Presentation.IHudData)game).PreviewStyle(PlayStyle.Keyboard);// a body style would wait for its calibration
                 game.Session.Config.ExtendedRoutes=false;game.BeginRun(""); yield return new WaitForSecondsRealtime(1.1f);
                 Assert.AreEqual(GameFlowState.Running,game.Session.Flow.State);
                 yield return new WaitUntil(()=>!game.IsRevealing);
