@@ -58,10 +58,16 @@ namespace Muhanok.Tests
             Assert.AreEqual(PlayStyle.UpperBody,request.Mode);Assert.IsTrue(request.Today);Assert.AreEqual("fake-token",request.Token);
             Assert.AreEqual(RankingStatus.Ready,Board.Status);Assert.AreEqual(2,Board.Rows.Count);Assert.AreEqual("민수",Board.Rows[0].Name);
             Assert.IsNotNull(Board.Mine);Assert.AreEqual(2,Board.Mine.Rank);
-            // This PC's tab marks the member's run; another mode's tab does not show it.
+            // The merged tab takes the members from the server (this PC's member run is already there, not listed twice).
             Board.Select(false,PlayStyle.UpperBody,true);
-            Assert.AreEqual(1,Board.Rows.Count);Assert.IsTrue(Board.Rows[0].Member);Assert.IsNotNull(Board.Mine);
+            Assert.AreEqual(2,Board.Rows.Count);Assert.IsTrue(Board.Rows[0].Member&&Board.Rows[1].Member);
+            Assert.IsNotNull(Board.Mine);Assert.AreEqual(2,Board.Mine.Rank);Assert.IsFalse(Board.MembersMissing);
+            fake.BoardResult=new LeaderboardReply{ok=true};
             Board.Select(false,PlayStyle.FullBody,true);Assert.AreEqual(0,Board.Rows.Count);Assert.IsNull(Board.Mine);
+            // Offline, the merged tab keeps this PC's runs (the member's run included) and notes the missing members.
+            fake.FailBoard=true;Board.Select(false,PlayStyle.UpperBody,true);
+            Assert.AreEqual(RankingStatus.Ready,Board.Status);Assert.IsTrue(Board.MembersMissing);Assert.AreEqual(1,Board.Rows.Count);Assert.IsTrue(Board.Rows[0].Member);
+            fake.FailBoard=false;
             // The server board fails visibly.
             fake.FailBoard=true;Board.Select(true,PlayStyle.Keyboard,false);
             Assert.AreEqual(RankingStatus.Failed,Board.Status);Assert.AreEqual(RankingBoard.OfflineText,Board.StatusText);
@@ -75,8 +81,9 @@ namespace Muhanok.Tests
             yield return Open();
             game.Session.Score.Advance(300);game.RecordFinishedRun();
             Board.OpenResult(Data,Identity);
-            Assert.IsFalse(Board.MemberTab,"이 PC");Assert.AreEqual(Data.Player.Style,Board.Mode);Assert.IsTrue(Board.TodayOnly);
-            CollectionAssert.DoesNotContain(fake.Calls,"leaderboard");
+            Assert.IsFalse(Board.MemberTab,"merged tab");Assert.AreEqual(Data.Player.Style,Board.Mode);Assert.IsTrue(Board.TodayOnly);
+            // The merged tab asks the server for the members without a token.
+            Assert.AreEqual("",fake.BoardRequests[fake.BoardRequests.Count-1].Token);
             Assert.AreEqual(1,Board.Rows.Count);Assert.IsFalse(Board.Rows[0].Member);Assert.IsNotNull(Board.Mine);Assert.AreEqual(1,Board.Mine.Rank);
             // Naming the run on the result screen shows the new name on the 이 PC board at once.
             game.StartIntro();for(int i=0;i<82;i++)game.Intro.Tick(.1f);

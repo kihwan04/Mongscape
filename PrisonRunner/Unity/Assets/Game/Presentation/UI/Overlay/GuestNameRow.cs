@@ -35,7 +35,7 @@ namespace Muhanok.Presentation
             if (e.type == EventType.KeyDown && (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter)) { enter = true; e.Use(); }
             else if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape) { escape = true; e.Use(); }
             skin.BorderBox(r, Palette.A(Palette.Panel, 0.97f), Palette.Gold, 2);
-            skin.Text(new Rect(r.x + 24, r.y + 14, r.width - 48, 34), "이 PC 랭킹에 남길 닉네임", 24, Palette.Gold, TextAnchor.MiddleLeft);
+            skin.Text(new Rect(r.x + 24, r.y + 14, r.width - 48, 34), "통합 랭킹에 남길 닉네임", 24, Palette.Gold, TextAnchor.MiddleLeft);
             skin.Text(new Rect(r.x + 24, r.y + 48, r.width - 48, 24), "최대 " + AccountSession.MaxNickname + "자. 건너뛰면 \"" + AccountSession.GuestName + "\"로 남습니다.", 15, Palette.Sand, TextAnchor.MiddleLeft, false, true);
             var field = new Rect(r.x + 24, r.y + 84, r.width - 300, 52);
             GUI.SetNextControlName("MongscapeGuestName");
