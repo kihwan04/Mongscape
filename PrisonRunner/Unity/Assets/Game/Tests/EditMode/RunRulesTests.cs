@@ -22,6 +22,19 @@ namespace Muhanok.Tests
             run.Reset(); Assert.IsTrue(run.Invincible, "Stays on across runs");
             run.Invincible = false; Assert.IsTrue(run.Hit(true)); Assert.AreEqual(GameFlowState.Caught, run.Flow.State);
         }
+        [Test] public void OperatorCatchEndsTheRunEvenWhileInvincibleOrShielded()
+        {
+            var run = Running(); run.Invincible = true; run.Items.Activate(ItemKind.Shield);
+            Assert.IsTrue(run.ForceCatch()); Assert.AreEqual(GameFlowState.Caught, run.Flow.State);
+            Assert.AreEqual(CaptureReason.Collision, run.Reason);
+            Assert.IsFalse(run.ForceCatch(), "Only a running run can be ended");
+        }
+        [Test] public void OperatorCatchLeavesPausedRunsAndTutorialsAlone()
+        {
+            var run = Running(); run.Paused = true; Assert.IsFalse(run.ForceCatch());
+            run.Paused = false; run.IsTutorial = true; Assert.IsFalse(run.ForceCatch());
+            Assert.AreEqual(GameFlowState.Running, run.Flow.State);
+        }
         [Test] public void InvincibleTutorialStillCountsMistakes()
         {
             var run = Running(); run.IsTutorial = true; run.Invincible = true;

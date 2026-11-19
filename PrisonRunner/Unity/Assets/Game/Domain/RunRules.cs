@@ -333,11 +333,21 @@ namespace Muhanok.Domain
                 // The shield absorbs one solid hit: a stumble instead of a capture.
                 ShieldSaves++; Runner.Stumble(); lastHit = clock; return false;
             }
+            Catch(reason);
+            return true;
+        }
+        // Operator key (F7): ends the run as a capture right away, even while invincible or shielded. Tutorial lessons are left alone.
+        public bool ForceCatch()
+        {
+            if (Flow.State != GameFlowState.Running || Paused || tutorial) return false;
+            DodgeStreak=0; Catch(CaptureReason.Collision); return true;
+        }
+        private void Catch(CaptureReason reason)
+        {
             Reason=reason;
             lastHit = clock;
             Runner.Stumble(); Chase.Hit(1f);
             Flow.Transition(GameFlowState.Caught);
-            return true;
         }
         public bool Slip(SlipSource source=SlipSource.Floor)
         {

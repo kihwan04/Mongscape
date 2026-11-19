@@ -195,11 +195,11 @@ namespace Muhanok.Presentation
                 GUI.enabled = true;
                 if (calibrating) calibration.Draw(Data);
             }
-            // F9 demo invincibility (development builds): a small reminder in the bottom-left corner while it is on.
+            // F9 demo invincibility (development builds): a small reminder in the bottom-left corner while it is on, with the F7 key that still ends the run.
             if (session.Invincible && (state == GameFlowState.Running || state == GameFlowState.Caught) && Event.current.type == EventType.Repaint)
             {
-                skin.Card(new Rect(16, 684, 132, 26), new Color(0, 0, 0, .55f));
-                GUI.color = Palette.Gold; GUI.Label(new Rect(16, 684, 132, 26), "무적 모드 켜짐 (F9)", skin.Centered(14, FontStyle.Bold)); GUI.color = Color.white;
+                skin.Card(new Rect(16, 684, 220, 26), new Color(0, 0, 0, .55f));
+                GUI.color = Palette.Gold; GUI.Label(new Rect(16, 684, 220, 26), "무적 모드 켜짐 (F9) · F7 잡히기", skin.Centered(14, FontStyle.Bold)); GUI.color = Color.white;
             }
             var cameraSlot = CameraSlot(state);
             if (cameraSlot.width > 0) PosePreview.DrawCorner(skin, cameraSlot, Data);

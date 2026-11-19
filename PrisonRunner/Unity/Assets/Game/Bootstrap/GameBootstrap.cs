@@ -431,6 +431,8 @@ namespace Muhanok.Bootstrap
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             // Demo invincibility: the HUD shows a small "무적 모드 켜짐" note in the bottom-left corner while it is on; the log records each switch.
             if (KeyboardGameInput.InvinciblePressed) { Session.Invincible = !Session.Invincible; Debug.Log("Invincible " + (Session.Invincible ? "on" : "off")); }
+            // F7: the operator ends the run as a capture now (invincible or not), so a demo run can be closed into the results.
+            if (KeyboardGameInput.ForceCatchPressed && Session.ForceCatch()) Debug.Log("Run ended by the operator (F7).");
 #endif
         }
         internal HUDPresenter Hud => hud;
