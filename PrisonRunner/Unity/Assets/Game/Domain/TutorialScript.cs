@@ -103,15 +103,16 @@ namespace Muhanok.Domain
         public static bool ShouldOffer(bool member, bool tutorialDone, bool offeredThisSession) => !offeredThisSession && (!member || !tutorialDone);
     }
 
-    // The fixed tutorial map: a warm-up lap without a fork that holds one lesson obstacle per chunk,
+    // The fixed tutorial map: a short warm-up lap in the mine without a fork that holds one lesson obstacle per chunk,
     // then an ordinary lap whose first cart chunk keeps one broken rail and whose cart fork is the last lesson.
     // Positions are route z in metres.
     public static class TutorialCourse
     {
         public const int Seed = 723, BlockedLane = 0;
-        // Mine x4 (start, lane, jump, slide), transition, stairs, corridor, checkpoint, descent, zoo, return to the mine.
-        public static readonly int[] WarmupLap = { 0, 0, 0, 0, 3, 7, 4, 6, 11, 12, 3 };
-        public const int LaneChunk = 1, JumpChunk = 2, CrouchChunk = 3, StairChunk = 5;
+        // Mine only: start, lane, jump, slide, then the mine stair. The next lap's mine start boards the cart right after,
+        // so the lessons never pass through the prison or the zoo.
+        public static readonly int[] WarmupLap = { 0, 0, 0, 0, RouteSurface.MineStair };
+        public const int LaneChunk = 1, JumpChunk = 2, CrouchChunk = 3, StairChunk = 4;
         public const float LaneBlockZ = 12f;
         public static int ForkLapStart => WarmupLap.Length;
         // The ordinary lap's first cart chunk (type 1 on every lap layout) keeps its second rail window broken on one side.
@@ -133,7 +134,8 @@ namespace Muhanok.Domain
             {
                 case TutorialStep.Jump: return 40f;
                 case TutorialStep.Crouch: return 64f;
-                case TutorialStep.HighKnee: return 100f;
+                // Past the slide row of the crouch chunk, just before the mine stair.
+                case TutorialStep.HighKnee: return StairChunk * RouteSurface.Length - 3f;
                 // On the cart, well before the broken rail; a fork retry starts past it so the rail is not judged again.
                 case TutorialStep.Rail: return RailChunk * RouteSurface.Length + 2f;
                 case TutorialStep.Fork: return RailGapZ + 4f;
