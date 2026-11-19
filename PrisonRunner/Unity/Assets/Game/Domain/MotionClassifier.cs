@@ -52,6 +52,11 @@ namespace Muhanok.Domain
         public void SetStyle(PlayStyle next) { style = next; Recalibrate(); }
         // Boarding or leaving the cart switches the full body from side steps to leaning (and back).
         public void SetCart(bool riding) { if (riding == cart) return; cart = riding; cartChanged = true; }
+        // On (or right before) a stair chunk: only knee steps matter there (stairs carry no hazards), so the jump reading is off.
+        // Hopping high knees and stepping toward or away from the camera move the hips in the image and used to read as
+        // "airborne", which blocked every knee step.
+        private bool stairs;
+        public void SetStairs(bool on) { stairs = on; if (on) airborne = hopping = false; }
         public void Recalibrate()
         {
             calibrated = false; samples = 0; smoothed = false; Reading.Clear(); airborne = hopping = handsUp = duckOnLoss = false; dropRatio = 0; actionLockUntil = 0; laneCandidate = 0;
@@ -218,6 +223,7 @@ namespace Muhanok.Domain
             bool up = hipRise > tuning.JumpRise && shoulderRise > tuning.JumpRise * .8f && feetUp;
             // Jump wins over a crouch that only just confirmed: the dip was the take-off. No refractory lock.
             if (up && Reading.Crouch && windUp) Reading.Crouch = false;
+            if (stairs) up = false;
             if (up && !airborne && now - lastJump > .25 && !Locked(now) && !Reading.Crouch)
             {
                 Reading.JumpEdge = true; lastJump = now;

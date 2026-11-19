@@ -41,7 +41,7 @@ namespace Muhanok.Domain
         public float LaneSpacing = 2.2f, LaneSeconds = .20f, BaseSpeed = 9f, MaxSpeed = 17f;
         public float JumpHeight = 1.8f, Gravity = 24f, CrouchSeconds = .8f;
         // A knee step keeps the runner climbing for this long; the next alternating step has to land inside it.
-        public float KneeStepGap = .7f;
+        public float KneeStepGap = 1f;
         public float LightHit = .18f, HeavyHit = .35f, Recovery = .018f, StumbleSeconds = .8f;
         public int CleanBonus = 25; // Unused since score v2; kept for saved settings.
         public float SlipSeconds = 2.4f, SlipSpeedMultiplier = .5f, CartSpeed = 9f;

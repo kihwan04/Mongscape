@@ -118,14 +118,15 @@ namespace Muhanok.Infrastructure
         }
         // riding: the cart takes absolute lean commands (not inside a fork window).
         // inCart: the whole cart ride, where the full body leans the shoulders instead of stepping aside.
-        public PoseTracker(PoseGameInput output, PoseCameraOptions camera, MotionTuning tuning, Func<int> lane, Func<bool> riding, Func<bool> inCart = null)
+        // onStairs: on or right before a stair chunk, where the jump reading is switched off (MotionClassifier.SetStairs).
+        public PoseTracker(PoseGameInput output, PoseCameraOptions camera, MotionTuning tuning, Func<int> lane, Func<bool> riding, Func<bool> inCart = null, Func<bool> onStairs = null)
         {
             // Work on copies: settings change them at runtime and must not edit the GameSettings asset.
             options = Copy(camera ?? new PoseCameraOptions()); baseTuning = Copy(tuning ?? new MotionTuning());
             this.tuning = Copy(baseTuning); classifier = new MotionClassifier(this.tuning);
-            commands = new PoseCommandSource(output, lane, riding); this.inCart = inCart;
+            commands = new PoseCommandSource(output, lane, riding); this.inCart = inCart; this.onStairs = onStairs;
         }
-        private readonly Func<bool> inCart;
+        private readonly Func<bool> inCart, onStairs;
         public void SetStyle(PlayStyle style)
         {
             if (style == Style && (estimator != null || !UsesCamera)) return;
@@ -185,6 +186,7 @@ namespace Muhanok.Infrastructure
             smoother.Apply(incoming, tuning);
             LastFrame.CopyFrom(incoming);
             classifier.SetCart(inCart != null && inCart());
+            classifier.SetStairs(onStairs != null && onStairs());
             var reading = classifier.Update(incoming);
             if (classifier.Calibrated && !calibrated) { CalibratedAt = now; LostSinceCalibration = false; }
             else if (!classifier.Calibrated || classifier.Status != PoseStatus.Tracking) LostSinceCalibration |= calibrated;

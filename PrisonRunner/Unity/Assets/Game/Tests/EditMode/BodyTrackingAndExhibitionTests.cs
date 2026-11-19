@@ -28,7 +28,7 @@ namespace Muhanok.Tests
             Set(15, .41f + l, b.WristL + b.Dy); Set(16, .59f + l, b.WristR + b.Dy);
             return frame;
         }
-        private static List<string> Play(PlayStyle style, Func<double, Body> script, double seconds, Func<double, bool> cart = null)
+        private static List<string> Play(PlayStyle style, Func<double, Body> script, double seconds, Func<double, bool> cart = null, bool stairs = false)
         {
             var classifier = new MotionClassifier(new MotionTuning()); classifier.SetStyle(style);
             for (int i = 0; i < 30; i++) classifier.Update(Frame(new Body { Legs = style == PlayStyle.FullBody }, i / 30.0));
@@ -37,7 +37,7 @@ namespace Muhanok.Tests
             for (double t = 0; t < seconds; t += 1 / 30.0)
             {
                 var body = script(t); body.Legs = style == PlayStyle.FullBody;
-                classifier.SetCart(cart != null && cart(t));
+                classifier.SetCart(cart != null && cart(t)); classifier.SetStairs(stairs);
                 var r = classifier.Update(Frame(body, 1 + t));
                 if (r.Lane != lane) { events.Add("lane" + r.Lane); lane = r.Lane; }
                 if (r.JumpEdge) events.Add("jump");
@@ -211,6 +211,21 @@ namespace Muhanok.Tests
                 if (In(t, .35, .55)) body.KneeL = .09f;
                 return body;
             }, 1.5));
+        }
+        [Test] public void OnStairsHoppingHighKneesAreKneeStepsAndNeverJumps()
+        {
+            // The same hop as above while one knee is up: on stairs the jump reading is off, so the knee counts.
+            Func<double, Body> hop = t =>
+            {
+                var body = new Body { Dy = In(t, .2, .3) ? .085f : In(t, .3, .6) ? -.06f : 0, Ankle = In(t, .3, .6) ? .06f : 0 };
+                if (In(t, .35, .55)) body.KneeL = .09f;
+                return body;
+            };
+            CollectionAssert.AreEqual(new[] { "knee" }, Play(PlayStyle.FullBody, hop, 1.5, stairs: true));
+            // Stepping toward the camera (the whole body rising in the image) while marching keeps counting steps.
+            var events = Play(PlayStyle.FullBody, t => { int s = (int)((t - .2) / .3) % 2; bool on = In(t, .2, 1.6);
+                return new Body { Dy = on ? -.07f : 0, Ankle = on ? .06f : 0, KneeL = on && s == 0 ? .09f : 0, KneeR = on && s == 1 ? .09f : 0 }; }, 1.8, stairs: true);
+            CollectionAssert.DoesNotContain(events, "jump"); Assert.GreaterOrEqual(events.Count(e => e == "knee"), 4);
         }
         [Test] public void ShortDropoutKeepsTrackingAndVanishingWhileDuckingCountsAsDuck()
         {

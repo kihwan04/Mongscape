@@ -99,7 +99,7 @@ namespace Muhanok.Bootstrap
             if (ChunkPrefabs == null || ChunkPrefabs.Length < 5 || CameraRig == null || OutputCamera == null)
             { Debug.LogError("GameScene requires content references. Run Muhanok/Build GameScene."); enabled = false; return; }
             keyboard = new KeyboardGameInput(); poseInput = new PoseGameInput(); router = new InputRouter(Session, keyboard, poseInput);
-            Pose = new PoseTracker(poseInput, Settings != null ? Settings.Camera : null, Settings != null ? Settings.Motion : null, () => Session.Runner.Lane, () => Session.Runner.Riding&&!(RouteSurface.ActivePlan?.ForkWindow(Session.Runner.Z)??false), () => Session.Runner.Riding);
+            Pose = new PoseTracker(poseInput, Settings != null ? Settings.Camera : null, Settings != null ? Settings.Motion : null, () => Session.Runner.Lane, () => Session.Runner.Riding&&!(RouteSurface.ActivePlan?.ForkWindow(Session.Runner.Z)??false), () => Session.Runner.Riding, OnOrBeforeStairs);
             Store = new PlayerProgressStore(DataRoot());
             player = Account.Profile.Clone();
             Hero = CreateActor("CHR_Monkey_Prisoner", MonkeyPrefab);
@@ -435,6 +435,13 @@ namespace Muhanok.Bootstrap
         }
         internal HUDPresenter Hud => hud;
         // Development builds can keep player data in another folder (--muhanok-data <dir>) for captures and tests.
+        // On foot on a stair chunk, or within 3 m of one (people start lifting their knees a little early).
+        private bool OnOrBeforeStairs()
+        {
+            var runner = Session.Runner; if (runner.Riding) return false;
+            return RouteSurface.IsStair(RouteSurface.TypeAt(RouteSurface.SequenceAt(runner.Z)))
+                || RouteSurface.IsStair(RouteSurface.TypeAt(RouteSurface.SequenceAt(runner.Z + 3f)));
+        }
         private static string DataRoot()
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

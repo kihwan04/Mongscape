@@ -81,7 +81,7 @@ namespace Muhanok.Domain
         // A take-off this soon after a crouch confirms cancels it; a rise this fast (body units/s) is a jump attempt that earns the landing grace.
         public float CrouchJumpCancelSeconds = .35f, JumpAttemptSpeed = .8f;
         public float JumpRise = .15f;
-        public float HighKneeLift = .22f, StepLift = .06f;
+        public float HighKneeLift = .20f, StepLift = .06f;
         public float UpperLaneEnter = .75f, UpperLaneExit = .42f, UpperCrouchDrop = .35f, UpperCrouchConfirmSeconds = .12f, UpperHandsAboveNose = .2f;
         // The upper body also leans by tilting the shoulder line (degrees from the calibrated tilt); the exit follows UpperLaneExit/Enter.
         public float UpperLeanEnterDegrees = 12f;
