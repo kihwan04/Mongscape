@@ -99,6 +99,9 @@ namespace Muhanok.Infrastructure
         public string Diagnostics => estimator?.Diagnostics ?? "";
         public bool UsesCamera => PlayStyleInfo.UsesCamera(Style);
         public bool Tracking => Status == PoseStatus.Tracking;
+        // The camera delivers pose frames, calibrated or not. Hand pointing needs only this: it reads the shoulders of each frame,
+        // so a style switch (the login page's upper-body camera) that restarts calibration must not switch it off.
+        public bool CameraLive => UsesCamera && estimator != null && estimator.Status == PoseStatus.Tracking;
         public PoseStatus Status
         {
             get

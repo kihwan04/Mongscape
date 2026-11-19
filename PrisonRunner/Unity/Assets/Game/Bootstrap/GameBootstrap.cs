@@ -347,7 +347,9 @@ namespace Muhanok.Bootstrap
             UpdateAdaptive(live);
             Pose.Tick(now, live);
             // The calibration panel takes no hand pointing: the player stands still and it closes by itself.
-            GesturePointer.Feed(Pose.LastFrame,menu&&GesturePointer.Enabled&&Pose.Tracking&&!hud.CalibrationOpen,now);
+            // Not gated on calibration: logging out switches to the upper-body camera, which restarts calibration, and a player
+            // reaching for a button never stands still long enough to finish it (the pointer checks pose freshness itself).
+            GesturePointer.Feed(Pose.LastFrame,menu&&GesturePointer.Enabled&&Pose.CameraLive&&!hud.CalibrationOpen,now);
             OperatorKeys();
             if (ExpiryPending && Session.Flow.State == GameFlowState.TitleIdle && !hud.Loading) ApplyExpiry();
             TickInput();
