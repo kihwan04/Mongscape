@@ -109,10 +109,10 @@ namespace Muhanok.Domain
     public static class TutorialCourse
     {
         public const int Seed = 723, BlockedLane = 0;
-        // Mine only: start, lane, jump, slide, then the mine stair. The next lap's mine start boards the cart right after,
-        // so the lessons never pass through the prison or the zoo.
-        public static readonly int[] WarmupLap = { 0, 0, 0, 0, RouteSurface.MineStair };
-        public const int LaneChunk = 1, JumpChunk = 2, CrouchChunk = 3, StairChunk = 4;
+        // Mine only: start, lane, jump, slide, a plain walk (about three seconds to get ready), then the mine stair.
+        // The next lap's mine start boards the cart right after, so the lessons never pass through the prison or the zoo.
+        public static readonly int[] WarmupLap = { 0, 0, 0, 0, 0, RouteSurface.MineStair };
+        public const int LaneChunk = 1, JumpChunk = 2, CrouchChunk = 3, StairChunk = 5;
         public const float LaneBlockZ = 12f;
         public static int ForkLapStart => WarmupLap.Length;
         // The ordinary lap's first cart chunk (type 1 on every lap layout) keeps its second rail window broken on one side.
@@ -134,8 +134,8 @@ namespace Muhanok.Domain
             {
                 case TutorialStep.Jump: return 40f;
                 case TutorialStep.Crouch: return 64f;
-                // Past the slide row of the crouch chunk, just before the mine stair.
-                case TutorialStep.HighKnee: return StairChunk * RouteSurface.Length - 3f;
+                // Early in the walking chunk after the slide lesson, with time to read the stair call.
+                case TutorialStep.HighKnee: return StairChunk * RouteSurface.Length - 20f;
                 // On the cart, well before the broken rail; a fork retry starts past it so the rail is not judged again.
                 case TutorialStep.Rail: return RailChunk * RouteSurface.Length + 2f;
                 case TutorialStep.Fork: return RailGapZ + 4f;
