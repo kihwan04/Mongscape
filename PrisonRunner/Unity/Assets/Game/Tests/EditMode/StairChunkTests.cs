@@ -194,29 +194,34 @@ namespace Muhanok.Tests
             Walk(judge, runner, 0, 24, 0, false);
             Assert.AreEqual(1, Walk(judge, runner, 0, 24, 0));
         }
-        [Test] public void TheFirstTwoMetresAreGraceAndTheFirstStepIsDueAtTwo()
+        // Enters a stair chunk and lets the entry grace run out, so the judge only sees the runner's own steps.
+        private static void EnterLongAgo(StairJudge judge, RunnerController runner) { judge.Tick(.05f, true, 0f, runner); judge.Tick(1f, true, .5f, runner); }
+        [Test] public void TheFirstTwoMetresAreGraceAndEnteringFillsTheKneeGauge()
         {
             var judge = new StairJudge(new RunConfig()); var runner = Standing();
             Assert.AreEqual(0, Walk(judge, runner, 0, 1.99f, 0), "No failure before z 2");
             Assert.IsFalse(judge.InStair);
-            Assert.IsTrue(judge.Tick(.05f, true, 2f, runner), "No step yet at z 2");
+            Assert.IsFalse(judge.Tick(.05f, true, 2f, runner), "Entering counts as a step: nobody has to start before the stairs");
+            Assert.Less(judge.KneeUrgency, .5f, "The gauge starts (nearly) full");
+            Assert.IsTrue(judge.Tick(.5f, true, 2.5f, runner), "Still no step 0.8 s after entering is a miss");
         }
         [Test] public void AStepJustBeforeTheJudgedSpanKeepsTheRunnerSafeForTheGap()
         {
-            var judge = new StairJudge(new RunConfig()); var runner = Standing();
+            var judge = new StairJudge(new RunConfig()); var runner = Standing(); EnterLongAgo(judge, runner);
             runner.Command(MotionCommand.KneeStep); runner.Tick(.5f, 0);
             Assert.IsFalse(judge.Tick(.05f, true, 2f, runner));
             runner.Tick(.3f, 0); Assert.IsTrue(judge.Tick(.05f, true, 2.5f, runner), "0.8 s since the step is a miss");
         }
         [Test] public void LocalZWrappingBackStartsANewChunk()
         {
-            var judge = new StairJudge(new RunConfig()); var runner = Standing();
+            var judge = new StairJudge(new RunConfig()); var runner = Standing(); EnterLongAgo(judge, runner);
             Assert.IsTrue(judge.Tick(.05f, true, 10f, runner)); Assert.IsFalse(judge.Tick(.05f, true, 12f, runner));
-            Assert.IsTrue(judge.Tick(.05f, true, 3f, runner), "z went back: another stair chunk");
+            Assert.IsFalse(judge.Tick(.05f, true, 3f, runner), "z went back: another stair chunk, with a fresh entry grace");
+            Assert.IsTrue(judge.Tick(1f, true, 4f, runner), "and its own miss once the grace runs out");
         }
         [Test] public void HudValuesTrackProgressAndUrgency()
         {
-            var judge = new StairJudge(new RunConfig()); var runner = Standing();
+            var judge = new StairJudge(new RunConfig()); var runner = Standing(); EnterLongAgo(judge, runner);
             runner.Command(MotionCommand.KneeStep); judge.Tick(.05f, true, 12f, runner);
             Assert.IsTrue(judge.InStair); Assert.AreEqual(.5f, judge.StairProgress, .001f); Assert.AreEqual(0f, judge.KneeUrgency, .001f);
             runner.Tick(.35f, 0); judge.Tick(.05f, true, 12.5f, runner); Assert.AreEqual(.5f, judge.KneeUrgency, .001f);
