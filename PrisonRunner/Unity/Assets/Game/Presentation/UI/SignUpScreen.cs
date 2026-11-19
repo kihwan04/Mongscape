@@ -99,7 +99,7 @@ namespace Muhanok.Presentation
             if (flow.Step == SignUpStep.Capture)
             {
                 capture.Draw(data, identity, "회원가입: 얼굴 등록",
-                    SignUpFlow.Summary(flow.Nickname, flow.Settings) + "\n정면을 보고 틀 안에 얼굴을 맞춘 뒤 등록하세요.\n촬영에 실패해도 입력한 내용은 그대로 남습니다.",
+                    SignUpFlow.Summary(flow.Nickname, flow.Settings) + "\n정면을 보고 틀 안에 얼굴을 맞추면 잠시 뒤 자동으로 등록됩니다.\n촬영에 실패해도 입력한 내용은 그대로 남습니다.",
                     "얼굴 등록하기", enroll, () => flow.Back());
                 return;
             }

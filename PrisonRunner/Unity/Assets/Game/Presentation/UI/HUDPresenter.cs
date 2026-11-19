@@ -243,7 +243,7 @@ namespace Muhanok.Presentation
                 case MenuPage.Login: ChooseLogin(gate.Draw(Account, TitleLogo)); break;
                 case MenuPage.SignUp: if (Account != null) signUp.Draw(Data, Account, SignUp, EnrollFace, OpenLogin); break;
                 case MenuPage.Identity:
-                    if (Account != null) identity.Draw(Data, Account, "얼굴 로그인", "정면을 보고 틀 안에 얼굴을 맞춘 뒤 [얼굴 로그인]을 누르세요.\n가입한 얼굴이면 이름 입력 없이 로그인됩니다.", "얼굴 로그인", LoginWithFace, OpenLogin);
+                    if (Account != null) identity.Draw(Data, Account, "얼굴 로그인", "정면을 보고 틀 안에 얼굴을 맞추면 잠시 뒤 자동으로 로그인됩니다.\n가입한 얼굴이면 이름 입력 없이 로그인됩니다.", "얼굴 로그인", LoginWithFace, OpenLogin);
                     break;
                 case MenuPage.Main: SelectMenu(menu.Draw(Data, TitleLogo)); break;
                 case MenuPage.TutorialOffer: { var choice = tutorialOffer.Draw(offerMode, Data == null || Data.BodyStylesAllowed, Data?.Player?.Style ?? PlayStyle.Keyboard, out var style); ChooseTutorial(choice, style); break; }
