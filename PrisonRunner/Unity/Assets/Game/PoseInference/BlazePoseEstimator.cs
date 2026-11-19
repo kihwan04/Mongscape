@@ -66,6 +66,8 @@ namespace Muhanok.PoseInference
         private bool tracking;
         private Vector2 roiHip, roiTop;
         private float shoulderQuality, lastDetectorScore;
+        // F8 player lock (PoseEstimatorRegistry.PlayerLock): only the re-detection after a loss is limited; tracking is untouched.
+        private readonly PlayerLockGate playerLock = new PlayerLockGate();
         private int published, detections, lostTracks, cameraFrames, latencySamples, mostInFlight;
         private double latencySum;
         public string Diagnostics { get; private set; } = "";
@@ -136,7 +138,7 @@ namespace Muhanok.PoseInference
         private void ResetPipeline()
         {
             foreach (var slot in slots) slot.Busy = slot.Copied = false;
-            detecting = gotIndex = gotScore = gotBox = false; tracking = false; freshFrame = false;
+            detecting = gotIndex = gotScore = gotBox = false; tracking = false; freshFrame = false; playerLock.Reset();
             queueHead = queueCount = 0; statsSince = -1;
         }
 
@@ -263,7 +265,9 @@ namespace Muhanok.PoseInference
             float size = Mathf.Max(detectFrame.Width, detectFrame.Height), scale = size / DetectorSize;
             // Letterbox the frame into the square detector input; tensor rows go down, texture rows go up.
             detectorToImage = Affine.Translation(.5f * (detectFrame.Width - size), .5f * (detectFrame.Height + size)) * Affine.Scale(scale, -scale);
-            Sample(detectorInput, DetectorSize, detectorToImage, detectFrame);
+            var band = Vector4.zero;
+            if (PoseEstimatorRegistry.PlayerLock && playerLock.Active(now)) { playerLock.Band(detectFrame.Width, out float min, out float max); band = new Vector4(min, max, 1, 0); }
+            Sample(detectorInput, DetectorSize, detectorToImage, detectFrame, band);
             detector.Schedule(detectorInput);
             pendingIndex = detector.PeekOutput(0) as Tensor<int>;
             pendingScore = detector.PeekOutput(1) as Tensor<float>;
@@ -285,6 +289,8 @@ namespace Muhanok.PoseInference
             float ax = DetectorSize * anchors[index, 0], ay = DetectorSize * anchors[index, 1];
             var hip = detectorToImage.Apply(ax + box[4], ay + box[5]);
             var top = detectorToImage.Apply(ax + box[6], ay + box[7]);
+            // Player lock: a much smaller body than the player who was just lost is someone farther back.
+            if (PoseEstimatorRegistry.PlayerLock && !playerLock.Accepts((top - hip).magnitude, now)) { Publish(false, detectFrame, .5f, now); return; }
             // No pass is in flight while detecting, so a slot is free.
             var slot = FreeSlot();
             if (slot != null) StartLandmarks(slot, hip, top, detectFrame, false, now);
@@ -340,7 +346,7 @@ namespace Muhanok.PoseInference
             shoulderQuality = Mathf.Max(target.Points[11].Visibility, target.Points[12].Visibility);
             bool keep = shoulderQuality >= .5f && (nextTop - nextHip).magnitude > 8f;
             tracking = keep;
-            if (keep) { roiHip = nextHip; roiTop = nextTop; }
+            if (keep) { roiHip = nextHip; roiTop = nextTop; playerLock.Track(nextHip.x, (nextTop - nextHip).magnitude, now); }
             // A tracked crop that lost the body is not published: the detector runs once the passes in flight finish.
             if (!keep && slot.FromTracking) { lostTracks++; return; }
             var queued = Enqueue(); queued.CopyFrom(target);
@@ -373,7 +379,8 @@ namespace Muhanok.PoseInference
             string latency = latencySamples > 0 ? (latencySum / latencySamples * 1000).ToString("0") + "ms" : "-";
             Diagnostics = (tracking ? "이어서 추적" : "사람 찾기") + " · 어깨 " + shoulderQuality.ToString("0.00") + " · 검출 " + lastDetectorScore.ToString("0.00")
                 + " · 추론 " + (published / span).ToString("0") + "fps / 카메라 " + (cameraFrames / span).ToString("0") + "fps"
-                + " · 지연 " + latency + " · 동시 " + mostInFlight + "/" + slots.Length + " · 재검출 " + detections + " · 놓침 " + lostTracks;
+                + " · 지연 " + latency + " · 동시 " + mostInFlight + "/" + slots.Length + " · 재검출 " + detections + " · 놓침 " + lostTracks
+                + " · F8 고정 " + (PoseEstimatorRegistry.PlayerLock ? (playerLock.Active(now) ? "켜짐" : "켜짐(대기)") + " 거부 " + playerLock.Rejected : "꺼짐");
             published = detections = lostTracks = cameraFrames = latencySamples = mostInFlight = 0; latencySum = 0; statsSince = now;
         }
 
@@ -384,8 +391,10 @@ namespace Muhanok.PoseInference
             return true;
         }
 
-        private void Sample(Tensor<float> tensor, int size, Affine transform, FrameInfo frame)
+        // band: (min u, max u, 1, 0) keeps only that vertical strip of the source (the rest reads as black like the letterbox); zero keeps all.
+        private void Sample(Tensor<float> tensor, int size, Affine transform, FrameInfo frame, Vector4 band = default)
         {
+            sampler.SetVector("Band", band);
             var data = ComputeTensorData.Pin(tensor);
             sampler.SetTexture(kernel, "Source", camera);
             sampler.SetBuffer(kernel, "Output", data.buffer);

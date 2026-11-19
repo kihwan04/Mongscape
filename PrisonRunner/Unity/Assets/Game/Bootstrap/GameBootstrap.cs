@@ -426,6 +426,8 @@ namespace Muhanok.Bootstrap
             if (KeyboardGameInput.RecalibratePressed && !hud.MenuOpen) Pose.Recalibrate();
             if (KeyboardGameInput.DeveloperTogglePressed && Session.Flow.State == GameFlowState.TitleIdle) SetDeveloperMode(!userSettings.DeveloperMode);
             if (KeyboardGameInput.ClearRankingPressed && userSettings.DeveloperMode) { Store.ClearToday(); Debug.Log("Today's ranking cleared."); }
+            // Player lock for crowded booths; the F3 overlay's pose line shows its state.
+            if (KeyboardGameInput.PlayerLockPressed) { PoseEstimatorRegistry.PlayerLock = !PoseEstimatorRegistry.PlayerLock; Debug.Log("Player lock " + (PoseEstimatorRegistry.PlayerLock ? "on" : "off")); }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             // Demo invincibility: no on-screen indicator by design; the log records each switch.
             if (KeyboardGameInput.InvinciblePressed) { Session.Invincible = !Session.Invincible; Debug.Log("Invincible " + (Session.Invincible ? "on" : "off")); }

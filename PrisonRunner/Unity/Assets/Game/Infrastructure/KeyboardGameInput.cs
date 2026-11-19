@@ -17,7 +17,8 @@ namespace Muhanok.Infrastructure
         public static bool OverlayPressed => Keyboard.current != null && Keyboard.current.f3Key.wasPressedThisFrame;
         public static bool ClearRankingPressed => Keyboard.current != null && Keyboard.current.ctrlKey.isPressed && Keyboard.current.f10Key.wasPressedThisFrame;
         // F9 toggles demo invincibility; only development builds read it.
-        public static bool InvinciblePressed => Keyboard.current != null && Keyboard.current.f9Key.wasPressedThisFrame;
+        public static bool PlayerLockPressed => Keyboard.current != null && Keyboard.current.f8Key.wasPressedThisFrame;
+        public static bool InvinciblePressed =>Keyboard.current != null && Keyboard.current.f9Key.wasPressedThisFrame;
         public static bool DeveloperTogglePressed => Keyboard.current != null && Keyboard.current.ctrlKey.isPressed && Keyboard.current.shiftKey.isPressed && Keyboard.current.f12Key.wasPressedThisFrame;
         // Korean names need the IME while the setup text fields are open.
         public static void SetTextInput(bool on) { if (Keyboard.current != null) Keyboard.current.SetIMEEnabled(on); }

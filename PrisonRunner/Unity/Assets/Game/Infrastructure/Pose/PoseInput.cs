@@ -37,6 +37,10 @@ namespace Muhanok.Infrastructure
     {
         // Set by Muhanok.PoseInference when the Inference Engine package is installed.
         public static Func<PoseCameraOptions, IPoseEstimator> Factory;
+        // Exhibition player lock (F8, off by default): when the body is lost, the search for it again only looks around where
+        // the player was and ignores much smaller (farther) people, so a bystander behind or beside the player is not taken.
+        // While the player is tracked nothing changes.
+        public static bool PlayerLock;
     }
 
     // Converts classifier readings into the same commands the keyboard produces.
