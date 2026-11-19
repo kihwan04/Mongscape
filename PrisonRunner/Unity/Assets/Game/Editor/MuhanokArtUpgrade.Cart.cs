@@ -132,12 +132,40 @@ namespace Muhanok.Editor
                 var plank=Shape("SplinteredSleeper",dressing,RoutePoint(new Vector3(missing*(.5f+i*.12f),-.2f-i*.32f,z-1+i),type),new Vector3(.65f,.10f,.24f),wood);
                 plank.transform.localRotation=Quaternion.Euler(i*27,15,missing*35);
             }
-            var sign=Node("TrackWarningSign",dressing,RoutePoint(new Vector3(missing*1.5f,1.4f,z-3.1f),type));
-            Shape("ArrowBoard",sign,Vector3.zero,new Vector3(1.04f,.65f,.10f),iron);
-            Beam("ArrowShaft",sign,new Vector3(-safe*.32f,0,-.075f),new Vector3(safe*.32f,0,-.075f),.08f,brass);
-            for(int wing=-1;wing<=1;wing+=2)Beam("ArrowHead",sign,new Vector3(safe*.32f,0,-.075f),new Vector3(safe*.07f,wing*.22f,-.075f),.08f,brass);
+            // Blender hazard sign (TrackHazardSign.fbx, 2.6m tall, 1.5m diamond) well before the hole, outside the deck on the
+            // missing side, turned slightly toward the approaching cart; its bracket meets the deck edge.
+            float signZ=z-HazardSignLead,slope=(RouteSurface.LocalX(type,signZ+.01f)-RouteSurface.LocalX(type,signZ-.01f))/.02f;
+            Beam("HazardSignBracket",dressing,RoutePoint(new Vector3(missing*1.0f,-.17f,signZ),type),RoutePoint(new Vector3(missing*HazardSignOffset,-.17f,signZ),type),.10f,iron);
+            var sign=Node("TrackWarningSign",dressing,RoutePoint(new Vector3(missing*HazardSignOffset,-.12f,signZ),type));
+            sign.localRotation=Quaternion.Euler(0,Mathf.Atan(slope)*Mathf.Rad2Deg+missing*12f,0);
+            var hazard=HazardYellow();HazardPaint(Prop("blender","TrackHazardSign",sign,Vector3.zero,2.6f),hazard);
+            // Arrow to the safe side on a black board fixed to the striped post, under the diamond.
+            Shape("ArrowBoard",sign,new Vector3(0,.62f,-.11f),new Vector3(1.10f,.42f,.06f),black);
+            Beam("ArrowShaft",sign,new Vector3(-safe*.36f,.62f,-.16f),new Vector3(safe*.36f,.62f,-.16f),.09f,hazard);
+            for(int wing=-1;wing<=1;wing+=2)Beam("ArrowHead",sign,new Vector3(safe*.38f,.62f,-.16f),new Vector3(safe*.18f,.62f+wing*.15f,-.16f),.09f,hazard);
             for(int i=0;i<3;i++)Shape("SafeSideGoldMarker",dressing,RoutePoint(new Vector3(safe*.92f,.12f,z-2.7f+i*.65f),type),new Vector3(.12f,.06f,.32f),brass);
             return dressing.gameObject;
+        }
+        // 7.5m before the gap centre = 6m before the hole opens, about 0.7s at cart speed and visible from the previous gap.
+        private const float HazardSignLead=7.5f,HazardSignOffset=1.85f;
+        private static Material HazardYellow()
+        {
+            var m=Mat("HazardSignYellow",new Color(1,.78f,.06f),0,.3f);Emit(m,new Color(1,.62f,.03f)*1.4f);return m;
+        }
+        // The sign's FBX slots are named HazardYellow/HazardBlack: yellow glows in the dark ravine, black stays charcoal.
+        private static void HazardPaint(GameObject model,Material hazard)
+        {
+            foreach(var renderer in model.GetComponentsInChildren<Renderer>())
+            {
+                var materials=renderer.sharedMaterials;
+                for(int i=0;i<materials.Length;i++)
+                {
+                    if(materials[i]==null)continue;
+                    if(materials[i].name.Contains("Yellow"))materials[i]=hazard;
+                    else if(materials[i].name.Contains("HazardBlack"))materials[i]=black;
+                }
+                renderer.sharedMaterials=materials;
+            }
         }
         // Rebuilds only the two cart chunks and their editable route floors, e.g. after changing the rail windows.
         [MenuItem("Mongscape/Rebuild Cart Chunks")]
