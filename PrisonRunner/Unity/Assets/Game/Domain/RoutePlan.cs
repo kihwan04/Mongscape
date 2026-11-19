@@ -83,6 +83,9 @@ namespace Muhanok.Domain
             int local = sequence - starts[cycles[sequence]];
             return local >= CartFork.FirstChunk - 1 && local <= CartFork.LastChunk;
         }
+        // The first cart ride of a run keeps both rails in every window: first-time players were falling at the very first
+        // broken rail before they understood the cart. Later laps break rails as usual (the tutorial places its own lesson rail).
+        public bool CalmCart(int sequence) => Extended && CycleAt(sequence) == plainLaps;
         public void UpdateChoice(float z, int lane)
         {
             if (!Extended) return;
