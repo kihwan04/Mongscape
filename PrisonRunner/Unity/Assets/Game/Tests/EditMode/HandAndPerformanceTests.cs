@@ -104,6 +104,17 @@ namespace Muhanok.Tests
             Assert.IsFalse(FaceAutoCapture.FaceInOval(Face(1),1.5),"Stale frame");
             var hidden=Face(1);hidden.Points[2].Visibility=.1f;Assert.IsFalse(FaceAutoCapture.FaceInOval(hidden,1),"Eyes must be seen");
         }
+        [Test] public void CapturedFrameKeepsOnlyTheGuideOval()
+        {
+            // 640x480: oval half axes 108 x 144 px around (320, 240).
+            Assert.IsTrue(FaceAutoCapture.InOvalPixel(320,240,640,480),"Centre");
+            Assert.IsTrue(FaceAutoCapture.InOvalPixel(420,240,640,480),"Inside the side");
+            Assert.IsFalse(FaceAutoCapture.InOvalPixel(440,240,640,480),"Past the side");
+            Assert.IsTrue(FaceAutoCapture.InOvalPixel(320,110,640,480),"Inside the top");
+            Assert.IsFalse(FaceAutoCapture.InOvalPixel(320,90,640,480),"Past the top");
+            Assert.IsFalse(FaceAutoCapture.InOvalPixel(20,240,640,480),"A bystander at the edge");
+            Assert.IsFalse(FaceAutoCapture.InOvalPixel(420,120,640,480),"Corner of the oval's box");
+        }
         [Test] public void FaceHeldForTheHoldTimeCapturesOnceUntilItLeavesOrRetryTimePasses()
         {
             var a=new FaceAutoCapture();bool fired=false;int count=0;

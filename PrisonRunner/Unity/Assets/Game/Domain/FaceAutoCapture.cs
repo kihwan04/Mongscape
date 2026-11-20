@@ -34,6 +34,15 @@ namespace Muhanok.Domain
             return u * u + v * v <= 1f;
         }
 
+        // Pixel (x, y) of a width x height upright frame lies inside the guide oval. The captured login/sign-up frames keep
+        // only these pixels so a bystander in the wide webcam view never reaches the face server.
+        public static bool InOvalPixel(int x, int y, int width, int height)
+        {
+            float b = OvalHeight * .5f * height, a = b * OvalWidthToHeight;
+            float u = (x + .5f - width * .5f) / a, v = (y + .5f - height * .5f) / b;
+            return u * u + v * v <= 1f;
+        }
+
         // ready: the button could be pressed now (no request in flight). Returns true on the frame the capture should start.
         public bool Tick(bool inside, bool ready, double now)
         {

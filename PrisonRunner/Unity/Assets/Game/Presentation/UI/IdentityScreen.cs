@@ -79,8 +79,8 @@ namespace Muhanok.Presentation
             if(!GUI.enabled||e.type!=EventType.KeyDown||(e.keyCode!=KeyCode.Return&&e.keyCode!=KeyCode.KeypadEnter))return false;
             e.Use();return true;
         }
-        private static readonly Color GuideIdle=new Color(1f,1f,1f,.85f),Shade=new Color(0,0,0,.55f),FaceHeld=new Color(.22f,1,.65f,1);
-        // Fixed oval face guide over the video: shade outside, dotted outline, hint below. Repaint only.
+        private static readonly Color GuideIdle=new Color(1f,1f,1f,.85f),Shade=Color.black,FaceHeld=new Color(.22f,1,.65f,1);
+        // Fixed oval face guide over the video: solid black outside (the wide webcam shows bystanders), dotted outline, hint below. Repaint only.
         private void DrawFaceGuide(Rect view,bool busy,float progress)
         {
             if(Event.current.type!=EventType.Repaint)return;
