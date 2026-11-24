@@ -6,8 +6,10 @@ namespace Muhanok.Domain
     {
         private string target, fired;
         private double entered, lastSeen;
+        // Hold time of a hand "click" on a menu button.
+        public const double ClickSeconds = 1.2;
         public double Progress { get; private set; }
-        public bool Tick(string hovered, double now, bool valid, double seconds=.9)
+        public bool Tick(string hovered, double now, bool valid, double seconds=ClickSeconds)
         {
             if (!valid || string.IsNullOrEmpty(hovered)) { target=null; fired=null; Progress=0; return false; }
             if (hovered!=target || now-lastSeen>.25 || now<lastSeen) { target=hovered; fired=null; entered=now; Progress=0; }

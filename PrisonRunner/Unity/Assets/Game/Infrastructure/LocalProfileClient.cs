@@ -75,11 +75,13 @@ namespace Muhanok.Infrastructure
                 int rotation=camera.videoRotationAngle; bool swapped=rotation==90||rotation==270;
                 int ow=swapped?h:w,oh=swapped?w:h;
                 var corrected=new Color32[pixels.Length];
+                var black=new Color32(0,0,0,255);
                 for(int y=0;y<h;y++)for(int x=0;x<w;x++)
                 {
                     int cy=camera.videoVerticallyMirrored?h-1-y:y,dx=x,dy=cy;
                     if(rotation==90){dx=cy;dy=w-1-x;}else if(rotation==180){dx=w-1-x;dy=h-1-cy;}else if(rotation==270){dx=h-1-cy;dy=x;}
-                    corrected[dy*ow+dx]=pixels[y*w+x];
+                    // Black outside the on-screen face oval, so only the player in the guide is sent.
+                    corrected[dy*ow+dx]=Muhanok.Domain.FaceAutoCapture.InOvalPixel(dx,dy,ow,oh)?pixels[y*w+x]:black;
                 }
                 var texture=new Texture2D(ow,oh,TextureFormat.RGB24,false);texture.SetPixels32(corrected);texture.Apply();
                 images[i]=Convert.ToBase64String(texture.EncodeToJPG(85));Destroy(texture);

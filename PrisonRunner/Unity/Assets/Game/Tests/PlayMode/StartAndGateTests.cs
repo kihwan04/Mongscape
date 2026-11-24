@@ -17,6 +17,8 @@ namespace Muhanok.Tests
             Assert.AreEqual(1672,game.LoadingImage.width,"Loading import must retain source aspect instead of power-of-two resizing");
             Assert.AreEqual(941,game.LoadingImage.height);
             game.OpenStartSetup();Assert.IsTrue(game.StartSetupOpen);
+            // Keyboard play: a body style on a PC with a webcam waits for its calibration before the run starts.
+            ((Muhanok.Presentation.IHudData)game).PreviewStyle(PlayStyle.Keyboard);
             game.Session.Config.ExtendedRoutes=false;game.BeginRun("70");Assert.IsTrue(game.IsLoading);Assert.AreEqual(70,game.Session.Workout.WeightKg);
             yield return new WaitForSecondsRealtime(1.1f);Assert.IsFalse(game.IsLoading);Assert.AreEqual(GameFlowState.Running,game.Session.Flow.State);
             Assert.IsTrue(game.IsRevealing,"Loading image must dissolve into the preposed live world");

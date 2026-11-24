@@ -37,6 +37,10 @@ namespace Muhanok.Infrastructure
     {
         // Set by Muhanok.PoseInference when the Inference Engine package is installed.
         public static Func<PoseCameraOptions, IPoseEstimator> Factory;
+        // Exhibition player lock (F8, off by default): when the body is lost, the search for it again only looks around where
+        // the player was and ignores much smaller (farther) people, so a bystander behind or beside the player is not taken.
+        // While the player is tracked nothing changes.
+        public static bool PlayerLock;
     }
 
     // Converts classifier readings into the same commands the keyboard produces.
@@ -87,19 +91,21 @@ namespace Muhanok.Infrastructure
         public PlayStyle Style { get; private set; } = PlayStyle.Keyboard;
         public MotionReading Reading => classifier.Reading;
         public float CalibrationProgress => classifier.CalibrationProgress;
+        public bool KneesMissing => UsesCamera && classifier.KneesMissing && classifier.Status == PoseStatus.Calibrating;
         public float StepsPerMinute => classifier.StepsPerMinute;
         public double LastJumpTime { get; private set; } = -10;
         public double LastKneeStepTime { get; private set; } = -10;
         // When the last calibration finished (Tick time, -1 none) and whether tracking dropped or restarted since.
         public double CalibratedAt { get; private set; } = -1;
         public bool LostSinceCalibration { get; private set; } = true;
-        // A run may skip its loading calibration while the last one is fresh (CalibrationReuse).
-        public bool CalibrationFresh(double now) => UsesCamera && calibrated && CalibrationReuse.Keep(now, CalibratedAt, LostSinceCalibration);
         public Texture CameraTexture => estimator?.CameraTexture;
         public string Message => estimator?.Message ?? "";
         public string Diagnostics => estimator?.Diagnostics ?? "";
         public bool UsesCamera => PlayStyleInfo.UsesCamera(Style);
         public bool Tracking => Status == PoseStatus.Tracking;
+        // The camera delivers pose frames, calibrated or not. Hand pointing needs only this: it reads the shoulders of each frame,
+        // so a style switch (the login page's upper-body camera) that restarts calibration must not switch it off.
+        public bool CameraLive => UsesCamera && estimator != null && estimator.Status == PoseStatus.Tracking;
         public PoseStatus Status
         {
             get
@@ -112,14 +118,15 @@ namespace Muhanok.Infrastructure
         }
         // riding: the cart takes absolute lean commands (not inside a fork window).
         // inCart: the whole cart ride, where the full body leans the shoulders instead of stepping aside.
-        public PoseTracker(PoseGameInput output, PoseCameraOptions camera, MotionTuning tuning, Func<int> lane, Func<bool> riding, Func<bool> inCart = null)
+        // onStairs: on or right before a stair chunk, where the jump reading is switched off (MotionClassifier.SetStairs).
+        public PoseTracker(PoseGameInput output, PoseCameraOptions camera, MotionTuning tuning, Func<int> lane, Func<bool> riding, Func<bool> inCart = null, Func<bool> onStairs = null)
         {
             // Work on copies: settings change them at runtime and must not edit the GameSettings asset.
             options = Copy(camera ?? new PoseCameraOptions()); baseTuning = Copy(tuning ?? new MotionTuning());
             this.tuning = Copy(baseTuning); classifier = new MotionClassifier(this.tuning);
-            commands = new PoseCommandSource(output, lane, riding); this.inCart = inCart;
+            commands = new PoseCommandSource(output, lane, riding); this.inCart = inCart; this.onStairs = onStairs;
         }
-        private readonly Func<bool> inCart;
+        private readonly Func<bool> inCart, onStairs;
         public void SetStyle(PlayStyle style)
         {
             if (style == Style && (estimator != null || !UsesCamera)) return;
@@ -179,6 +186,7 @@ namespace Muhanok.Infrastructure
             smoother.Apply(incoming, tuning);
             LastFrame.CopyFrom(incoming);
             classifier.SetCart(inCart != null && inCart());
+            classifier.SetStairs(onStairs != null && onStairs());
             var reading = classifier.Update(incoming);
             if (classifier.Calibrated && !calibrated) { CalibratedAt = now; LostSinceCalibration = false; }
             else if (!classifier.Calibrated || classifier.Status != PoseStatus.Tracking) LostSinceCalibration |= calibrated;

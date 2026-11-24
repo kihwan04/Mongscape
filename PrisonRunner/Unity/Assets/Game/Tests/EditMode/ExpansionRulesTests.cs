@@ -40,39 +40,39 @@ namespace Muhanok.Tests
             int count=0;for(int i=CartFork.DestinationChunk;i<RoutePlan.ExtendedLapChunks;i++)if(p.TypeAt(i)==4||p.TypeAt(i)==5)count++;
             int destination=p.DestinationAt(6);
             int extraStairs=0;for(int i=CartFork.DestinationChunk+1;i<RoutePlan.ExtendedLapChunks;i++)if(p.TypeAt(i)==7)extraStairs++;
-            Assert.AreEqual(destination==0?22:0,count+(destination==0?extraStairs:0),"The prison corridor fills indices 8..29, minus stairs placed in it");
+            Assert.AreEqual(destination==0?8:0,count+(destination==0?extraStairs:0),"The prison corridor fills indices 8..15, minus stairs placed in it");
             Assert.AreEqual(destination<0?12:destination>0?0:7,p.TypeAt(CartFork.DestinationChunk),"The three destinations must enter three actual biomes");
             for(int i=0;i<2*RoutePlan.ExtendedLapChunks-1;i++)Assert.AreEqual(p.BaseHeight(i)+RouteSurface.Rise(p.TypeAt(i)),p.BaseHeight(i+1),.001f);
             Assert.AreEqual(0,p.CycleAt(RoutePlan.ExtendedLapChunks-1)); Assert.AreEqual(1,p.CycleAt(RoutePlan.ExtendedLapChunks));
             p.UpdateChoice(150,-lane);Assert.AreEqual(lane,p.ChoiceAt(8),"Commitment must be stable");
         }
-        [Test] public void EveryExtendedBranchLapIsThirtyTwoChunksWithTheFixedPrisonLayout()
+        [Test] public void EveryExtendedBranchLapIsEighteenChunksWithTheFixedPrisonLayout()
         {
-            Assert.AreEqual(32,RoutePlan.ExtendedLapChunks);
+            Assert.AreEqual(18,RoutePlan.ExtendedLapChunks);
             for(int lane=-1;lane<=1;lane++)
             {
                 var p=new RoutePlan(new RunConfig(),3);p.UpdateChoice(CartFork.Decision,lane);
                 int destination=p.DestinationAt(6);
-                Assert.AreEqual(0,p.CycleAt(31));Assert.AreEqual(1,p.CycleAt(32));
+                Assert.AreEqual(0,p.CycleAt(17));Assert.AreEqual(1,p.CycleAt(18));
                 if(destination==0)
                 {
                     var expected=new System.Collections.Generic.List<int>{0,1,2,1,2,1,3,7};
-                    for(int i=0;i<22;i++)expected.Add(4+i%2);
+                    for(int i=0;i<8;i++)expected.Add(4+i%2);
                     expected.Add(6);expected.Add(RouteSurface.PrisonExit);
-                    Assert.AreEqual(32,expected.Count);
+                    Assert.AreEqual(18,expected.Count);
                     // Corridor stairs (type 7) may replace corridor chunks; everything else is fixed.
-                    for(int i=0;i<32;i++)
+                    for(int i=0;i<18;i++)
                     {
-                        if(i>7&&i<30&&p.TypeAt(i)==7)continue;
+                        if(i>7&&i<16&&p.TypeAt(i)==7)continue;
                         Assert.AreEqual(expected[i],p.TypeAt(i),"prison chunk "+i);
                     }
                 }
                 else
                 {
-                    Assert.AreEqual(destination<0?3:0,p.TypeAt(31));
+                    Assert.AreEqual(destination<0?3:0,p.TypeAt(17));
                     // The first lap has one stair chunk (mine 13, zoo 14) in place of a walking chunk; everything else keeps the biome's walk.
                     int stairs=0;
-                    for(int i=CartFork.DestinationChunk;i<31;i++)
+                    for(int i=CartFork.DestinationChunk;i<17;i++)
                     {
                         if(RouteSurface.IsStair(p.TypeAt(i))){stairs++;Assert.AreEqual(destination<0?RouteSurface.ZooStair:RouteSurface.MineStair,p.TypeAt(i));continue;}
                         Assert.AreEqual(destination<0?12:0,p.TypeAt(i));
@@ -91,7 +91,7 @@ namespace Muhanok.Tests
                     int start=lap*RoutePlan.ExtendedLapChunks;
                     if(q.DestinationAt(start)!=0)continue;
                     for(int i=0;i<RoutePlan.ExtendedLapChunks;i++){int t=q.TypeAt(start+i);Assert.AreNotEqual(11,t);Assert.AreNotEqual(12,t);Assert.AreNotEqual(RouteSurface.ZooStair,t);Assert.IsFalse(RouteSurface.IsOutdoor(t),"seed "+seed+" chunk "+i);}
-                    Assert.AreEqual(6,q.TypeAt(start+30));Assert.AreEqual(RouteSurface.PrisonExit,q.TypeAt(start+31));
+                    Assert.AreEqual(6,q.TypeAt(start+16));Assert.AreEqual(RouteSurface.PrisonExit,q.TypeAt(start+17));
                     Assert.AreEqual(0f,RouteSurface.Rise(RouteSurface.PrisonExit));
                     Assert.IsFalse(RouteSurface.IsOutdoor(RouteSurface.PrisonExit));Assert.IsFalse(RouteSurface.IsZoo(RouteSurface.PrisonExit));
                 }
@@ -206,10 +206,12 @@ namespace Muhanok.Tests
         }
         [Test] public void DwellCancelsOnTrackingLossAndFiresOnlyOncePerHover()
         {
-            var d=new GestureDwell();Assert.IsFalse(d.Tick("start",0,true));for(int i=1;i<9;i++)Assert.IsFalse(d.Tick("start",i*.1,true));Assert.IsTrue(d.Tick("start",.91,true));
-            Assert.IsFalse(d.Tick("start",1.1,true));d.Tick(null,1.2,false);
-            Assert.IsFalse(d.Tick("start",1.3,true));Assert.IsFalse(d.Tick("start",1.4,false));
-            Assert.IsFalse(d.Tick("start",2,true));for(int i=1;i<9;i++)Assert.IsFalse(d.Tick("start",2+i*.1,true));Assert.IsTrue(d.Tick("start",2.91,true));
+            // A hand click holds for 1.2 s.
+            Assert.AreEqual(1.2,GestureDwell.ClickSeconds,1e-9);
+            var d=new GestureDwell();Assert.IsFalse(d.Tick("start",0,true));for(int i=1;i<12;i++)Assert.IsFalse(d.Tick("start",i*.1,true));Assert.IsTrue(d.Tick("start",1.21,true));
+            Assert.IsFalse(d.Tick("start",1.3,true));d.Tick(null,1.4,false);
+            Assert.IsFalse(d.Tick("start",1.5,true));Assert.IsFalse(d.Tick("start",1.6,false));
+            Assert.IsFalse(d.Tick("start",2,true));for(int i=1;i<12;i++)Assert.IsFalse(d.Tick("start",2+i*.1,true));Assert.IsTrue(d.Tick("start",3.21,true));
         }
         [Test] public void FiveSuccessfulMovesEarnComboAndRetryClearsIt()
         {

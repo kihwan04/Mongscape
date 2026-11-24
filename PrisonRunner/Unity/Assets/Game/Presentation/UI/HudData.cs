@@ -25,6 +25,8 @@ namespace Muhanok.Presentation
         float SecondsSinceJump { get; }
         float SecondsSinceKneeStep { get; }
         float CalibrationProgress { get; }
+        // Full body calibration waits for both knees to be in view.
+        bool PoseKneesMissing { get; }
         float StepsPerMinute { get; }
         bool BodyActive { get; }
         PlayerWallet Wallet { get; }
@@ -61,6 +63,7 @@ namespace Muhanok.Presentation
     internal static class PosePreview
     {
         private static readonly Color Bone = new Color(.3f, 1f, .55f), Joint = new Color(1f, .85f, .2f);
+        public const string KneesHint = "무릎까지 보이게 뒤로 물러나 주세요";
         // A webcam is plugged in and already delivering frames.
         public static bool Live(IHudData data)
         {
@@ -119,7 +122,7 @@ namespace Muhanok.Presentation
             var status = data.PoseStatus;
             if ((status == PoseStatus.NoCamera || status == PoseStatus.NoModel) && !string.IsNullOrEmpty(data.PoseMessage))
                 GUI.Label(new Rect(area.x + 16, area.y + 16, area.width - 32, area.height - 70), data.PoseMessage, skin.Style(16, FontStyle.Normal));
-            string text = PoseStatusText.Korean(status);
+            string text = status == PoseStatus.Calibrating && data.PoseKneesMissing ? KneesHint : PoseStatusText.Korean(status);
             if (status == PoseStatus.Tracking && data.StepsPerMinute > 0) text += " (분당 " + Mathf.RoundToInt(data.StepsPerMinute) + "걸음)";
             var label = new Rect(area.x, area.yMax - 34, area.width, 30);
             skin.Card(label, new Color(0, 0, 0, .6f));

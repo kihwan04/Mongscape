@@ -36,6 +36,10 @@ namespace Muhanok.Presentation
     {
         private readonly HudSkin skin;
         private GUIStyle paragraph,notice;
+        // Auto-press after the face stays in the oval; restarts when the screen (login or sign-up) changes or was hidden.
+        private readonly Muhanok.Domain.FaceAutoCapture auto=new Muhanok.Domain.FaceAutoCapture();
+        private string autoAction;
+        private double autoDrawn=-10;
         public IdentityScreen(HudSkin skin){this.skin=skin;}
         public void Draw(IHudData data,IIdentityData identity,string heading,string guide,string action,Action capture,Action back)
         {
@@ -47,11 +51,19 @@ namespace Muhanok.Presentation
             GUI.color=Palette.Gold;GUI.Label(new Rect(80,58,950,56),heading,skin.Style(36,FontStyle.Bold));GUI.color=Color.white;
             // Video only: no body skeleton or pose status here, just a fixed face guide. Hand pointing still runs.
             var view=PosePreview.Draw(skin,new Rect(80,130,560,400),data,showStatus:false,drawSkeleton:false);
-            if(view.width>0)DrawFaceGuide(view,identity.IdentityBusy);
+            bool ready=!identity.IdentityBusy&&data.CameraDetected;
+            if(Event.current.type==EventType.Repaint)
+            {
+                double now=Time.realtimeSinceStartupAsDouble;
+                if(autoAction!=action||now-autoDrawn>.5){auto.Reset();autoAction=action;}
+                autoDrawn=now;
+                if(auto.Tick(view.width>0&&Muhanok.Domain.FaceAutoCapture.FaceInOval(data.PoseFrame,now),ready,now))capture?.Invoke();
+            }
+            if(view.width>0)DrawFaceGuide(view,identity.IdentityBusy,(float)auto.Progress);
             GUI.Label(new Rect(680,140,510,160),guide,paragraph);
             GUI.color=Palette.Sand;GUI.Label(new Rect(680,305,510,90),"전시용 얼굴 로그인입니다.\n사진·영상 위조를 차단하는 보안 인증 기능은 포함하지 않습니다.",notice);GUI.color=Color.white;
             // Without a webcam there is nothing to capture.
-            GUI.enabled=!identity.IdentityBusy&&data.CameraDetected;
+            GUI.enabled=ready;
             if(skin.PrimaryButton(new Rect(680,420,500,64),action)||Enter())capture?.Invoke();
             GUI.enabled=true;
             GUI.color=new Color(1,1,1,.75f);GUI.Label(new Rect(80,548,560,32),GesturePointer.Hint("Enter를 누르세요."),skin.Style(17,FontStyle.Normal));GUI.color=Color.white;
@@ -67,12 +79,12 @@ namespace Muhanok.Presentation
             if(!GUI.enabled||e.type!=EventType.KeyDown||(e.keyCode!=KeyCode.Return&&e.keyCode!=KeyCode.KeypadEnter))return false;
             e.Use();return true;
         }
-        private static readonly Color GuideIdle=new Color(1f,1f,1f,.85f),Shade=new Color(0,0,0,.55f);
-        // Fixed oval face guide over the video: shade outside, dotted outline, hint below. Repaint only.
-        private void DrawFaceGuide(Rect view,bool busy)
+        private static readonly Color GuideIdle=new Color(1f,1f,1f,.85f),Shade=Color.black,FaceHeld=new Color(.22f,1,.65f,1);
+        // Fixed oval face guide over the video: solid black outside (the wide webcam shows bystanders), dotted outline, hint below. Repaint only.
+        private void DrawFaceGuide(Rect view,bool busy,float progress)
         {
             if(Event.current.type!=EventType.Repaint)return;
-            float h=view.height*.6f,w=h*.75f,cx=view.center.x,cy=view.center.y,top=cy-h*.5f,bottom=cy+h*.5f;
+            float h=view.height*Muhanok.Domain.FaceAutoCapture.OvalHeight,w=h*Muhanok.Domain.FaceAutoCapture.OvalWidthToHeight,cx=view.center.x,cy=view.center.y,top=cy-h*.5f,bottom=cy+h*.5f;
             var white=Texture2D.whiteTexture;
             GUI.color=Shade;
             GUI.DrawTexture(new Rect(view.x,view.y,view.width,top-view.y),white);
@@ -84,14 +96,15 @@ namespace Muhanok.Presentation
                 GUI.DrawTexture(new Rect(view.x,y,cx-half-view.x,rh),white);
                 GUI.DrawTexture(new Rect(cx+half,y,view.xMax-cx-half,rh),white);
             }
-            GUI.color=busy?Palette.Gold:GuideIdle;
             for(int i=0;i<160;i++)
             {
-                float a=i*Mathf.PI*2f/160f;
+                // The outline fills green clockwise from the top while the face holds still in the oval.
+                GUI.color=busy?Palette.Gold:i<progress*160?FaceHeld:GuideIdle;
+                float a=i*Mathf.PI*2f/160f-Mathf.PI*.5f;
                 GUI.DrawTexture(new Rect(cx+Mathf.Cos(a)*w*.5f-2.5f,cy+Mathf.Sin(a)*h*.5f-2.5f,5,5),white);
             }
             GUI.color=busy?Palette.Gold:Color.white;
-            GUI.Label(new Rect(view.x,bottom+8,view.width,30),busy?"가만히 계세요":"틀 안에 얼굴을 맞춰 주세요",skin.Centered(22,FontStyle.Bold));
+            GUI.Label(new Rect(view.x,bottom+8,view.width,30),busy||progress>0?"가만히 계세요":"틀 안에 얼굴을 맞춰 주세요",skin.Centered(22,FontStyle.Bold));
             GUI.color=Color.white;
         }
     }

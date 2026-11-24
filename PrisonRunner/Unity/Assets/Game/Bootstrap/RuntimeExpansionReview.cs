@@ -86,9 +86,9 @@ namespace Muhanok.Bootstrap
             {
                 if(detailsOnly)break;
                 host.Settings.ApplyPreset(preset);host.Settings.Fullscreen=false;host.Settings.PerformanceOverlay=true;game.ApplySettings(false);
-                foreach(float z in new[]{132f,340f,580f,950f})
+                foreach(float z in new[]{132f,300f,380f,614f})
                 {
-                    Seek(z,z==132?0:BranchFor(z==340?0:z==580?1:-1));game.Session.Score.Advance(Mathf.Max(0,z-2));driving=true;game.enabled=true;
+                    Seek(z,z==132?0:BranchFor(z==300?0:z==380?1:-1));game.Session.Score.Advance(Mathf.Max(0,z-2));driving=true;game.enabled=true;
                     yield return new WaitForSecondsRealtime(2);
                     var frames=new List<float>(700);float until=Time.realtimeSinceStartup+7;
                     while(Time.realtimeSinceStartup<until&&error==null)
@@ -97,7 +97,7 @@ namespace Muhanok.Bootstrap
                     }
                     driving=false;game.enabled=false;
                     if(game.Session.Flow.State!=GameFlowState.Running){Finish("Review driver collision in "+RouteSurface.AreaAt(game.Session.Runner.Z));yield break;}
-                    var sample=new Sample{preset=preset.ToString(),area=z==132?"Fork":z==340?"Prison":z==580?"Mine":"Zoo",frames=frames.Count,cap=host.Settings.FrameCap,renderScale=host.Settings.RenderScale};
+                    var sample=new Sample{preset=preset.ToString(),area=z==132?"Fork":z==300?"Prison":z==380?"Mine":"Zoo",frames=frames.Count,cap=host.Settings.FrameCap,renderScale=host.Settings.RenderScale};
                     float total=0;foreach(float f in frames)total+=f;frames.Sort();sample.meanMs=total/Mathf.Max(1,frames.Count);sample.fps=1000/sample.meanMs;
                     sample.p95Ms=frames[Mathf.Clamp((int)(frames.Count*.95f),0,frames.Count-1)];sample.worstMs=frames[frames.Count-1];report.samples.Add(sample);
                     yield return Capture("04_"+preset+"_"+sample.area);
@@ -111,7 +111,7 @@ namespace Muhanok.Bootstrap
                 Seek(176,BranchFor(destinationType));yield return new WaitForSecondsRealtime(.6f);yield return Capture("17_Biome_Start_"+(destinationType+1));
             }
             Seek(RoutePlan.ExtendedLapChunks*24-12,BranchFor(-1));yield return new WaitForSecondsRealtime(.6f);yield return Capture("18_Outdoor_Return_To_Mine");
-            Seek(480,BranchFor(-1));
+            Seek(330,BranchFor(-1));
             foreach(var active in game.Map.Active)
             {
                 foreach(var animal in active.Chunk.GetComponentsInChildren<ZooHazard>())
@@ -122,7 +122,7 @@ namespace Muhanok.Bootstrap
             }
             for(int theme=0;theme<3;theme++)
             {
-                Seek(theme==0?580:theme==1?340:480,BranchFor(theme==2?-1:theme==0?1:0));
+                Seek(theme==0?380:theme==1?300:330,BranchFor(theme==2?-1:theme==0?1:0));
                 bool found=false;
                 for(int step=0;step<12&&!found;step++)
                 {
@@ -136,7 +136,7 @@ namespace Muhanok.Bootstrap
                         }
                         if(found)break;
                     }
-                    if(!found)game.Map.Tick((theme==0?580:theme==1?340:480)+(step+1)*12);
+                    if(!found)game.Map.Tick((theme==0?380:theme==1?300:330)+(step+1)*12);
                 }
             }
             game.GetComponent<HUDPresenter>().ShowIdentity();yield return new WaitForSecondsRealtime(.2f);yield return Capture("08_FaceLogin_Menu");game.GetComponent<HUDPresenter>().CloseSetup();
@@ -158,7 +158,7 @@ namespace Muhanok.Bootstrap
                 yield return null;
             }
             report.cameraStatus=deferCamera?"Deferred by user":game.Pose.Status+": "+game.Pose.Message;game.Pose.SetStyle(PlayStyle.Keyboard);
-            Seek(480,BranchFor(-1));game.Session.Slip(SlipSource.Banana);
+            Seek(330,BranchFor(-1));game.Session.Slip(SlipSource.Banana);
             yield return new WaitForSecondsRealtime(.4f);yield return Capture("13_Banana_Siren");
             var caughtPortrait=new Texture2D(32,32,TextureFormat.RGB24,false);
             for(int y=0;y<32;y++)for(int x=0;x<32;x++)caughtPortrait.SetPixel(x,y,(x/8+y/8)%2==0?new Color(1,.7f,.2f):new Color(.2f,.65f,1));caughtPortrait.Apply();

@@ -9,8 +9,8 @@ namespace Muhanok.Tests
     {
         private const int Lap = RoutePlan.ExtendedLapChunks;
         [TearDown] public void Reset() => RouteSurface.UsePlan(null);
-        // Grace 0 and full 1536 m put lap 0 / 1 / 2 (starting at 0 / 768 / 1536 m) in the 1 / 2 / 3 stair buckets.
-        private static RunConfig Curve() => new RunConfig { DifficultyGraceDistance = 0f, DifficultyFullDistance = 1536f };
+        // Grace 0 and full distance at the third lap put lap 0 / 1 / 2 (starting at 0 / 432 / 864 m) in the 1 / 2 / 3 stair buckets.
+        private static RunConfig Curve() => new RunConfig { DifficultyGraceDistance = 0f, DifficultyFullDistance = 2f * Lap * RouteSurface.Length };
         private static float DecisionAt(int lap) => lap * Lap * RouteSurface.Length + CartFork.Decision + 1;
         private static bool Transition(int type) => type == 3 || type == 6 || type == 7 || type == 11 || type == RouteSurface.PrisonExit;
         private static int[] Choose(int seed, params int[] lanes)
@@ -55,7 +55,7 @@ namespace Muhanok.Tests
                         {
                             Assert.Contains(7, stairs, note); Assert.AreEqual(7, types[CartFork.DestinationChunk], note);
                             Assert.AreEqual(expected, stairs.Count, "Prison stairs: the entrance plus corridor stairs, " + note);
-                            foreach (int i in stairs) { Assert.AreEqual(7, types[i], "Prison stairs are the type-7 stair chunk: " + note); if (i != 7) Assert.IsTrue(i >= 9 && i <= 28, "Extra prison stair sits in the corridor: " + note); }
+                            foreach (int i in stairs) { Assert.AreEqual(7, types[i], "Prison stairs are the type-7 stair chunk: " + note); if (i != 7) Assert.IsTrue(i >= 9 && i <= 14, "Extra prison stair sits in the corridor: " + note); }
                         }
                         else
                         {
@@ -73,7 +73,7 @@ namespace Muhanok.Tests
                             Assert.IsFalse(Transition(types[i - 1]) || Transition(types[i + 1]), "Next to a transition chunk: " + note);
                         }
                         for (int i = 0; i < CartFork.DestinationChunk; i++) Assert.IsFalse(RouteSurface.IsStair(types[i]), "Shared start: " + note);
-                        for (int i = 0; i < Lap; i++) if (types[i] == 4 || types[i] == 5) Assert.IsTrue(i >= 8 && i <= 29, "Corridor stays corridor: " + note);
+                        for (int i = 0; i < Lap; i++) if (types[i] == 4 || types[i] == 5) Assert.IsTrue(i >= 8 && i <= 15, "Corridor stays corridor: " + note);
                     }
             Assert.AreEqual(9, seen.Count, "Every branch was exercised on every lap");
         }
@@ -194,32 +194,37 @@ namespace Muhanok.Tests
             Walk(judge, runner, 0, 24, 0, false);
             Assert.AreEqual(1, Walk(judge, runner, 0, 24, 0));
         }
-        [Test] public void TheFirstTwoMetresAreGraceAndTheFirstStepIsDueAtTwo()
+        // Enters a stair chunk and lets the entry grace run out, so the judge only sees the runner's own steps.
+        private static void EnterLongAgo(StairJudge judge, RunnerController runner) { judge.Tick(.05f, true, 0f, runner); judge.Tick(2f, true, .5f, runner); }
+        [Test] public void TheFirstTwoMetresAreGraceAndEnteringFillsTheKneeGauge()
         {
             var judge = new StairJudge(new RunConfig()); var runner = Standing();
             Assert.AreEqual(0, Walk(judge, runner, 0, 1.99f, 0), "No failure before z 2");
             Assert.IsFalse(judge.InStair);
-            Assert.IsTrue(judge.Tick(.05f, true, 2f, runner), "No step yet at z 2");
+            Assert.IsFalse(judge.Tick(.05f, true, 2f, runner), "Entering counts as a step: nobody has to start before the stairs");
+            Assert.Less(judge.KneeUrgency, .5f, "The gauge starts (nearly) full");
+            Assert.IsTrue(judge.Tick(.8f, true, 2.5f, runner), "Still no step a second after entering is a miss");
         }
         [Test] public void AStepJustBeforeTheJudgedSpanKeepsTheRunnerSafeForTheGap()
         {
-            var judge = new StairJudge(new RunConfig()); var runner = Standing();
+            var judge = new StairJudge(new RunConfig()); var runner = Standing(); EnterLongAgo(judge, runner);
             runner.Command(MotionCommand.KneeStep); runner.Tick(.5f, 0);
             Assert.IsFalse(judge.Tick(.05f, true, 2f, runner));
-            runner.Tick(.3f, 0); Assert.IsTrue(judge.Tick(.05f, true, 2.5f, runner), "0.8 s since the step is a miss");
+            runner.Tick(.6f, 0); Assert.IsTrue(judge.Tick(.05f, true, 2.5f, runner), "1.1 s since the step is a miss");
         }
         [Test] public void LocalZWrappingBackStartsANewChunk()
         {
-            var judge = new StairJudge(new RunConfig()); var runner = Standing();
+            var judge = new StairJudge(new RunConfig()); var runner = Standing(); EnterLongAgo(judge, runner);
             Assert.IsTrue(judge.Tick(.05f, true, 10f, runner)); Assert.IsFalse(judge.Tick(.05f, true, 12f, runner));
-            Assert.IsTrue(judge.Tick(.05f, true, 3f, runner), "z went back: another stair chunk");
+            Assert.IsFalse(judge.Tick(.05f, true, 3f, runner), "z went back: another stair chunk, with a fresh entry grace");
+            Assert.IsTrue(judge.Tick(1.2f, true, 4f, runner), "and its own miss once the grace runs out");
         }
         [Test] public void HudValuesTrackProgressAndUrgency()
         {
-            var judge = new StairJudge(new RunConfig()); var runner = Standing();
+            var judge = new StairJudge(new RunConfig()); var runner = Standing(); EnterLongAgo(judge, runner);
             runner.Command(MotionCommand.KneeStep); judge.Tick(.05f, true, 12f, runner);
             Assert.IsTrue(judge.InStair); Assert.AreEqual(.5f, judge.StairProgress, .001f); Assert.AreEqual(0f, judge.KneeUrgency, .001f);
-            runner.Tick(.35f, 0); judge.Tick(.05f, true, 12.5f, runner); Assert.AreEqual(.5f, judge.KneeUrgency, .001f);
+            runner.Tick(.5f, 0); judge.Tick(.05f, true, 12.5f, runner); Assert.AreEqual(.5f, judge.KneeUrgency, .001f);
             judge.Tick(.05f, false, 12.5f, runner); Assert.IsFalse(judge.InStair); Assert.AreEqual(0f, judge.StairProgress);
         }
 

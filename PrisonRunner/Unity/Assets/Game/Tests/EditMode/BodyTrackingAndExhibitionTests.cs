@@ -13,7 +13,7 @@ namespace Muhanok.Tests
         // Synthetic standing body in normalised image coordinates; offsets move parts of it.
         // Lean tilts the upper body sideways: shoulders, head and arms move, hips and feet stay.
         // Roll tilts the shoulder line: the +X shoulder drops by Roll and the other one rises by Roll, the centre stays.
-        private sealed class Body { public float Dx, Dy, Lean, Roll, Shoulder, Hip, KneeL, KneeR, Ankle, WristL = .6f, WristR = .6f; public bool Legs = true; }
+        private sealed class Body { public float Dx, Dy, Lean, Roll, Shoulder, Hip, KneeL, KneeR, Ankle, WristL = .6f, WristR = .6f; public bool Legs = true, Knees = true; }
         private static PoseFrame Frame(Body b, double time)
         {
             var frame = new PoseFrame { HasPose = true, Time = time, Aspect = 4f / 3f };
@@ -22,12 +22,13 @@ namespace Muhanok.Tests
             float sy = .35f + b.Dy + b.Shoulder, hy = .62f + b.Dy + b.Hip, legs = b.Legs ? .95f : .1f, l = b.Lean;
             Set(0, .5f + l, .25f + b.Dy + b.Shoulder); Set(11, .44f + l, sy - b.Roll); Set(12, .56f + l, sy + b.Roll);
             Set(23, .46f, hy, legs); Set(24, .54f, hy, legs);
-            Set(25, .46f, .78f + b.Dy + b.Hip * .5f - b.KneeL, legs); Set(26, .54f, .78f + b.Dy + b.Hip * .5f - b.KneeR, legs);
+            float knees = b.Knees ? legs : .1f;
+            Set(25, .46f, .78f + b.Dy + b.Hip * .5f - b.KneeL, knees); Set(26, .54f, .78f + b.Dy + b.Hip * .5f - b.KneeR, knees);
             Set(27, .46f, .93f + b.Dy - b.Ankle, legs); Set(28, .54f, .93f + b.Dy - b.Ankle, legs);
             Set(15, .41f + l, b.WristL + b.Dy); Set(16, .59f + l, b.WristR + b.Dy);
             return frame;
         }
-        private static List<string> Play(PlayStyle style, Func<double, Body> script, double seconds, Func<double, bool> cart = null)
+        private static List<string> Play(PlayStyle style, Func<double, Body> script, double seconds, Func<double, bool> cart = null, bool stairs = false)
         {
             var classifier = new MotionClassifier(new MotionTuning()); classifier.SetStyle(style);
             for (int i = 0; i < 30; i++) classifier.Update(Frame(new Body { Legs = style == PlayStyle.FullBody }, i / 30.0));
@@ -36,7 +37,7 @@ namespace Muhanok.Tests
             for (double t = 0; t < seconds; t += 1 / 30.0)
             {
                 var body = script(t); body.Legs = style == PlayStyle.FullBody;
-                classifier.SetCart(cart != null && cart(t));
+                classifier.SetCart(cart != null && cart(t)); classifier.SetStairs(stairs);
                 var r = classifier.Update(Frame(body, 1 + t));
                 if (r.Lane != lane) { events.Add("lane" + r.Lane); lane = r.Lane; }
                 if (r.JumpEdge) events.Add("jump");
@@ -100,6 +101,19 @@ namespace Muhanok.Tests
             // The shoulder on the side of the raised arm lifts with each pump.
             var events = Play(PlayStyle.UpperBody, t => { int s = (int)(t / .3) % 2; bool on = In(t, .2, 1.8); return new Body { WristL = on ? (s == 0 ? .4f : .62f) : .6f, WristR = on ? (s == 1 ? .4f : .62f) : .6f, Roll = on ? (s == 0 ? Roll(15) : -Roll(15)) : 0 }; }, 2.0);
             Assert.IsFalse(events.Exists(e => e.StartsWith("lane")), string.Join(",", events));
+        }
+        [Test] public void FullBodyCalibrationWaitsUntilBothKneesAreInView()
+        {
+            var classifier = new MotionClassifier(new MotionTuning()); classifier.SetStyle(PlayStyle.FullBody);
+            for (int i = 0; i < 60; i++) classifier.Update(Frame(new Body { Knees = false }, i / 30.0));
+            Assert.IsFalse(classifier.Calibrated, "No calibration without the knees");
+            Assert.AreEqual(PoseStatus.Calibrating, classifier.Status); Assert.IsTrue(classifier.KneesMissing); Assert.AreEqual(0f, classifier.CalibrationProgress);
+            for (int i = 0; i < 30; i++) classifier.Update(Frame(new Body(), 2 + i / 30.0));
+            Assert.IsTrue(classifier.Calibrated); Assert.IsFalse(classifier.KneesMissing);
+            // The upper body ignores the legs.
+            var upper = new MotionClassifier(new MotionTuning()); upper.SetStyle(PlayStyle.UpperBody);
+            for (int i = 0; i < 30; i++) upper.Update(Frame(new Body { Knees = false }, i / 30.0));
+            Assert.IsTrue(upper.Calibrated); Assert.IsFalse(upper.KneesMissing);
         }
         [Test] public void UpperBodyCalibratedShoulderTiltIsTheCentre()
         {
@@ -197,6 +211,21 @@ namespace Muhanok.Tests
                 if (In(t, .35, .55)) body.KneeL = .09f;
                 return body;
             }, 1.5));
+        }
+        [Test] public void OnStairsHoppingHighKneesAreKneeStepsAndNeverJumps()
+        {
+            // The same hop as above while one knee is up: on stairs the jump reading is off, so the knee counts.
+            Func<double, Body> hop = t =>
+            {
+                var body = new Body { Dy = In(t, .2, .3) ? .085f : In(t, .3, .6) ? -.06f : 0, Ankle = In(t, .3, .6) ? .06f : 0 };
+                if (In(t, .35, .55)) body.KneeL = .09f;
+                return body;
+            };
+            CollectionAssert.AreEqual(new[] { "knee" }, Play(PlayStyle.FullBody, hop, 1.5, stairs: true));
+            // Stepping toward the camera (the whole body rising in the image) while marching keeps counting steps.
+            var events = Play(PlayStyle.FullBody, t => { int s = (int)((t - .2) / .3) % 2; bool on = In(t, .2, 1.6);
+                return new Body { Dy = on ? -.07f : 0, Ankle = on ? .06f : 0, KneeL = on && s == 0 ? .09f : 0, KneeR = on && s == 1 ? .09f : 0 }; }, 1.8, stairs: true);
+            CollectionAssert.DoesNotContain(events, "jump"); Assert.GreaterOrEqual(events.Count(e => e == "knee"), 4);
         }
         [Test] public void ShortDropoutKeepsTrackingAndVanishingWhileDuckingCountsAsDuck()
         {
@@ -296,33 +325,18 @@ namespace Muhanok.Tests
             public void Tick(double time) { now = time; }
             public bool TryTakeFrame(PoseFrame target) { if (now == taken) return false; taken = now; target.CopyFrom(Script(now)); return true; }
         }
-        [Test] public void CalibrationIsKeptForAMinuteUnlessTrackingWasLost()
+        [Test] public void TrackerReportsHiddenKneesUntilTheFullBodyCalibrationCompletes()
         {
-            Assert.IsTrue(CalibrationReuse.Keep(10, 5, false), "Just calibrated: the run skips its loading calibration");
-            Assert.IsTrue(CalibrationReuse.Keep(65, 5, false));
-            Assert.IsFalse(CalibrationReuse.Keep(65.1, 5, false), "More than 60 s ago");
-            Assert.IsFalse(CalibrationReuse.Keep(10, 5, true), "Tracking was lost since");
-            Assert.IsFalse(CalibrationReuse.Keep(10, -1, false), "Never calibrated");
-        }
-        [Test] public void TrackerSkipsRecalibrationRightAfterCalibratingAndNotAfterLosingThePlayer()
-        {
-            var previous = PoseEstimatorRegistry.Factory; bool present = true;
-            var camera = new FakeEstimator { Script = t => present ? Frame(new Body(), t) : new PoseFrame { HasPose = false, Time = t } };
+            var previous = PoseEstimatorRegistry.Factory; bool knees = false;
+            var camera = new FakeEstimator { Script = t => Frame(new Body { Knees = knees }, t) };
             PoseEstimatorRegistry.Factory = _ => camera;
             var tracker = new PoseTracker(new PoseGameInput(), new PoseCameraOptions(), new MotionTuning(), () => 0, () => false);
             try
             {
                 tracker.SetStyle(PlayStyle.FullBody);
                 double t = 0; void Run(double seconds) { for (double end = t + seconds; t < end; t += 1 / 30.0) tracker.Tick(t, false); }
-                Assert.IsFalse(tracker.CalibrationFresh(t), "Not calibrated yet");
-                Run(1.5); Assert.AreEqual(PoseStatus.Tracking, tracker.Status);
-                Assert.IsTrue(tracker.CalibrationFresh(t), "Just calibrated: PrepareRun keeps it");
-                Assert.IsFalse(tracker.CalibrationFresh(tracker.CalibratedAt + 61), "A minute later it calibrates again");
-                present = false; Run(1); present = true; Run(1);
-                Assert.AreEqual(PoseStatus.Tracking, tracker.Status); Assert.IsFalse(tracker.CalibrationFresh(t), "Tracking was lost since the calibration");
-                tracker.Recalibrate(); Assert.IsFalse(tracker.CalibrationFresh(t));
-                Run(1.5); Assert.IsTrue(tracker.CalibrationFresh(t), "A new calibration is fresh again");
-                tracker.SetStyle(PlayStyle.UpperBody); Assert.IsFalse(tracker.CalibrationFresh(t), "Another play style needs its own baseline");
+                Run(2); Assert.AreEqual(PoseStatus.Calibrating, tracker.Status); Assert.IsTrue(tracker.KneesMissing);
+                knees = true; Run(1.5); Assert.AreEqual(PoseStatus.Tracking, tracker.Status); Assert.IsFalse(tracker.KneesMissing);
             }
             finally { tracker.Dispose(); PoseEstimatorRegistry.Factory = previous; }
         }

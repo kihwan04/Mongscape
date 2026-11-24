@@ -78,7 +78,7 @@ namespace Muhanok.Domain
                 case TutorialStep.Lane: return keys ? "A·D(←·→) 키로 옆 줄로 피하세요." : "왼쪽이나 오른쪽 구역으로 몸을 옮겨 피하세요.";
                 case TutorialStep.Jump: return keys ? "스페이스 키로 점프!" : upper ? "두 손을 머리 위로 들어 점프!" : "제자리에서 점프!";
                 case TutorialStep.Crouch: return keys ? "S(↓) 키를 누르고 있으면 숙입니다." : upper ? "몸을 낮춰 숙이세요!" : "무릎을 굽혀 숙이세요!";
-                case TutorialStep.HighKnee: return keys ? "W(↑) 키를 번갈아 연타해 계단을 오르세요!" : upper ? "팔을 크게 번갈아 흔들어 계단을 오르세요!" : "양쪽 무릎을 번갈아 높이 들어 계단을 오르세요!";
+                case TutorialStep.HighKnee: return keys ? "W(↑) 키를 번갈아 연타해 계단을 오르세요!" : upper ? "팔을 크게 번갈아 흔들어 계단을 오르세요!" : "뛰지 말고 제자리에서 걷듯이, 무릎을 번갈아 높이 드세요!";
                 case TutorialStep.Rail:
                 {
                     bool right = TutorialCourse.RailLean == MotionCommand.Right;
@@ -90,18 +90,28 @@ namespace Muhanok.Domain
                 default: return "기본 동작을 모두 익혔어요!";
             }
         }
+        // Jump and crouch are timed: before their call the line only prepares the player, so nobody acts too early.
+        public static bool Timed(TutorialStep step) => step == TutorialStep.Jump || step == TutorialStep.Crouch;
+        public static string Prepare(TutorialStep step, PlayStyle style)
+        {
+            bool keys = style == PlayStyle.Keyboard, upper = style == PlayStyle.UpperBody;
+            if (step == TutorialStep.Jump) return keys ? "「점프!」 신호가 뜨면 스페이스 키를 누르세요." : upper ? "「점프!」 신호가 뜨면 두 손을 머리 위로 드세요." : "「점프!」 신호가 뜨면 제자리에서 점프하세요.";
+            if (step == TutorialStep.Crouch) return keys ? "「숙이기!」 신호가 뜨면 S(↓) 키를 누르고 있으세요." : upper ? "「숙이기!」 신호가 뜨면 몸을 낮추세요." : "「숙이기!」 신호가 뜨면 무릎을 굽혀 숙이세요.";
+            return Instruction(step, style);
+        }
         // Shown for members who have not finished it and for every guest, once per session.
         public static bool ShouldOffer(bool member, bool tutorialDone, bool offeredThisSession) => !offeredThisSession && (!member || !tutorialDone);
     }
 
-    // The fixed tutorial map: a warm-up lap without a fork that holds one lesson obstacle per chunk,
+    // The fixed tutorial map: a short warm-up lap in the mine without a fork that holds one lesson obstacle per chunk,
     // then an ordinary lap whose first cart chunk keeps one broken rail and whose cart fork is the last lesson.
     // Positions are route z in metres.
     public static class TutorialCourse
     {
         public const int Seed = 723, BlockedLane = 0;
-        // Mine x4 (start, lane, jump, slide), transition, stairs, corridor, checkpoint, descent, zoo, return to the mine.
-        public static readonly int[] WarmupLap = { 0, 0, 0, 0, 3, 7, 4, 6, 11, 12, 3 };
+        // Mine only: start, lane, jump, slide, a plain walk (about three seconds to get ready), then the mine stair.
+        // The next lap's mine start boards the cart right after, so the lessons never pass through the prison or the zoo.
+        public static readonly int[] WarmupLap = { 0, 0, 0, 0, 0, RouteSurface.MineStair };
         public const int LaneChunk = 1, JumpChunk = 2, CrouchChunk = 3, StairChunk = 5;
         public const float LaneBlockZ = 12f;
         public static int ForkLapStart => WarmupLap.Length;
@@ -124,7 +134,8 @@ namespace Muhanok.Domain
             {
                 case TutorialStep.Jump: return 40f;
                 case TutorialStep.Crouch: return 64f;
-                case TutorialStep.HighKnee: return 100f;
+                // Early in the walking chunk after the slide lesson, with time to read the stair call.
+                case TutorialStep.HighKnee: return StairChunk * RouteSurface.Length - 20f;
                 // On the cart, well before the broken rail; a fork retry starts past it so the rail is not judged again.
                 case TutorialStep.Rail: return RailChunk * RouteSurface.Length + 2f;
                 case TutorialStep.Fork: return RailGapZ + 4f;

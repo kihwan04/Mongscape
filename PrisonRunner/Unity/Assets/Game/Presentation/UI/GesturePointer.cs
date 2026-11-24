@@ -16,6 +16,11 @@ namespace Muhanok.Presentation
         private static bool hovered;
         private static string target;
         private static Rect targetRect;
+        // A held button stays the target while the cursor wobbles just past its edge (a margin) or leaves it for a moment
+        // (the dwell's own .25 s gap), so jitter at the edge no longer restarts the 1.2 s hold.
+        private const float StickyMargin=14f;
+        private const double StickySeconds=.25;
+        private static double lastHover=-10;
         public static void Feed(PoseFrame frame,bool valid,double now)
         {
             int previousHand=hand.Hand;
@@ -26,15 +31,20 @@ namespace Muhanok.Presentation
         public static void BeginPass(){if(Event.current.type==EventType.Repaint)hovered=false;}
         public static bool Activate(Rect rect,string id)
         {
-            if(Event.current.type!=EventType.Repaint || !GUI.enabled || !Visible || hovered || !rect.Contains(Position))return false;
-            hovered=true;
+            if(Event.current.type!=EventType.Repaint || !GUI.enabled || !Visible || hovered)return false;
+            double now=Time.realtimeSinceStartupAsDouble;
+            bool held=target==id&&targetRect==rect&&now-lastHover<=StickySeconds;
+            var area=held?new Rect(rect.x-StickyMargin,rect.y-StickyMargin,rect.width+2*StickyMargin,rect.height+2*StickyMargin):rect;
+            if(!area.Contains(Position))return false;
+            hovered=true;lastHover=now;
             if(target!=id || targetRect!=rect){dwell.Reset();target=id;targetRect=rect;}
-            return dwell.Tick(id,Time.realtimeSinceStartupAsDouble,true,.75);
+            return dwell.Tick(id,now,true);
         }
         public static void Draw()
         {
             if(Event.current.type!=EventType.Repaint)return;
-            if(!hovered){dwell.Reset();target=null;}
+            // Off every button: keep the target through a short gap, then let it go.
+            if(!hovered&&Time.realtimeSinceStartupAsDouble-lastHover>StickySeconds){dwell.Reset();target=null;}
             if(!Visible)return;
             var old=GUI.color;
             GUI.color=new Color(.22f,1,.65f,.95f);
@@ -55,6 +65,6 @@ namespace Muhanok.Presentation
             }
             GUI.color=old;
         }
-        public static void Reset(){hand.Reset();dwell.Reset();target=null;hovered=false;}
+        public static void Reset(){hand.Reset();dwell.Reset();target=null;hovered=false;lastHover=-10;}
     }
 }

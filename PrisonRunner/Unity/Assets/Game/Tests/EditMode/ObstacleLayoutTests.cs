@@ -185,6 +185,15 @@ namespace Muhanok.Tests
             Assert.Greater(lane, 0); Assert.Greater(gates, 0, "Corridor doors close a random lane");
         }
 
+        [Test] public void FirstCartRideOfARunKeepsBothRails()
+        {
+            var plan = new RoutePlan(new RunConfig { ExtendedRoutes = true }, 5);
+            int lap = RoutePlan.ExtendedLapChunks;
+            for (int i = 1; i < CartFork.FirstChunk; i++) { Assert.IsTrue(ObstacleLayout.IsCart(plan.TypeAt(i))); Assert.IsTrue(plan.CalmCart(i), "First lap cart chunk " + i); }
+            Assert.IsFalse(plan.CalmCart(lap + 1), "The second lap breaks rails again");
+            Assert.IsFalse(new RoutePlan(new RunConfig { ExtendedRoutes = false }, 5).CalmCart(1), "The authored lap keeps its broken rails");
+        }
+
         [Test] public void MineTrackBreaksAtLeastOnceOnBothSidesAndForksStayWhole()
         {
             bool left = false, right = false, intact = false;

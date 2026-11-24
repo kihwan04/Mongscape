@@ -15,7 +15,7 @@ namespace Muhanok.Presentation
         // card slots left to right: 2nd, 1st, 3rd
         static readonly int[] SlotRank = { 1, 0, 2 };
         static readonly float[] SlotHeight = { 138, 158, 128 };
-        static readonly string[] SourceTabs = { "회원 랭킹", "이 PC" }, ModeTabs = { "전신", "상체", "키보드" }, PeriodTabs = { "전체", "오늘" };
+        static readonly string[] SourceTabs = { "회원 랭킹", "통합 랭킹" }, ModeTabs = { "전신", "상체", "키보드" }, PeriodTabs = { "전체", "오늘" };
 
         readonly OverlaySkin skin;
         readonly RankingBoard board;
@@ -80,6 +80,9 @@ namespace Muhanok.Presentation
             }
             else skin.Text(new Rect(x, 36, 300, 48), "랭킹", 44, Palette.Cream, TextAnchor.MiddleLeft);
             DrawTabs(x, w);
+            // 통합 랭킹 without the server: a small note in the gap between the mode and period tabs.
+            if (!board.MemberTab && board.MembersMissing)
+                skin.Text(new Rect(x + 512, 104, w - 680, 44), RankingBoard.MembersMissingText, 13, Palette.Sand, TextAnchor.MiddleCenter, false, true);
             if (board.Status != RankingStatus.Ready)
             {
                 skin.Text(new Rect(x, 200, w, 60), board.StatusText, 20, Palette.Sand, TextAnchor.MiddleCenter, false, true);

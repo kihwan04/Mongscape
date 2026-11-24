@@ -155,7 +155,8 @@ namespace Muhanok.Presentation
                 float opacity = Mathf.Clamp01(data.StartBanner * 2);
                 bool calibrating = data.PoseStatus == PoseStatus.Calibrating || data.PoseStatus == PoseStatus.Searching;
                 GUI.color = new Color(1, .82f, .3f, opacity);
-                GUI.Label(new Rect(340, 265, 600, 90), calibrating ? "바르게 서 주세요" : data.StartBanner > 1 ? "준비!" : "출발!", skin.Centered(48, FontStyle.Bold));
+                string text = data.PoseKneesMissing ? PosePreview.KneesHint : calibrating ? "바르게 서 주세요" : data.StartBanner > 1 ? "준비!" : "출발!";
+                GUI.Label(new Rect(140, 265, 1000, 90), text, skin.Centered(data.PoseKneesMissing ? 40 : 48, FontStyle.Bold));
             }
             if (data.CaughtFlash > 0)
             {

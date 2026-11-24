@@ -40,14 +40,6 @@ namespace Muhanok.Domain
             : status == PoseStatus.NoModel ? "포즈 모듈 없음" : status == PoseStatus.Searching ? "사람을 찾는 중" : status == PoseStatus.Calibrating ? "가만히 서 주세요 (자세 맞추는 중)" : "인식 완료";
     }
 
-    // A run keeps the standing baseline of a calibration that finished at most a minute ago (result-screen 웹캠 보정)
-    // when tracking has not been lost since; otherwise loading calibrates again.
-    public static class CalibrationReuse
-    {
-        public const double MaxAgeSeconds = 60;
-        public static bool Keep(double now, double calibratedAt, bool lostSince) => calibratedAt >= 0 && !lostSince && now >= calibratedAt && now - calibratedAt <= MaxAgeSeconds;
-    }
-
     [Serializable]
     public sealed class PoseCameraOptions
     {
@@ -89,7 +81,7 @@ namespace Muhanok.Domain
         // A take-off this soon after a crouch confirms cancels it; a rise this fast (body units/s) is a jump attempt that earns the landing grace.
         public float CrouchJumpCancelSeconds = .35f, JumpAttemptSpeed = .8f;
         public float JumpRise = .15f;
-        public float HighKneeLift = .22f, StepLift = .06f;
+        public float HighKneeLift = .20f, StepLift = .06f;
         public float UpperLaneEnter = .75f, UpperLaneExit = .42f, UpperCrouchDrop = .35f, UpperCrouchConfirmSeconds = .12f, UpperHandsAboveNose = .2f;
         // The upper body also leans by tilting the shoulder line (degrees from the calibrated tilt); the exit follows UpperLaneExit/Enter.
         public float UpperLeanEnterDegrees = 12f;

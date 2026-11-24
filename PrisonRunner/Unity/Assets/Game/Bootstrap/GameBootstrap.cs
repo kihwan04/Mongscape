@@ -99,7 +99,7 @@ namespace Muhanok.Bootstrap
             if (ChunkPrefabs == null || ChunkPrefabs.Length < 5 || CameraRig == null || OutputCamera == null)
             { Debug.LogError("GameScene requires content references. Run Muhanok/Build GameScene."); enabled = false; return; }
             keyboard = new KeyboardGameInput(); poseInput = new PoseGameInput(); router = new InputRouter(Session, keyboard, poseInput);
-            Pose = new PoseTracker(poseInput, Settings != null ? Settings.Camera : null, Settings != null ? Settings.Motion : null, () => Session.Runner.Lane, () => Session.Runner.Riding&&!(RouteSurface.ActivePlan?.ForkWindow(Session.Runner.Z)??false), () => Session.Runner.Riding);
+            Pose = new PoseTracker(poseInput, Settings != null ? Settings.Camera : null, Settings != null ? Settings.Motion : null, () => Session.Runner.Lane, () => Session.Runner.Riding&&!(RouteSurface.ActivePlan?.ForkWindow(Session.Runner.Z)??false), () => Session.Runner.Riding, OnOrBeforeStairs);
             Store = new PlayerProgressStore(DataRoot());
             player = Account.Profile.Clone();
             Hero = CreateActor("CHR_Monkey_Prisoner", MonkeyPrefab);
@@ -293,8 +293,8 @@ namespace Muhanok.Bootstrap
         {
             Session.Flow.Transition(GameFlowState.LoadingIntro);
             hud.BeginLoading(); hud.LoadingProgress=.12f;
-            // The player stands still during loading; that is the calibration pose. A fresh result-screen calibration is kept.
-            if (!Pose.CalibrationFresh(Time.realtimeSinceStartupAsDouble)) Pose.Recalibrate();
+            // Every run calibrates again: the player stands still during loading, and the countdown waits for it (WaitForCalibration).
+            Pose.Recalibrate(); runCalibrated = false;
             yield return new WaitForSecondsRealtime(.25f);
             RouteSurface.UsePlan(Session.IsTutorial?TutorialCourse.Plan(Session.Config):new RoutePlan(Session.Config, seed));
             Session.Reset(); keyboard.Clear(); poseInput.Clear(); hud.LoadingProgress=.42f;
@@ -347,7 +347,9 @@ namespace Muhanok.Bootstrap
             UpdateAdaptive(live);
             Pose.Tick(now, live);
             // The calibration panel takes no hand pointing: the player stands still and it closes by itself.
-            GesturePointer.Feed(Pose.LastFrame,menu&&GesturePointer.Enabled&&Pose.Tracking&&!hud.CalibrationOpen,now);
+            // Not gated on calibration: logging out switches to the upper-body camera, which restarts calibration, and a player
+            // reaching for a button never stands still long enough to finish it (the pointer checks pose freshness itself).
+            GesturePointer.Feed(Pose.LastFrame,menu&&GesturePointer.Enabled&&Pose.CameraLive&&!hud.CalibrationOpen,now);
             OperatorKeys();
             if (ExpiryPending && Session.Flow.State == GameFlowState.TitleIdle && !hud.Loading) ApplyExpiry();
             TickInput();
@@ -358,6 +360,7 @@ namespace Muhanok.Bootstrap
             if (Session.Flow.State == GameFlowState.IntroTimeline) hud.Fade = Mathf.Clamp01(1 - Intro.Elapsed * 3f);
             if (Session.Flow.State == GameFlowState.Running)
             {
+                if (WaitForCalibration()) return;
                 StartBannerSounds();
                 Tutorial.Tick(Time.realtimeSinceStartup);
                 // The finished tutorial has already gone back to the menu (Retry); nothing of the run may follow this frame.
@@ -395,6 +398,19 @@ namespace Muhanok.Bootstrap
                 }
             }
         }
+        // Camera play never starts a run before its own calibration: the runner stands at the start with "바르게 서 주세요"
+        // while the player is found and measured, then the countdown begins. A missing camera or model does not hold the run.
+        private bool runCalibrated = true;
+        private bool WaitForCalibration()
+        {
+            if (runCalibrated) return false;
+            var status = Pose.Status;
+            bool measuring = Pose.UsesCamera && (status == PoseStatus.Starting || status == PoseStatus.Searching || status == PoseStatus.Calibrating);
+            runStartedAt = Time.realtimeSinceStartup;
+            if (measuring) return true;
+            runCalibrated = true; bannerSounded = goSounded = false; Pose.ResetCommands();
+            return false;
+        }
         private void StartBannerSounds()
         {
             float banner = StartBanner;
@@ -410,9 +426,24 @@ namespace Muhanok.Bootstrap
             if (KeyboardGameInput.RecalibratePressed && !hud.MenuOpen) Pose.Recalibrate();
             if (KeyboardGameInput.DeveloperTogglePressed && Session.Flow.State == GameFlowState.TitleIdle) SetDeveloperMode(!userSettings.DeveloperMode);
             if (KeyboardGameInput.ClearRankingPressed && userSettings.DeveloperMode) { Store.ClearToday(); Debug.Log("Today's ranking cleared."); }
+            // Player lock for crowded booths; the F3 overlay's pose line shows its state.
+            if (KeyboardGameInput.PlayerLockPressed) { PoseEstimatorRegistry.PlayerLock = !PoseEstimatorRegistry.PlayerLock; Debug.Log("Player lock " + (PoseEstimatorRegistry.PlayerLock ? "on" : "off")); }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // Demo invincibility: the HUD shows a small "무적 모드 켜짐" note in the bottom-left corner while it is on; the log records each switch.
+            if (KeyboardGameInput.InvinciblePressed) { Session.Invincible = !Session.Invincible; Debug.Log("Invincible " + (Session.Invincible ? "on" : "off")); }
+            // F7: the operator ends the run as a capture now (invincible or not), so a demo run can be closed into the results.
+            if (KeyboardGameInput.ForceCatchPressed && Session.ForceCatch()) Debug.Log("Run ended by the operator (F7).");
+#endif
         }
         internal HUDPresenter Hud => hud;
         // Development builds can keep player data in another folder (--muhanok-data <dir>) for captures and tests.
+        // On foot on a stair chunk, or within 3 m of one (people start lifting their knees a little early).
+        private bool OnOrBeforeStairs()
+        {
+            var runner = Session.Runner; if (runner.Riding) return false;
+            return RouteSurface.IsStair(RouteSurface.TypeAt(RouteSurface.SequenceAt(runner.Z)))
+                || RouteSurface.IsStair(RouteSurface.TypeAt(RouteSurface.SequenceAt(runner.Z + 3f)));
+        }
         private static string DataRoot()
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -623,6 +654,7 @@ namespace Muhanok.Bootstrap
         float IHudData.SecondsSinceJump => (float)(Time.realtimeSinceStartupAsDouble - Pose.LastJumpTime);
         float IHudData.SecondsSinceKneeStep => (float)(Time.realtimeSinceStartupAsDouble - Pose.LastKneeStepTime);
         float IHudData.CalibrationProgress => Pose.CalibrationProgress;
+        bool IHudData.PoseKneesMissing => Pose.KneesMissing;
         float IHudData.StepsPerMinute => Pose.StepsPerMinute;
         bool IHudData.BodyActive => Pose.Tracking && Pose.Reading.Active;
         // Developer mode keeps this PC's exhibition wallet with every item open; players see their account.

@@ -81,7 +81,11 @@ namespace Muhanok.Tests
             plan.UpdateChoice(TutorialCourse.ForkDecisionZ, -1); Assert.IsTrue(plan.ForkLocked(TutorialCourse.ForkDecisionZ));
             Assert.AreEqual(-1, plan.ChoiceAt(TutorialCourse.ForkLapStart + CartFork.ConnectorChunk));
             Assert.AreEqual(TutorialHazard.LaneBlock, TutorialCourse.HazardAt(TutorialCourse.LaneChunk));
-            Assert.AreEqual(TutorialHazard.StairChunk, TutorialCourse.HazardAt(TutorialCourse.StairChunk)); Assert.AreEqual(7, plan.TypeAt(TutorialCourse.StairChunk));
+            Assert.AreEqual(TutorialHazard.StairChunk, TutorialCourse.HazardAt(TutorialCourse.StairChunk)); Assert.AreEqual(RouteSurface.MineStair, plan.TypeAt(TutorialCourse.StairChunk));
+            for (int i = 0; i < TutorialCourse.ForkLapStart; i++) Assert.IsTrue(RouteSurface.IsMine(plan.TypeAt(i)), "The warm-up lap stays in the mine (no prison or zoo)");
+            Assert.AreEqual(TutorialCourse.ForkLapStart - 1, TutorialCourse.StairChunk, "The mine stair is the last warm-up chunk, right before the cart lap");
+            Assert.Greater(TutorialCourse.RestartZ(TutorialStep.HighKnee), TutorialCourse.RestartZ(TutorialStep.Crouch) + 20f, "A stair retry starts past the slide lesson");
+            Assert.Less(TutorialCourse.RestartZ(TutorialStep.HighKnee), TutorialCourse.StairChunk * RouteSurface.Length, "and in front of the stair");
             Assert.AreEqual(TutorialHazard.None, TutorialCourse.HazardAt(0));
             Assert.AreEqual(TutorialHazard.RailGap, TutorialCourse.HazardAt(TutorialCourse.RailChunk)); Assert.AreEqual(1, plan.TypeAt(TutorialCourse.RailChunk), "The broken rail is on a cart chunk");
             Assert.AreEqual(1, TutorialCourse.Plan(new RunConfig { ExtendedRoutes = false }).TypeAt(TutorialCourse.RailChunk), "also on the authored lap");

@@ -73,7 +73,86 @@ namespace Muhanok.Tests
             a.Feed(Frame(0,.3f),true,0);b.Feed(Frame(0,.3f),true,0);
             for(int i=1;i<=30;i++)a.Feed(Frame(i/30.0,.7f),true,i/30.0);
             for(int i=1;i<=60;i++)b.Feed(Frame(i/60.0,.7f),true,i/60.0);
-            Assert.AreEqual(a.X,b.X,.00001);
+            // The follow rate adapts to the remaining offset, so 30 and 60 Hz agree closely rather than bit for bit.
+            Assert.AreEqual(a.X,b.X,.001);
+        }
+        [Test] public void LandmarkJitterBarelyMovesTheCursorButAReachStillArrivesQuickly()
+        {
+            var p=new HandMenuPointer();p.Feed(Frame(0),true,0);float home=p.X,worst=0;
+            // ±1% wrist and shoulder jitter at 23 fps for two seconds.
+            for(int i=1;i<=46;i++)
+            {
+                float n=i%2==0?.01f:-.01f;var f=Frame(i/23.0,.5f+n,.35f-n);f.Points[11].X+=n;f.Points[12].X-=n;
+                p.Feed(f,true,i/23.0);worst=Math.Max(worst,Math.Abs(p.X-home));
+            }
+            Assert.Less(worst,.02f,"Raw jitter maps to about 3.6% of the screen; the cursor stays within 2%");
+            for(int i=47;i<=53;i++)p.Feed(Frame(i/23.0,.7f),true,i/23.0);
+            Assert.Greater(p.X,home+.25f,"A real reach covers most of the way within 0.3 s");
+        }
+        private static PoseFrame Face(double time,float x=.5f,float y=.45f,float eyeSpan=.08f)
+        {
+            var f=new PoseFrame{HasPose=true,Time=time,Aspect=4f/3};
+            float half=eyeSpan*.5f/f.Aspect;
+            f.Points[PoseJoint.Nose]=new PoseLandmark{X=x,Y=y+.03f,Visibility=1};
+            f.Points[2]=new PoseLandmark{X=x+half,Y=y,Visibility=1};f.Points[5]=new PoseLandmark{X=x-half,Y=y,Visibility=1};return f;
+        }
+        [Test] public void FaceInsideTheOvalNearEnoughAndFreshCounts()
+        {
+            Assert.IsTrue(FaceAutoCapture.FaceInOval(Face(1),1));
+            Assert.IsFalse(FaceAutoCapture.FaceInOval(Face(1,.9f),1),"Outside the oval");
+            Assert.IsFalse(FaceAutoCapture.FaceInOval(Face(1,.5f,.45f,.02f),1),"Too far away");
+            Assert.IsFalse(FaceAutoCapture.FaceInOval(Face(1),1.5),"Stale frame");
+            var hidden=Face(1);hidden.Points[2].Visibility=.1f;Assert.IsFalse(FaceAutoCapture.FaceInOval(hidden,1),"Eyes must be seen");
+        }
+        [Test] public void CapturedFrameKeepsOnlyTheGuideOval()
+        {
+            // 640x480: oval half axes 108 x 144 px around (320, 240).
+            Assert.IsTrue(FaceAutoCapture.InOvalPixel(320,240,640,480),"Centre");
+            Assert.IsTrue(FaceAutoCapture.InOvalPixel(420,240,640,480),"Inside the side");
+            Assert.IsFalse(FaceAutoCapture.InOvalPixel(440,240,640,480),"Past the side");
+            Assert.IsTrue(FaceAutoCapture.InOvalPixel(320,110,640,480),"Inside the top");
+            Assert.IsFalse(FaceAutoCapture.InOvalPixel(320,90,640,480),"Past the top");
+            Assert.IsFalse(FaceAutoCapture.InOvalPixel(20,240,640,480),"A bystander at the edge");
+            Assert.IsFalse(FaceAutoCapture.InOvalPixel(420,120,640,480),"Corner of the oval's box");
+        }
+        [Test] public void FaceHeldForTheHoldTimeCapturesOnceUntilItLeavesOrRetryTimePasses()
+        {
+            var a=new FaceAutoCapture();bool fired=false;int count=0;
+            for(int i=0;i<=11;i++)fired|=a.Tick(true,true,i*.1);
+            Assert.IsFalse(fired,"Not before 1.2 s");Assert.Greater(a.Progress,.8);
+            Assert.IsTrue(a.Tick(true,true,1.21));count++;
+            // The request runs for 2 s, then fails; the face stays: no new attempt for the retry time.
+            for(double t=1.3;t<3.3;t+=.1)Assert.IsFalse(a.Tick(true,false,t));
+            for(double t=3.3;t<6.5;t+=.1)if(a.Tick(true,true,t))count++;
+            Assert.AreEqual(1,count,"No hammering while the face simply stays");
+            for(double t=7.5;t<9;t+=.1)if(a.Tick(true,true,t))count++;
+            Assert.AreEqual(2,count,"Retries once the retry time has passed");
+            // Leaving the oval briefly rearms at once.
+            for(double t=9;t<9.6;t+=.1)a.Tick(false,true,t);
+            fired=false;for(double t=9.6;t<11;t+=.1)fired|=a.Tick(true,true,t);Assert.IsTrue(fired);
+            // Leaving cancels progress.
+            var b=new FaceAutoCapture();b.Tick(true,true,0);b.Tick(true,true,1);b.Tick(false,true,1.1);Assert.AreEqual(0,b.Progress);Assert.IsFalse(b.Tick(true,true,1.2));
+        }
+        [Test] public void PlayerLockFollowsThePlayerRejectsFarBodiesAndExpires()
+        {
+            var g=new PlayerLockGate();Assert.IsFalse(g.Active(0));Assert.IsTrue(g.Accepts(10,0),"No reference yet: anyone");
+            g.Track(320,200,0);Assert.IsTrue(g.Active(1));
+            g.Band(640,out float min,out float max);Assert.AreEqual((320-240)/640f,min,1e-4);Assert.AreEqual((320+240)/640f,max,1e-4);
+            Assert.IsFalse(g.Accepts(90,1),"Someone far behind (less than half the size)");Assert.AreEqual(1,g.Rejected);
+            Assert.IsTrue(g.Accepts(150,1),"The player a step farther back");
+            // Walking forward while tracked moves the reference with the player.
+            for(int i=1;i<=20;i++)g.Track(320,260,i*.05);Assert.Greater(g.Size,250);
+            Assert.IsTrue(g.Accepts(160,1.5),"Above 55% of the grown size");
+            Assert.IsFalse(g.Active(1+PlayerLockGate.LockSeconds+.1),"Released a few seconds after the player was last tracked");
+            Assert.IsTrue(g.Accepts(10,5));
+            g.Track(100,120,10);Assert.AreEqual(100,g.X,"After expiry the next tracked body becomes the reference at once");
+        }
+        [Test] public void AFlickeringWristHoldsTheCursorBrieflyInsteadOfDroppingIt()
+        {
+            var p=new HandMenuPointer();p.Feed(Frame(1),true,1);float x=p.X;
+            var f=Frame(1.1);f.Points[16].Visibility=.2f;
+            Assert.IsTrue(p.Feed(f,true,1.1));Assert.IsTrue(p.Visible);Assert.AreEqual(16,p.Hand);Assert.AreEqual(x,p.X);
+            f.Time=1.5;Assert.IsFalse(p.Feed(f,true,1.5),"Gone after the grace time");Assert.IsFalse(p.Visible);
         }
         [Test] public void DwellSwitchingAwayAndReturningRearmsButNeverRapidRepeats()
         {

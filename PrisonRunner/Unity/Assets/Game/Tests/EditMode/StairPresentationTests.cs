@@ -18,7 +18,7 @@ namespace Muhanok.Tests
 
         [Test] public void CueTextFollowsThePlayStyle()
         {
-            Assert.AreEqual("무릎 번갈아!", ActionCuePresenter.StairCue(PlayStyle.FullBody));
+            Assert.AreEqual("걷듯이 무릎!",ActionCuePresenter.StairCue(PlayStyle.FullBody));
             Assert.AreEqual("팔 번갈아!", ActionCuePresenter.StairCue(PlayStyle.UpperBody));
             Assert.AreEqual("W 연타!", ActionCuePresenter.StairCue(PlayStyle.Keyboard));
         }
@@ -37,8 +37,8 @@ namespace Muhanok.Tests
             Assert.IsFalse(model.ShowStair);
             run.Runner.SetStartZ(106f); run.Runner.Command(MotionCommand.KneeStep); run.Tick(.05f); model.Tick(run, null, PlayStyle.Keyboard, PoseStatus.Tracking, false, 2);
             Assert.IsTrue(model.ShowStair); Assert.Greater(model.KneeGauge, .9f); Assert.IsFalse(model.KneeWarning); Assert.Greater(model.StairProgress, 0f);
-            // .55 s without a step: 1 - .55/.7 is about .21 of the gauge left, over the .7 urgency mark.
-            for (int i = 0; i < 11; i++) run.Tick(.05f);
+            // .85 s without a step: 1 - .85/1 is .15 of the gauge left, over the .7 urgency mark (a miss comes after 1 s).
+            for (int i = 0; i < 16; i++) run.Tick(.05f);
             model.Tick(run, null, PlayStyle.Keyboard, PoseStatus.Tracking, false, 3);
             Assert.IsTrue(model.KneeWarning); Assert.Less(model.KneeGauge, .3f);
         }

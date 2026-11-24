@@ -41,7 +41,7 @@ namespace Muhanok.Domain
         public float LaneSpacing = 2.2f, LaneSeconds = .20f, BaseSpeed = 9f, MaxSpeed = 17f;
         public float JumpHeight = 1.8f, Gravity = 24f, CrouchSeconds = .8f;
         // A knee step keeps the runner climbing for this long; the next alternating step has to land inside it.
-        public float KneeStepGap = .7f;
+        public float KneeStepGap = 1f;
         public float LightHit = .18f, HeavyHit = .35f, Recovery = .018f, StumbleSeconds = .8f;
         public int CleanBonus = 25; // Unused since score v2; kept for saved settings.
         public float SlipSeconds = 2.4f, SlipSpeedMultiplier = .5f, CartSpeed = 9f;
@@ -251,9 +251,12 @@ namespace Muhanok.Domain
         // Tutorial runs never end in a capture: a mistake is only counted and the tutorial restarts the step.
         public bool IsTutorial { get => tutorial; set { tutorial = value; TutorialMisses = 0; } }
         public int TutorialMisses {get;private set;}
-        // The tutorial slows the runner in front of a lesson obstacle (1 = normal speed).
+        // The tutorial holds the runner (0) for its calibration step and a retry, and eases it (.5) at the finish; 1 = normal speed.
         public float SpeedScale {get;set;}=1f;
         private bool tutorial;
+        // Demo invincibility (development builds only, toggled by the operator): no capture, fall or slip ends or slows the run.
+        // It survives Reset so it stays on across runs until switched off. Tutorial lessons still count mistakes.
+        public bool Invincible {get;set;}
         public int SlipStrikes {get;private set;}
         // Seconds until the single active strike clears (0 when there is none).
         public float StrikeClearRemaining=>SlipStrikes==1&&!SlipPursuit?Math.Max(0f,Config.StrikeClearSeconds-(clock-lastStrike)):0f;
@@ -324,20 +327,31 @@ namespace Muhanok.Domain
         {
             if (Flow.State != GameFlowState.Running || Paused) return false;
             if (tutorial) { Reason = reason; lastHit = clock; TutorialMisses++; return true; }
+            if (Invincible) return false;
             if (reason == CaptureReason.Collision && Items.ConsumeShield())
             {
                 // The shield absorbs one solid hit: a stumble instead of a capture.
                 ShieldSaves++; Runner.Stumble(); lastHit = clock; return false;
             }
+            Catch(reason);
+            return true;
+        }
+        // Operator key (F7): ends the run as a capture right away, even while invincible or shielded. Tutorial lessons are left alone.
+        public bool ForceCatch()
+        {
+            if (Flow.State != GameFlowState.Running || Paused || tutorial) return false;
+            DodgeStreak=0; Catch(CaptureReason.Collision); return true;
+        }
+        private void Catch(CaptureReason reason)
+        {
             Reason=reason;
             lastHit = clock;
             Runner.Stumble(); Chase.Hit(1f);
             Flow.Transition(GameFlowState.Caught);
-            return true;
         }
         public bool Slip(SlipSource source=SlipSource.Floor)
         {
-            if(Flow.State!=GameFlowState.Running||Paused||Runner.Riding)return false;
+            if(Flow.State!=GameFlowState.Running||Paused||Runner.Riding||Invincible&&!tutorial)return false;
             DodgeStreak=0;
             // The shield also absorbs one slip: no slowdown, no banana count, so no pursuit starts.
             if(Items.ConsumeShield()){ShieldSaves++;lastHit=clock;return false;}

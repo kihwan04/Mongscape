@@ -6,14 +6,16 @@ using UnityEngine;
 
 namespace Muhanok.Presentation
 {
-    // Runs the tutorial lessons on the ordinary run: slows the runner in front of the lesson obstacle, shows a big cue,
-    // resumes on the right action and completes the step when the obstacle is passed. A mistake shows "다시 해 볼까요?"
-    // and restarts in front of the same step. The bootstrap ticks it before the session moves.
+    // Runs the tutorial lessons on the ordinary run at full speed. As a lesson comes into view its instruction shows;
+    // the big call follows the action's timing (jump and crouch only when acting clears the obstacle, ActionTiming).
+    // Doing the lesson's action completes the step at once ("좋아요!"), and a slip inside that lesson's chunk afterwards is
+    // forgiven, so an early jump never fails a passed lesson. A real mistake shows "다시 해 볼까요?" and restarts in front of
+    // the same step. The bootstrap ticks it before the session moves.
     public sealed class TutorialDirector : MonoBehaviour
     {
-        // Slowing starts this far ahead; the runner creeps from the hold point and the action counts from the act distance.
-        public const float SlowDistance = 14f, HoldDistance = 2.4f, ActDistance = 3.6f, CreepScale = .08f;
-        public const float RetrySeconds = 1.6f, DoneSeconds = 2.5f;
+        // The lesson shows (and its action counts) from this far ahead.
+        public const float ShowDistance = 14f;
+        public const float RetrySeconds = 1.6f, DoneSeconds = 2.5f, PraiseSeconds = .9f;
         private RunSession session;
         private ChunkSpawner map;
         private Func<bool> poseReady, visible;
@@ -22,17 +24,18 @@ namespace Muhanok.Presentation
         private HudSkin skin;
         private readonly List<ObstacleController> lesson = new List<ObstacleController>(3);
         private int seenMisses;
-        private float retryAt = -1, doneAt = -1;
+        private float retryAt = -1, doneAt = -1, praiseUntil = -1, forgiveUntilZ = -1;
         private string cue;
         public TutorialScript Script { get; private set; }
         public bool Active => Script != null && session != null && session.IsTutorial;
         // Distance to the current lesson (obstacle or fork decision); infinity when none is in sight.
         public float LessonDistance { get; private set; } = float.PositiveInfinity;
-        // The runner is held in front of the lesson until the awaited action.
+        // The current lesson is in view and not done yet.
         public bool Waiting { get; private set; }
-        public bool Resumed { get; private set; }
         public bool Retrying => retryAt >= 0;
         public string Message { get; private set; }
+        // The big call on screen ("↑  점프!", "←  옆으로 피하기  →", ...), null while a timed call is not due yet.
+        public string Cue => cue;
 
         public void Configure(RunSession run, ChunkSpawner spawner, Func<bool> calibrated, Action<float> restartAt, Action complete, Func<bool> canDraw)
         {
@@ -40,10 +43,10 @@ namespace Muhanok.Presentation
         }
         public void Begin(PlayStyle style, bool forks)
         {
-            Script = new TutorialScript(style, forks); seenMisses = session.TutorialMisses; retryAt = doneAt = -1;
-            Resumed = Waiting = false; LessonDistance = float.PositiveInfinity; Message = null; cue = null;
+            Script = new TutorialScript(style, forks); seenMisses = session.TutorialMisses; retryAt = doneAt = praiseUntil = forgiveUntilZ = -1;
+            Waiting = false; LessonDistance = float.PositiveInfinity; Message = null; cue = null;
         }
-        public void End() { Script = null; Waiting = Resumed = false; retryAt = doneAt = -1; Message = cue = null; if (session != null) session.SpeedScale = 1; }
+        public void End() { Script = null; Waiting = false; retryAt = doneAt = praiseUntil = forgiveUntilZ = -1; Message = cue = null; if (session != null) session.SpeedScale = 1; }
 
         public void Tick(float now)
         {
@@ -54,15 +57,22 @@ namespace Muhanok.Presentation
             {
                 session.SpeedScale = 0;
                 if (now < retryAt) return;
-                retryAt = -1; Resumed = Waiting = false; Message = null;
+                retryAt = -1; Waiting = false; Message = null; session.SpeedScale = 1;
                 restart?.Invoke(TutorialCourse.RestartZ(Script.Current));
                 seenMisses = session.TutorialMisses; return;
             }
-            if (session.TutorialMisses > seenMisses) { Miss(now); return; }
+            if (session.TutorialMisses > seenMisses)
+            {
+                // A slip inside the chunk of a lesson already passed (an early jump landing on its crate) is forgiven.
+                if (runner.Z < forgiveUntilZ) seenMisses = session.TutorialMisses;
+                else { Miss(now); return; }
+            }
+            session.SpeedScale = 1;
+            var step = Script.Current;
             switch (Script.Condition)
             {
                 case TutorialPass.Calibrated:
-                    session.SpeedScale = 0; Waiting = true; Message = TutorialScript.Instruction(Script.Current, Script.Style);
+                    session.SpeedScale = 0; Waiting = true; Message = TutorialScript.Instruction(step, Script.Style);
                     if (poseReady == null || poseReady()) Next(now);
                     return;
                 case TutorialPass.ForkChosen:
@@ -71,61 +81,77 @@ namespace Muhanok.Presentation
                     LessonDistance = TutorialCourse.ForkDecisionZ - runner.Z;
                     if (plan == null || !plan.Extended) { Next(now); return; }
                     if (plan.ForkLocked(runner.Z)) { if (plan.ChoiceAt(RouteSurface.SequenceAt(runner.Z)) != 0) Next(now); else Miss(now); return; }
-                    // The whole fork window counts: a lean held until the decision chooses the branch.
-                    Approach(plan.ForkWindow(runner.Z) && TutorialScript.Performed(Script.Current, runner));
+                    // The lean counts anywhere in the fork window.
+                    bool open = plan.ForkWindow(runner.Z);
+                    Show(open || LessonDistance <= ShowDistance, open && TutorialScript.Performed(step, runner), now);
                     return;
                 }
-                case TutorialPass.ObstaclePassed when Script.Current == TutorialStep.Rail:
+                case TutorialPass.ObstaclePassed when step == TutorialStep.Rail:
                 {
-                    // The broken rail judges itself (a wrong lean counts as a miss); the lean can be held from the slowdown on.
                     var gap = FindRail();
-                    if (gap == null) { LessonDistance = float.PositiveInfinity; Waiting = false; session.SpeedScale = 1; Message = null; return; }
+                    if (gap == null) { Hide(); return; }
                     if (gap.Passed) { Next(now); return; }
                     LessonDistance = gap.transform.position.z - runner.Z;
-                    Approach(LessonDistance <= SlowDistance && TutorialScript.Performed(Script.Current, runner));
+                    Show(LessonDistance <= ShowDistance, TutorialScript.Performed(step, runner), now);
                     return;
                 }
-                case TutorialPass.ObstaclePassed when Script.Current == TutorialStep.HighKnee:
+                case TutorialPass.ObstaclePassed when step == TutorialStep.HighKnee:
                 {
-                    // The stair chunk is the lesson: the runner waits at its foot for the first step, then a gap in the steps counts as a miss
-                    // (the stair judge) and reaching the top completes the step.
+                    // The stair chunk is the lesson: the first knee step at its foot completes it. Standing still on the steps is a miss
+                    // (the stair judge) and restarts the step.
                     float start = TutorialCourse.StairChunk * RouteSurface.Length;
                     if (runner.Z >= start + RouteSurface.Length) { Next(now); return; }
                     LessonDistance = start + StairJudge.From + 1f - runner.Z;
-                    Approach(LessonDistance <= ActDistance && TutorialScript.Performed(Script.Current, runner));
+                    Show(LessonDistance <= ShowDistance, TutorialScript.Performed(step, runner), now);
                     return;
                 }
                 case TutorialPass.ObstaclePassed:
                 {
                     FindLesson();
-                    if (lesson.Count == 0) { LessonDistance = float.PositiveInfinity; Waiting = false; session.SpeedScale = 1; Message = null; return; }
+                    if (lesson.Count == 0) { Hide(); return; }
                     bool passed = true; foreach (var hazard in lesson) passed &= hazard.Passed;
                     if (passed) { Next(now); return; }
                     LessonDistance = lesson[0].transform.position.z - runner.Z;
-                    Approach(LessonDistance <= ActDistance && TutorialScript.Performed(Script.Current, runner));
+                    Show(LessonDistance <= ShowDistance, TutorialScript.Performed(step, runner), now);
                     return;
                 }
             }
         }
-        private void Approach(bool performed)
+        // While the lesson is in view its instruction shows and its action completes it.
+        private void Show(bool inView, bool performed, float now)
         {
-            if (performed) Resumed = true;
-            float d = LessonDistance;
-            Waiting = !Resumed && d <= SlowDistance;
-            session.SpeedScale = Resumed || d > SlowDistance ? 1 : d <= HoldDistance ? CreepScale : Mathf.Lerp(CreepScale, 1, Mathf.InverseLerp(HoldDistance, SlowDistance, d));
-            Message = d <= SlowDistance ? TutorialScript.Instruction(Script.Current, Script.Style) : null;
-            cue = Waiting ? ActionCuePresenter.Find(session, map, Script.Style) : null;
+            if (!inView) { Hide(); return; }
+            if (performed) { Next(now); return; }
+            var step = Script.Current;
+            Waiting = true;
+            var call = ActionCuePresenter.Find(session, map, Script.Style);
+            if (TutorialScript.Timed(step))
+            {
+                // Jump and crouch: the big call and the instruction wait for the action's timing.
+                cue = call;
+                Message = call != null ? TutorialScript.Instruction(step, Script.Style) : TutorialScript.Prepare(step, Script.Style);
+            }
+            else
+            {
+                cue = call ?? TutorialScript.Title(step);
+                Message = TutorialScript.Instruction(step, Script.Style);
+            }
         }
+        private void Hide() { LessonDistance = float.PositiveInfinity; Waiting = false; Message = null; cue = null; }
         private void Next(float now)
         {
-            Script.Pass(); Resumed = Waiting = false; LessonDistance = float.PositiveInfinity; session.SpeedScale = 1; cue = null;
+            var step = Script.Current;
+            int chunk = TutorialCourse.ChunkOf(step);
+            if (chunk >= 0) forgiveUntilZ = Mathf.Max(forgiveUntilZ, (chunk + 1) * RouteSurface.Length);
+            Script.Pass(); Waiting = false; LessonDistance = float.PositiveInfinity; session.SpeedScale = 1; cue = null;
             Message = Script.Finished ? TutorialScript.Instruction(TutorialStep.Done, Script.Style) : null;
             if (Script.Finished) doneAt = now;
+            else if (step != TutorialStep.Calibrate) praiseUntil = now + PraiseSeconds;
         }
         private void Miss(float now)
         {
-            seenMisses = session.TutorialMisses; Script.Fail(); retryAt = now + RetrySeconds;
-            Resumed = Waiting = false; session.SpeedScale = 0; cue = null; Message = "다시 해 볼까요?";
+            seenMisses = session.TutorialMisses; Script.Fail(); retryAt = now + RetrySeconds; praiseUntil = -1;
+            Waiting = false; session.SpeedScale = 0; cue = null; Message = "다시 해 볼까요?";
         }
         // Active hazards of this step's lesson chunk (one lane block or one full row).
         private void FindLesson()
@@ -170,13 +196,14 @@ namespace Muhanok.Presentation
             skin.Card(header, Palette.A(Palette.Ground, .85f));
             GUI.color = Palette.Gold;
             GUI.Label(header, step == TutorialStep.Done ? "튜토리얼 완료" : "튜토리얼 " + progress + " · " + TutorialScript.Title(step), skin.Centered(20, FontStyle.Bold));
-            // Mistakes and the finish fill the banner; while held, the obstacle cue is big and the instruction sits below.
-            string big = Retrying || Script.Finished ? Message : Waiting ? cue ?? TutorialScript.Title(step) : null;
+            // Mistakes and the finish fill the banner; a lesson in view shows its call (when due) with the instruction below.
+            bool praise = Time.realtimeSinceStartup < praiseUntil && !Waiting;
+            string big = Retrying || Script.Finished ? Message : Waiting ? cue : praise ? "좋아요!" : null;
             if (big != null)
             {
                 var banner = new Rect(240, 196, 800, 110);
                 skin.Card(banner, Palette.A(Palette.Ground, .88f));
-                GUI.color = Retrying ? new Color(1, .7f, .3f) : Palette.Gold;
+                GUI.color = Retrying ? new Color(1, .7f, .3f) : praise ? new Color(.45f, 1f, .6f) : Palette.Gold;
                 GUI.Label(banner, big, skin.Centered(58, FontStyle.Bold));
             }
             if (!Retrying && !Script.Finished && !string.IsNullOrEmpty(Message))

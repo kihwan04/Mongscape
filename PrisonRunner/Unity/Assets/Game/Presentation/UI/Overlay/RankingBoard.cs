@@ -69,17 +69,23 @@ namespace Muhanok.Presentation
 
         void Reload()
         {
-            Rows.Clear(); Mine = null; int mine = ++request;
+            Rows.Clear(); Mine = null; MembersMissing = false; int mine = ++request;
             if (!MemberTab)
             {
+                // 통합 랭킹: this PC's runs at once, then this PC's guest runs merged with every member's best from the server.
                 Status = RankingStatus.Ready;
                 var list = data?.Board != null ? data.Board.View(TodayOnly, DateTime.Now, Mode) : new List<RankingEntry>();
-                for (int i = 0; i < list.Count; i++)
+                ShowLocal(list);
+                if (identity == null) { MembersMissing = true; return; }
+                identity.MemberLeaderboard(Mode, TodayOnly, reply =>
                 {
-                    var row = new RankingRow { Rank = i + 1, Name = list[i].Name ?? "", Score = list[i].Score, Member = list[i].Member };
-                    Rows.Add(row);
-                    if (MineEntry != null && list[i] == MineEntry) Mine = row;
-                }
+                    if (mine != request) return;
+                    // Offline: keep this PC's rows (members included) and say the other PCs' members are missing.
+                    if (reply == null || !reply.ok) { MembersMissing = true; return; }
+                    Rows.Clear(); Mine = null;
+                    var merged = Combined(list, reply, MineEntry, out var mineRow);
+                    Rows.AddRange(merged); Mine = mineRow;
+                });
                 return;
             }
             if (identity == null) { Status = RankingStatus.Failed; return; }
@@ -95,7 +101,73 @@ namespace Muhanok.Presentation
             });
         }
 
-        public string StatusText => Status == RankingStatus.Loading ? LoadingText : Status == RankingStatus.Failed ? OfflineText : "";
+        void ShowLocal(List<RankingEntry> list)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                var row = new RankingRow { Rank = i + 1, Name = list[i].Name ?? "", Score = list[i].Score, Member = list[i].Member };
+                Rows.Add(row);
+                if (MineEntry != null && list[i] == MineEntry) Mine = row;
+            }
+        }
+        // The member board could not be read: 통합 랭킹 shows only this PC's runs.
+        public bool MembersMissing { get; private set; }
+        public const string MembersMissingText = "회원 기록 연결 안 됨\n이 PC 기록만 표시";
+
+        // This PC's guest runs (every run) and the server's members (best run each), by score; ties keep the guest first.
+        // This PC's member runs are left out because the server already has them, except a member run that just finished
+        // and is not on the server yet (its upload is still on the way), which stands in for that member's server row.
+        public static List<RankingRow> Combined(IList<RankingEntry> local, LeaderboardReply reply, RankingEntry mineEntry, out RankingRow mine)
+        {
+            mine = null;
+            var guests = new List<RankingEntry>();
+            foreach (var entry in local) if (entry != null && !entry.Member) guests.Add(entry);
+            var members = new List<RankingRow>();
+            int serverMine = reply.me != null && reply.me.rank > 0 ? reply.me.rank : 0;
+            // Only a run on this view (its play style and period) can stand in for the member's server row.
+            bool pending = mineEntry != null && mineEntry.Member && local.Contains(mineEntry) && (serverMine == 0 || reply.me.score < mineEntry.Score);
+            RankingRow mineMember = null;
+            if (reply.entries != null)
+                foreach (var e in reply.entries)
+                {
+                    if (e == null) continue;
+                    var row = new RankingRow { Name = e.name ?? "", Score = e.score, Member = true };
+                    // The member's own server row gives way to the newer run that is still uploading.
+                    if (e.rank == serverMine && serverMine > 0) { if (pending) continue; mineMember = row; }
+                    members.Add(row);
+                }
+            if (pending)
+            {
+                mineMember = new RankingRow { Name = mineEntry.Name ?? "", Score = mineEntry.Score, Member = true };
+                int at = 0; while (at < members.Count && members[at].Score >= mineMember.Score) at++;
+                members.Insert(at, mineMember);
+            }
+            var rows = new List<RankingRow>(guests.Count + members.Count);
+            int g = 0, m = 0;
+            while (g < guests.Count || m < members.Count)
+            {
+                bool guest = m >= members.Count || g < guests.Count && guests[g].Score >= members[m].Score;
+                if (guest)
+                {
+                    var row = new RankingRow { Name = guests[g].Name ?? "", Score = guests[g].Score, Member = false };
+                    if (mineEntry != null && guests[g] == mineEntry) mine = row;
+                    rows.Add(row); g++;
+                }
+                else rows.Add(members[m++]);
+                rows[rows.Count - 1].Rank = rows.Count;
+            }
+            if (mineMember != null) mine = mineMember;
+            // A member below the server's top list: ranked after every row that scores higher.
+            else if (mine == null && serverMine > 0 && (mineEntry == null || mineEntry.Member))
+            {
+                int above = serverMine - 1;
+                foreach (var guest in guests) if (guest.Score > reply.me.score) above++;
+                mine = new RankingRow { Rank = above + 1, Name = "내 기록", Score = reply.me.score, Member = true };
+            }
+            return rows;
+        }
+
+        public string StatusText =>Status == RankingStatus.Loading ? LoadingText : Status == RankingStatus.Failed ? OfflineText : "";
 
         // Result title: "내 최고 N점" for a member (or an exhibition run), the sign-up note for a guest.
         public string BestLine

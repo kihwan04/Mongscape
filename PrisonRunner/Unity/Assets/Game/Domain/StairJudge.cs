@@ -10,6 +10,9 @@ namespace Muhanok.Domain
         private readonly RunConfig config;
         private bool failed, inChunk;
         private float lastZ;
+        // Seconds since this stair chunk was entered: entering counts as a fresh step, so the knee gauge starts full and
+        // nobody has to begin stepping before the stairs. The runner's own step clock (animation, coins, lessons) is untouched.
+        private float sinceEntry = float.MaxValue;
         public StairJudge(RunConfig tuning) { config = tuning; }
         // Inside the judged span of a stair chunk.
         public bool InStair { get; private set; }
@@ -23,18 +26,19 @@ namespace Muhanok.Domain
         {
             bool entered = inStairChunk && (!inChunk || localZ < lastZ);
             if (!inStairChunk || runner.Riding) { inChunk = false; InStair = false; StairProgress = KneeUrgency = 0f; lastZ = 0f; return false; }
-            if (entered) failed = false;
+            if (entered) { failed = false; sinceEntry = 0f; } else sinceEntry += dt;
             inChunk = true; lastZ = localZ;
             InStair = localZ >= From && localZ <= To;
             StairProgress = InStair ? Math.Max(0f, Math.Min(1f, (localZ - From) / (To - From))) : 0f;
             float gap = Math.Max(.01f, config.KneeStepGap);
-            KneeUrgency = InStair ? Math.Max(0f, Math.Min(1f, runner.SinceKneeStep / gap)) : 0f;
-            if (InStair && !failed && runner.SinceKneeStep > gap) { failed = true; return true; }
+            float since = Math.Min(runner.SinceKneeStep, sinceEntry);
+            KneeUrgency = InStair ? Math.Max(0f, Math.Min(1f, since / gap)) : 0f;
+            if (InStair && !failed && since > gap) { failed = true; return true; }
             return false;
         }
         // For scripted runners (bots, tests): true when the next step is due, every `interval` simulated seconds inside a stair chunk.
         public static bool StepDue(RunnerController runner, float interval = .4f)
             => !runner.Riding && RouteSurface.IsStair(RouteSurface.TypeAt(RouteSurface.SequenceAt(runner.Z))) && runner.SinceKneeStep >= interval;
-        public void Reset() { failed = inChunk = InStair = false; StairProgress = KneeUrgency = lastZ = 0f; }
+        public void Reset() { failed = inChunk = InStair = false; StairProgress = KneeUrgency = lastZ = 0f; sinceEntry = float.MaxValue; }
     }
 }
