@@ -57,9 +57,6 @@ namespace Muhanok.Bootstrap
             yield return Capture("20_Settings_Auto_Performance");
             var root=window.GetComponent<UIDocument>().rootVisualElement;
             yield return PointAt(ElementCenter(root,root.Q<Button>("tab-body")),.95f);
-            yield return PointAt(ElementCenter(root,root.Q<Button>("phone-camera-guide")),.95f);
-            if(root.Q<VisualElement>("phone-guide").resolvedStyle.display==DisplayStyle.None){Finish("Synthetic hand could not open phone guide");yield break;}
-            yield return Capture("21_Phone_Camera_Guide");
             window.Close(false);GesturePointer.Reset();
             game.OpenStartSetup();yield return new WaitForSecondsRealtime(.3f);yield return Capture("02_Setup");game.enabled=true;
             game.StartPlayerRun(new PlayerProfile{Name="QA",Style=PlayStyle.Keyboard,Weight="70",CalorieGoal=50});

@@ -273,31 +273,6 @@
     margin: 0 16px 0 0;
 }
 
-.settings-guide {
-    padding: 20px 24px;
-    margin: 16px 0;
-    background-color: rgb(30, 20, 14);
-    border-radius: 10px;
-}
-
-.settings-guide-title {
-    font-size: 26px;
-    -unity-font-style: normal;
-    color: rgb(255, 200, 61);
-    margin: 6px 0;
-}
-
-.settings-guide-text {
-    font-size: 24px;
-    color: rgb(255, 243, 220);
-    white-space: normal;
-    margin-bottom: 10px;
-}
-
-.settings-guide-text--muted {
-    color: rgb(156, 132, 103);
-}
-
 /* Buttons: wooden outline; the primary action is gold with dark text like the IMGUI screens. */
 .settings-footer {
     flex-direction: row;

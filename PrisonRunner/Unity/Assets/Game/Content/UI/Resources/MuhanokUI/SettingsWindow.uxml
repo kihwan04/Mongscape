@@ -50,14 +50,6 @@
                         <ui:DropdownField name="camera-device" label="웹캠" class="settings-row" />
                         <ui:VisualElement class="settings-row settings-row--actions">
                             <ui:Button name="refresh-cameras" text="카메라 다시 찾기" class="settings-button settings-display" />
-                            <ui:Button name="phone-camera-guide" text="휴대폰을 웹캠으로 쓰기" class="settings-button settings-display" />
-                        </ui:VisualElement>
-                        <ui:VisualElement name="phone-guide" class="settings-guide" style="display: none;">
-                            <ui:Label text="아이폰" class="settings-guide-title" />
-                            <ui:Label text="1. PC에 Camo Studio, 휴대폰에 Camo Camera를 설치합니다.&#10;2. USB로 연결하고 신뢰를 승인한 뒤 두 앱을 켭니다.&#10;3. 위 웹캠 목록에서 Camo를 고릅니다." class="settings-guide-text" />
-                            <ui:Label text="안드로이드" class="settings-guide-title" />
-                            <ui:Label text="USB 설정에 웹캠 항목이 있으면 고르세요. 없으면 휴대폰 웹캠 앱과 PC 드라이버가 필요합니다." class="settings-guide-text" />
-                            <ui:Label text="연결한 뒤 카메라 다시 찾기, 웹캠 선택, 자세 다시 맞추기 순서로 진행하세요. 충전 전용 케이블로는 연결되지 않습니다." class="settings-guide-text settings-guide-text--muted" />
                         </ui:VisualElement>
                         <ui:Toggle name="hand-menus" label="손으로 메뉴 고르기" class="settings-row" />
                         <ui:Toggle name="lite-model" label="가벼운 인식 모델 (저사양 PC)" class="settings-row" />

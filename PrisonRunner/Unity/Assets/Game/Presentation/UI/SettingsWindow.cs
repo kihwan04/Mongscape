@@ -80,7 +80,6 @@ namespace Muhanok.Presentation
             ToggleBind("auto-performance", () => s.AutoPerformance, v => s.AutoPerformance = v);
             ToggleBind("hand-menus", () => s.HandMenus, v => s.HandMenus = v);
             Clicked("refresh-cameras", ()=>{Refresh();host.RefreshCamera();});
-            Clicked("phone-camera-guide",()=>{var guide=root.Q<VisualElement>("phone-guide");guide.style.display=guide.resolvedStyle.display==DisplayStyle.None?DisplayStyle.Flex:DisplayStyle.None;});
             Dropdown("shadow-quality", ShadowNames, () => (int)s.Shadows, i => { s.Shadows = (ShadowSetting)i; Custom(); });
             ToggleBind("ambient-occlusion", () => s.AmbientOcclusion, v => { s.AmbientOcclusion = v; Custom(); });
             ToggleBind("gpu-resident-drawer", () => s.GpuResidentDrawer, v => s.GpuResidentDrawer = v);
