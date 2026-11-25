@@ -12,8 +12,6 @@ namespace Muhanok.Presentation.Map
         public bool Pulled => pulled;
         // Stair coins sit at knee height and only count while the runner is knee-stepping.
         public bool RequiresKneeStep { get; set; }
-        // A big movement's coin (BonusCoins): under the bars only while sliding (the far ones in a deep slide), or up in the air.
-        public BonusCoin Bonus { get; set; }
         // Pooled coins return to their authored spot; chunk preparation then only re-picks the lane (x).
         public void ResetCoin()
         {
@@ -25,9 +23,8 @@ namespace Muhanok.Presentation.Map
         {
             if(collected||!gameObject.activeSelf||run.Flow.State!=GameFlowState.Running||run.Paused) return;
             if(!ObstacleLayout.CoinReachable(RequiresKneeStep,run.Runner.KneeStepping)) return;
-            if(!BonusCoins.Reachable(Bonus,run.Runner.Crouching,run.Runner.DeepSliding)) return;
             RouteSurface.Sample(run.Runner.Z,out float x,out float y);
-            var player=new Vector3(run.Runner.WorldLaneOffset+x,run.Runner.Y+y+BonusCoins.ChestHeight,run.Runner.Z);
+            var player=new Vector3(run.Runner.WorldLaneOffset+x,run.Runner.Y+y+.85f,run.Runner.Z);
             if(run.Items.IsActive(ItemKind.Magnet))
             {
                 float ahead=transform.position.z-run.Runner.Z;
@@ -40,10 +37,10 @@ namespace Muhanok.Presentation.Map
                 }
             }
             if(previousZ>transform.position.z||run.Runner.Z<transform.position.z) return;
-            if(Mathf.Abs(player.x-transform.position.x)>BonusCoins.ReachX||Mathf.Abs(player.y-transform.position.y)>BonusCoins.ReachY) return;
+            if(Mathf.Abs(player.x-transform.position.x)>.8f||Mathf.Abs(player.y-transform.position.y)>.9f) return;
             Collect(run);
         }
-        private void Collect(RunSession run) { collected=true; if(Bonus!=BonusCoin.None)run.CollectBonusCoin(); else run.CollectCoin(); gameObject.SetActive(false); }
+        private void Collect(RunSession run) { collected=true; run.CollectCoin(); gameObject.SetActive(false); }
         private void Update() { transform.Rotate(0,Time.deltaTime*90,0,Space.Self); }
     }
 }

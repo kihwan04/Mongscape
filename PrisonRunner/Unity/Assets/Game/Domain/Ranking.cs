@@ -43,9 +43,6 @@ namespace Muhanok.Domain
         public int Mode = -1;
         // Calories of the run (0 for keyboard play).
         public double Kcal;
-        // Today's challenge (KST day "yyyyMMdd") the run belonged to; empty for ordinary runs. Challenge runs rank only on the challenge board.
-        public string Challenge = "";
-        public bool IsChallenge => !string.IsNullOrEmpty(Challenge);
         public bool Ranked => ScoreVersion == RunScore.Version;
         public bool Member => !string.IsNullOrEmpty(AccountId);
         public string Day => Leaderboard.DayKey(new DateTime(Ticks));
@@ -65,10 +62,8 @@ namespace Muhanok.Domain
         public List<RankingEntry> View(bool todayOnly, DateTime now, PlayStyle mode)
         {
             string day = DayKey(now);
-            return entries.FindAll(e => e.Ranked && !e.IsChallenge && e.Mode == (int)mode && (!todayOnly || e.Day == day));
+            return entries.FindAll(e => e.Ranked && e.Mode == (int)mode && (!todayOnly || e.Day == day));
         }
-        // Ranked runs of one challenge day and play style, best first.
-        public List<RankingEntry> ChallengeView(string challengeDay, PlayStyle mode) => entries.FindAll(e => e.Ranked && e.Challenge == challengeDay && e.Mode == (int)mode);
         // Adds a run and returns its 1-based rank among the ranked runs of its play style.
         public int Add(RankingEntry entry)
         {
@@ -79,8 +74,7 @@ namespace Muhanok.Domain
         public int RankOf(RankingEntry entry, bool sameDay, PlayStyle mode)
         {
             if (entry == null || !entry.Ranked || entry.Mode != (int)mode || !entries.Contains(entry)) return 0;
-            var list = entry.IsChallenge ? ChallengeView(entry.Challenge, mode) : View(sameDay, new DateTime(entry.Ticks), mode);
-            return list.IndexOf(entry) + 1;
+            return View(sameDay, new DateTime(entry.Ticks), mode).IndexOf(entry) + 1;
         }
         public bool Contains(RankingEntry entry) => entry != null && entries.Contains(entry);
         public void Load(IEnumerable<RankingEntry> saved)
@@ -96,18 +90,6 @@ namespace Muhanok.Domain
             foreach (var e in entries) if (e.Ranked && e.Style == style && (name == null || e.Name == name)) best = Math.Max(best, e.Score);
             return best;
         }
-        // Best score of the previous ranking season (RunScore.PreviousVersion) for one play style: the member's own runs
-        // (by account id) or, without one, the runs under that name. 0 when there is none.
-        public int PreviousSeasonBest(PlayStyle mode, string accountId, string name)
-        {
-            int best = 0;
-            foreach (var e in entries)
-                if (e.ScoreVersion == RunScore.PreviousVersion && e.Mode == (int)mode
-                    && (!string.IsNullOrEmpty(accountId) ? e.AccountId == accountId : e.Name == name)) best = Math.Max(best, e.Score);
-            return best;
-        }
-        // This play style has records from an older score formula on this PC (they stay saved, but no longer rank).
-        public bool HasOlderSeason(PlayStyle mode) => entries.Exists(e => !e.Ranked && e.Mode == (int)mode);
         public void ClearDay(string day) => entries.RemoveAll(e => e.Day == day);
         // A deleted member's runs leave this PC's board too.
         public void RemoveAccount(string id) { if (!string.IsNullOrEmpty(id)) entries.RemoveAll(e => e.AccountId == id); }
@@ -117,7 +99,6 @@ namespace Muhanok.Domain
             if (entry.ScoreVersion <= 0) entry.ScoreVersion = 1;
             if (entry.Mode < 0 || entry.Mode > 2) entry.Mode = PlayStyleInfo.ModeOf(entry.Style);
             if (entry.AccountId == null) entry.AccountId = "";
-            if (entry.Challenge == null) entry.Challenge = "";
         }
         // Ranked runs first by score, then unranked older records in their old distance order; ties go to the earlier run.
         private void Sort() => entries.Sort((a, b) => a.Ranked != b.Ranked ? (a.Ranked ? -1 : 1)

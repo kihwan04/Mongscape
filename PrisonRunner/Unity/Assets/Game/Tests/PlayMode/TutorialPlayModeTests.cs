@@ -107,7 +107,7 @@ namespace Muhanok.Tests
             while((game.IsLoading||game.Session.Flow.State!=GameFlowState.Running)&&Time.realtimeSinceStartup<deadline)yield return null;
             Assert.AreEqual(PlayStyle.UpperBody,game.Tutorial.Script.Style);
             CollectionAssert.AreEqual(new TutorialScript(PlayStyle.UpperBody).Steps,game.Tutorial.Script.Steps);
-            Assert.AreEqual(TutorialStep.Camera,game.Tutorial.Script.Steps[0],"Body styles check the camera first");Assert.AreEqual(TutorialStep.Calibrate,game.Tutorial.Script.Steps[1],"then calibrate before the first lesson");
+            Assert.AreEqual(TutorialStep.Calibrate,game.Tutorial.Script.Steps[0],"Body styles calibrate before the first lesson");
             game.ExitToMenu();game.SetDeveloperMode(false,false);game.FaceLogout(false);
         }
 
@@ -208,7 +208,6 @@ namespace Muhanok.Tests
                     else if(step==TutorialStep.Jump&&t.Cue==ActionCuePresenter.JumpCue&&run.Y<=.001f)run.Command(MotionCommand.Jump);
                     else if(step==TutorialStep.Crouch&&t.Cue==ActionCuePresenter.CrouchCue)run.Command(MotionCommand.Crouch);
                     else if(step==TutorialStep.HighKnee&&(near||StairJudge.StepDue(run))&&run.SinceKneeStep>=.4f)run.Command(MotionCommand.KneeStep);
-                    else if(step==TutorialStep.Banana&&near&&run.Lane==TutorialCourse.BlockedLane)run.Command(MotionCommand.Left);
                     else if(step==TutorialStep.Rail&&near&&run.Lane==0)run.Command(TutorialCourse.RailLean);
                     else if(step==TutorialStep.Fork&&(RouteSurface.ActivePlan?.ForkWindow(run.Z)??false)&&run.Lane==0)run.Command(MotionCommand.Left);
                 }

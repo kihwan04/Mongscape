@@ -19,7 +19,7 @@ namespace Muhanok.Tests
         [Test] public void CueTextFollowsThePlayStyle()
         {
             Assert.AreEqual("걷듯이 무릎!",ActionCuePresenter.StairCue(PlayStyle.FullBody));
-            Assert.AreEqual("팔 당겨 내리기!", ActionCuePresenter.StairCue(PlayStyle.UpperBody));
+            Assert.AreEqual("팔 번갈아!", ActionCuePresenter.StairCue(PlayStyle.UpperBody));
             Assert.AreEqual("W 연타!", ActionCuePresenter.StairCue(PlayStyle.Keyboard));
         }
         [Test] public void RunnerCountsEveryAcceptedKneeStep()

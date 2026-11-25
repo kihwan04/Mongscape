@@ -50,7 +50,6 @@ namespace Muhanok.Infrastructure
         [Serializable] private sealed class NameRequest { public string name; }
         [Serializable] private sealed class ItemRequest { public int item; }
         [Serializable] private sealed class BoardRequest { public int mode; public bool today; }
-        [Serializable] private sealed class WeekBoardRequest { public int mode; public bool week = true; }
         private bool capturing; private int faceCalls;
         // Capturing faces, or a login/enroll/delete call is waiting for the server.
         public bool Busy=>capturing||faceCalls>0;
@@ -119,8 +118,6 @@ namespace Muhanok.Infrastructure
             done?.Invoke(reply);
         });
         public void Buy(string token,ItemKind item,Action<AccountReply> done)=>Post("/shop/buy",JsonUtility.ToJson(new ItemRequest{item=(int)item}),token,done);
-        public void WeekLeaderboard(string token,PlayStyle mode,Action<LeaderboardReply> done)=>
-            StartCoroutine(Send("/leaderboard",JsonUtility.ToJson(new WeekBoardRequest{mode=(int)mode}),token,done));
         public void Leaderboard(string token,PlayStyle mode,bool today,Action<LeaderboardReply> done)=>
             StartCoroutine(Send("/leaderboard",JsonUtility.ToJson(new BoardRequest{mode=(int)mode,today=today}),token,done));
         public void Stats(string token,Action<StatsReply> done)=>StartCoroutine(Send("/stats","{}",token,done));

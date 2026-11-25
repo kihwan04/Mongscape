@@ -1,5 +1,0 @@
-# action,start,end[,count]
-walk,2.5,12.5
-run,12.5,22.5
-sprint,22.5,32.5
-stand,32.5,37.5

@@ -46,9 +46,6 @@ namespace Muhanok.Domain
         public int CleanBonus = 25; // Unused since score v2; kept for saved settings.
         public float SlipSeconds = 2.4f, SlipSpeedMultiplier = .5f, CartSpeed = 9f;
         public float BananaCatchSeconds=1.2f;
-        // Big movements (exercise plan 6): a jump goes this much higher, a deep slide lasts this much longer, a high knee step
-        // on the stairs takes the police back this far (pressure units), a wide side step crosses in this share of the time.
-        public float BigJumpHeight = 1.35f, DeepSlideFactor = 1.5f, BigKneeRelief = .08f, BigLaneTime = .5f;
         // A single slip strike is forgiven after this many seconds without a second one.
         public float StrikeClearSeconds=8f;
         public float SpeedRampDistance = 120f;
@@ -154,9 +151,6 @@ namespace Muhanok.Domain
         public float Y { get; private set; }
         public float Z { get; private set; }
         public bool Crouching => crouchLeft > 0f;
-        // The slide was lengthened by a deep crouch (the far half of the under-bar coin line needs it).
-        public bool DeepSliding => Crouching && deepSlide;
-        private bool deepSlide;
         public float SinceKneeStep => clock - lastKneeStep;
         // Counts every accepted KneeStep (feedback such as footsteps and camera bob listens for changes).
         public int KneeSteps { get; private set; }
@@ -196,19 +190,6 @@ namespace Muhanok.Domain
             if (command == MotionCommand.KneeStep && !Riding) { lastKneeStep = clock; KneeSteps++; }
         }
         public void Stumble() { stumbleLeft = config.StumbleSeconds; }
-        // A big jump while still rising: the arc reaches BigJumpHeight times the normal height.
-        public bool BoostJump()
-        {
-            if (Riding || Y <= .001f || verticalSpeed <= 0f) return false;
-            float apex = config.JumpHeight * config.BigJumpHeight;
-            if (Y >= apex) return false;
-            verticalSpeed = Math.Max(verticalSpeed, (float)Math.Sqrt(2f * config.Gravity * (apex - Y))); return true;
-        }
-        // A deep crouch keeps the slide going longer.
-        public bool DeepSlide() { if (!Crouching) return false; crouchLeft = Math.Max(crouchLeft, config.CrouchSeconds * config.DeepSlideFactor); deepSlide = true; return true; }
-        // A wide side step finishes the lane change sooner.
-        public void HurryLane() { laneTime = Math.Max(laneTime, config.LaneSeconds * (1 - config.BigLaneTime)); }
-        public float JumpApex => config.JumpHeight;
         public void Slip() { slowLeft = config.SlipSeconds; }
         public void SetStartZ(float z) { Z = z; }
         public void Tick(float dt, float speed)
@@ -238,17 +219,16 @@ namespace Muhanok.Domain
             if(wasRiding!=Riding){laneFrom=X;Lane=0;laneTime=0;}
             if(wasRiding&&!Riding&&(RouteSurface.ActivePlan?.Extended??false)){X=laneFrom=0;laneTime=1;}
             crouchLeft = Math.Max(0f, crouchLeft - dt);
-            if (crouchLeft <= 0f) deepSlide = false;
             clock += dt;
             stumbleLeft = Math.Max(0f, stumbleLeft - dt);
             slowLeft = Math.Max(0f, slowLeft - dt);
         }
         private void StartJump()
         {
-            crouchLeft = 0f; deepSlide = false;
+            crouchLeft = 0f;
             verticalSpeed = (float)Math.Sqrt(2f * config.Gravity * config.JumpHeight);
         }
-        public void Reset() { deepSlide = false; Lane = 0; X = Y = 0f; Z = 2f; laneFrom = verticalSpeed = crouchLeft = stumbleLeft = slowLeft = jumpBuffer = crouchBuffer = 0f; laneTime = 1f; clock = 0f; lastKneeStep = NoKneeStep; KneeSteps = 0; }
+        public void Reset() { Lane = 0; X = Y = 0f; Z = 2f; laneFrom = verticalSpeed = crouchLeft = stumbleLeft = slowLeft = jumpBuffer = crouchBuffer = 0f; laneTime = 1f; clock = 0f; lastKneeStep = NoKneeStep; KneeSteps = 0; }
     }
 
     public sealed class RunSession
@@ -289,22 +269,7 @@ namespace Muhanok.Domain
         public bool SlipPursuit=>bananaCatchLeft>0;
         public float TargetSpeed => Config.IntervalMode ? IntervalSpeed() : Difficulty.Speed(Score.Distance, Config, Runner.Riding);
         public float CurrentSpeed => Flow.State == GameFlowState.Running && !Paused ? MoveSpeed * Runner.SpeedMultiplier * SpeedScale : 0f;
-        // On foot the cadence sets the pace (CadencePace: 0.7 walking to 1.3 sprinting); the cart keeps its own speed.
-        private float MoveSpeed => (Config.IntervalMode ? smoothSpeed : TargetSpeed) * (Runner.Riding ? 1f : CadenceScale);
-        // Set each frame from CadencePace (1 for the keyboard, the option off, or the tutorial).
-        public float CadenceScale { get; set; } = 1f;
-        // How close the police come because the player is below the target cadence (0..CadencePace.MaxPressure).
-        // Separate from Chase: it moves the police and reddens the screen edges but never makes a capture.
-        public float PacePressure { get; set; }
-        public float PolicePressure => Math.Max(Chase.Pressure, PacePressure);
-        // On-foot speed expected at a route distance with the current cadence (a little faster, so hazards planned now still
-        // keep their time gap if the player speeds up before reaching them).
-        public float PlannedSpeed(float distance)
-        {
-            float speed = Config.IntervalMode && Config.ExtendedRoutes ? Difficulty.Ramp(Config.SprintSpeed, Config.MaxSprintSpeed, distance, Config)
-                : Config.IntervalMode ? Math.Min(Config.MaxSprintSpeed, Config.SprintSpeed + Config.SprintSpeedStep * IntervalCycle) : Difficulty.Speed(distance, Config);
-            return speed * Math.Min(CadencePace.Sprint, CadenceScale + .3f);
-        }
+        private float MoveSpeed => Config.IntervalMode ? smoothSpeed : TargetSpeed;
         // Interval rhythm comes from the route: walking chunks sprint, the cart ride rests.
         public bool Resting => Config.IntervalMode && Runner.Riding;
         public int IntervalCycle => RouteSurface.CycleAt(RouteSurface.SequenceAt(Runner.Z));
@@ -388,8 +353,6 @@ namespace Muhanok.Domain
         {
             if(Flow.State!=GameFlowState.Running||Paused||Runner.Riding||Invincible&&!tutorial)return false;
             DodgeStreak=0;
-            // The tutorial's banana lesson: stepping on a peel is a counted miss that restarts the step, never a strike or pursuit.
-            if(tutorial&&source==SlipSource.Banana){Runner.Slip();lastHit=clock;TutorialMisses++;return true;}
             // The shield also absorbs one slip: no slowdown, no banana count, so no pursuit starts.
             if(Items.ConsumeShield()){ShieldSaves++;lastHit=clock;return false;}
             Runner.Slip();
@@ -401,23 +364,6 @@ namespace Muhanok.Domain
             }
             return true;
         }
-        public enum BigMove { Jump, Crouch, Knee, Lane }
-        // Big movements seen this run, by kind, and the bonus coins taken (the coin line under the bars, the coins in the air;
-        // BonusCoins places them on the course).
-        public readonly int[] BigMoves = new int[4];
-        public int BigCoins { get; private set; }
-        public void CollectBonusCoin() { CollectCoin(); BigCoins++; }
-        // Applies a big movement's in-game effect. Returns whether the effect applied.
-        public bool Big(BigMove move)
-        {
-            if (Flow.State != GameFlowState.Running || Paused) return false;
-            bool applied = move == BigMove.Jump ? Runner.BoostJump() : move == BigMove.Crouch ? Runner.DeepSlide() : true;
-            if (!applied) return false;
-            if (move == BigMove.Knee) { Chase.Recover(Config.BigKneeRelief); PacePressure = Math.Max(0, PacePressure - Config.BigKneeRelief); }
-            if (move == BigMove.Lane) Runner.HurryLane();
-            BigMoves[(int)move]++;
-            return true;
-        }
-        public void Reset() { Array.Clear(BigMoves, 0, BigMoves.Length); BigCoins = 0; Runner.Reset(); Stair.Reset(); Chase.Reset(); Score.Reset(); Workout.Reset(); Items.Reset(); Paused=false; SpeedScale=1f; CadenceScale=1f; PacePressure=0f; clock = 0f; lastHit = -100f;SlipStrikes=0;lastStrike=0f;ShieldSaves=0;DodgeStreak=BestDodgeStreak=0;bananaCatchLeft=0;Reason=CaptureReason.Collision; smoothSpeed = TargetSpeed; }
+        public void Reset() { Runner.Reset(); Stair.Reset(); Chase.Reset(); Score.Reset(); Workout.Reset(); Items.Reset(); Paused=false; SpeedScale=1f; clock = 0f; lastHit = -100f;SlipStrikes=0;lastStrike=0f;ShieldSaves=0;DodgeStreak=BestDodgeStreak=0;bananaCatchLeft=0;Reason=CaptureReason.Collision; smoothSpeed = TargetSpeed; }
     }
 }

@@ -33,8 +33,6 @@ namespace Muhanok.Presentation
             GUI.color = Palette.Gold; GUI.Label(new Rect(195, 92, 500, 50), "탈출 준비", skin.Style(36, FontStyle.Bold));
             if (openSettings != null && skin.FlatButton(new Rect(950, 92, 140, 44), "설정", false)) openSettings();
             if (back != null && skin.FlatButton(new Rect(800, 92, 140, 44), "뒤로", false)) back();
-            // Today's challenge: the same map for everyone today, with its own ranking (exercise plan 10).
-            if (data != null && skin.FlatButton(new Rect(600, 92, 190, 44), ChallengeLabel(data.DailyChallenge), data.DailyChallenge)) data.SetDailyChallenge(!data.DailyChallenge);
             GUI.color = Color.white;
             if (perRun)
             {
@@ -86,19 +84,8 @@ namespace Muhanok.Presentation
                 if(!probe.SetGoal(goalText)&&exercise){validation="목표는 1~5000 kcal 숫자로 입력해 주세요.";return;}
                 beginRun?.Invoke(new PlayerProfile { Name = name.Trim(), Weight = weightText.Trim(), Style = style,CalorieGoal=probe.GoalKcal });
             }
-            if (data != null && PlayStyleInfo.UsesCamera(style))
-            {
-                if (skin.FlatButton(new Rect(640, 500, 210, 40), "자세 다시 맞추기 (R)", false)) data.Recalibrate();
-                // Cadence -> speed: on by default and remembered. Off keeps the base speed and stepping in place earns no calories
-                // (only jumps, crouches, knee raises and lane changes). Both share one ranking.
-                bool on = data.CadenceSpeed;
-                if (skin.FlatButton(new Rect(860, 500, 230, 40), CadenceLabel(on), on)) data.SetCadenceSpeed(!on);
-                if (!on) { GUI.color = Palette.Cream; GUI.Label(new Rect(860, 580, 360, 28), CadenceOffHint, skin.Style(16, FontStyle.Normal)); GUI.color = Color.white; }
-            }
+            if (data != null && PlayStyleInfo.UsesCamera(style) && skin.FlatButton(new Rect(640, 500, 450, 40), "자세 다시 맞추기 (R)", false)) data.Recalibrate();
         }
-        public static string ChallengeLabel(bool on) => on ? "오늘의 도전 ✓" : "오늘의 도전";
-        public static string CadenceLabel(bool on) => "달리기 속도 조절 " + (on ? "켜짐" : "꺼짐");
-        public const string CadenceOffHint = "꺼짐: 걸음은 칼로리에서 빠져요";
         public const string NoCameraGuide = "카메라가 연결되어 있지 않아 키보드로만 플레이할 수 있어요. 카메라를 연결하면 전신·상체를 고를 수 있어요.";
         private bool Choice(Rect rect, string text, bool selected, bool enabled = true)
         {
@@ -110,7 +97,7 @@ namespace Muhanok.Presentation
         }
         private static string Guide(PlayStyle style) =>
             style == PlayStyle.FullBody ? "몸 전체가 보이게 서세요. 옆으로 걸어 좌우 이동(수레에서는 상체 기울이기), 점프, 숙이기, 무릎 높이 들기."
-            : style == PlayStyle.UpperBody ? "허리 위가 보이게 서거나 앉으세요. 상체 기울이기, 두 손 들기 = 점프, 숙이기, 팔 번갈아 흔들기 = 달리기, 계단에서는 머리 위에서 팔 당겨 내리기."
+            : style == PlayStyle.UpperBody ? "허리 위가 보이게 서거나 앉으세요. 상체 기울이기, 두 손 들기 = 점프, 숙이기, 팔 크게 흔들기 = 무릎 들기."
             : "";
         private void KeyboardGuide(Rect area)
         {

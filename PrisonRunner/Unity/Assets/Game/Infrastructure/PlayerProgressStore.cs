@@ -12,7 +12,7 @@ namespace Muhanok.Infrastructure
     public sealed class PlayerProgressStore
     {
         [Serializable] private sealed class WalletFile { public int Coins; public List<int> Unlocked = new List<int>(); }
-        [Serializable] private sealed class RecordsFile { public List<RankingEntry> Entries = new List<RankingEntry>(); public PlayerStats Stats = new PlayerStats(); public List<ExerciseDay> Exercise = new List<ExerciseDay>(); }
+        [Serializable] private sealed class RecordsFile { public List<RankingEntry> Entries = new List<RankingEntry>(); public PlayerStats Stats = new PlayerStats(); }
         [Serializable] private sealed class LegacyWallet { public int CoinPool; public List<int> Unlocked = new List<int>(); }
         private const string LegacyBestKey = "Muhanok.BestDistance";
         private readonly string folder;
@@ -26,13 +26,6 @@ namespace Muhanok.Infrastructure
         public bool DeveloperDataLoaded => profile != null;
         public readonly Leaderboard Board = new Leaderboard();
         public PlayerStats Stats { get; private set; } = new PlayerStats();
-        // Weekly goal, streak and course balance per player (exercise plan 8); this PC only for now.
-        public readonly ExerciseLog Exercise = new ExerciseLog();
-        // Adds a finished run's exercise time and saves; returns the streak coins it earned (see ExerciseLog.Add).
-        public int RecordExercise(string owner, DateTime utcNow, double active, double moderate, double[] kinds)
-        {
-            int coins = Exercise.Add(owner, utcNow, active, moderate, kinds); SaveRecords(); return coins;
-        }
         public PlayerProgressStore(string root = null)
         {
             folder = Path.Combine(root ?? UnityEngine.Application.persistentDataPath, "Player");
@@ -106,13 +99,12 @@ namespace Muhanok.Infrastructure
                 }
             }
             Board.Load(file?.Entries);
-            Exercise.Load(file?.Exercise);
             Stats = file?.Stats ?? new PlayerStats();
             // The best distance used to live in PlayerPrefs; keep it when this file is new.
             if(useLegacyPrefs)Stats.BestDistance = Mathf.Max(Stats.BestDistance, PlayerPrefs.GetFloat(LegacyBestKey, 0f));
             if(migrate&&file.Entries.Count>0)SaveRecords();
         }
-        private void SaveRecords() => Write(RecordsPath, new RecordsFile { Entries = new List<RankingEntry>(Board.All), Stats = Stats, Exercise = new List<ExerciseDay>(Exercise.Days) });
+        private void SaveRecords() => Write(RecordsPath, new RecordsFile { Entries = new List<RankingEntry>(Board.All), Stats = Stats });
         private static T Read<T>(string path) where T : class
         {
             try { return File.Exists(path) ? JsonUtility.FromJson<T>(File.ReadAllText(path)) : null; }

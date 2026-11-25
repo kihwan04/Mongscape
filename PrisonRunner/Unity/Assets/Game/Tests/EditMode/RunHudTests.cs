@@ -50,7 +50,7 @@ namespace Muhanok.Tests
             Assert.IsTrue(model.ShowFork);Assert.IsFalse(model.ForkCommitted);Assert.AreEqual(1,model.ForkLane);
             RouteSurface.ActivePlan.UpdateChoice(120,1);run.Runner.SetStartZ(132);
             model.Tick(run,null,PlayStyle.Keyboard,PoseStatus.Off,false,2);
-            Assert.IsTrue(model.ForkCommitted);StringAssert.Contains("코스",model.ForkCaption);
+            Assert.IsTrue(model.ForkCommitted);StringAssert.Contains("진입",model.ForkCaption);
             run.Runner.SetStartZ(144);model.Tick(run,null,PlayStyle.Keyboard,PoseStatus.Off,false,3);Assert.IsFalse(model.ShowFork);
         }
         [TestCase(true, true, true, true, true, true, HudNoticeKind.Tracking)]

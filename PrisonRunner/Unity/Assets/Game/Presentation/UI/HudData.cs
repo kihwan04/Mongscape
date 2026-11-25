@@ -4,9 +4,6 @@ using UnityEngine;
 
 namespace Muhanok.Presentation
 {
-    // The visible calibration before a camera run starts its countdown (and before the tutorial's first lesson).
-    public enum RunCalibrationState { None, Measuring, Done }
-
     // What the screens need from the running game; implemented by the bootstrap.
     public interface IHudData
     {
@@ -30,18 +27,7 @@ namespace Muhanok.Presentation
         float CalibrationProgress { get; }
         // Full body calibration waits for both knees to be in view.
         bool PoseKneesMissing { get; }
-        // Calibration restarted just now because the player moved ("움직이지 마세요").
-        bool PoseCalibrationMoving { get; }
-        // How the player stands in the camera picture; Ok when everything from the head to the ankles shows.
-        FramingIssue PoseFraming { get; }
         float StepsPerMinute { get; }
-        CadenceStage Cadence { get; }
-        // The run is held on the calibration screen (Measuring), or shows "보정 완료" for a second (Done).
-        RunCalibrationState RunCalibration { get; }
-        // A tutorial run: the calibration screen explains itself once.
-        bool TutorialRun { get; }
-        // Developer mode joint recording (F6) is on.
-        bool PoseRecording { get; }
         bool BodyActive { get; }
         PlayerWallet Wallet { get; }
         Leaderboard Board { get; }
@@ -71,28 +57,6 @@ namespace Muhanok.Presentation
         void Unlock(ItemKind kind, System.Action<bool, string> done);
         void SaveProfile(PlayerProfile profile);
         void Recalibrate();
-        // "달리기 속도 조절" (setup screen): on by default, remembered on this PC.
-        bool CadenceSpeed { get; }
-        void SetCadenceSpeed(bool on);
-        // The running ranking strip (loaded at the start of a run; not in the tutorial), whether a hazard is close
-        // (the strip stays small and holds its overtake effect), and the cadence pace pressure (red screen edges).
-        RankRace Race { get; }
-        bool HazardNear { get; }
-        float PacePressure { get; }
-        // The coach subtitle showing now, or "".
-        string CoachText { get; }
-        // The course done least this week, marked "추천" on the fork preview.
-        ExerciseKind Recommended { get; }
-        // Weekly goal (moderate minutes, of 150) and the daily streak of the current player; today's challenge state.
-        double WeekMinutes { get; }
-        int Streak { get; }
-        // Streak coins the last run earned (0 when none), and whether the last run was today's challenge (with its day rank).
-        int LastStreakCoins { get; }
-        bool ChallengeRun { get; }
-        bool DailyChallenge { get; }
-        void SetDailyChallenge(bool on);
-        // A banana is just ahead and this player has not been warned yet this session.
-        bool BananaWarning { get; }
     }
 
     // Draws the mirrored webcam image with the detected skeleton; returns the video rect for overlays.
@@ -159,15 +123,10 @@ namespace Muhanok.Presentation
             if ((status == PoseStatus.NoCamera || status == PoseStatus.NoModel) && !string.IsNullOrEmpty(data.PoseMessage))
                 GUI.Label(new Rect(area.x + 16, area.y + 16, area.width - 32, area.height - 70), data.PoseMessage, skin.Style(16, FontStyle.Normal));
             string text = status == PoseStatus.Calibrating && data.PoseKneesMissing ? KneesHint : PoseStatusText.Korean(status);
-            if (status == PoseStatus.Tracking && data.StepsPerMinute > 0) text += " (분당 " + Mathf.RoundToInt(data.StepsPerMinute) + "걸음 · " + Domain.Cadence.Korean(data.Cadence) + ")";
-            // Camera setup: a body cut off at the picture's edge (or standing too far or to one side) gets a hint instead.
-            string hint = FramingHint(data, status);
-            if (hint != null) text = hint;
+            if (status == PoseStatus.Tracking && data.StepsPerMinute > 0) text += " (분당 " + Mathf.RoundToInt(data.StepsPerMinute) + "걸음)";
             var label = new Rect(area.x, area.yMax - 34, area.width, 30);
             skin.Card(label, new Color(0, 0, 0, .6f));
-            if (hint != null) GUI.color = Palette.Warn;
             GUI.Label(label, text, skin.Centered(18, FontStyle.Bold));
-            GUI.color = Color.white;
             if (status == PoseStatus.Tracking && data.Motion != null) DrawMotion(skin, area, data);
             // Diagnostics for tuning: tracking mode, shoulder confidence, detector score, inference rate.
             if (!string.IsNullOrEmpty(data.PoseDiagnostics) && area.width > 300)
@@ -181,14 +140,6 @@ namespace Muhanok.Presentation
                 GUI.color = Color.white;
             }
             return view;
-        }
-        // The camera setup hint for this frame, or null (also null without a body style, a camera or a model).
-        public static string FramingHint(IHudData data, PoseStatus status)
-        {
-            if (data?.Player == null || (status != PoseStatus.Tracking && status != PoseStatus.Calibrating && status != PoseStatus.Searching)) return null;
-            var issue = data.PoseFraming;
-            if (status == PoseStatus.Calibrating && data.PoseKneesMissing) return KneesHint;
-            return issue == FramingIssue.Ok ? null : CameraFraming.Hint(issue, data.Player.Style);
         }
         private static void NoCamera(HudSkin skin, Rect area)
         {
@@ -204,7 +155,7 @@ namespace Muhanok.Presentation
             var lane = new Rect(area.x + 8, area.y + 8, 120, 34);
             skin.Card(lane, new Color(0, 0, 0, .6f));
             GUI.Label(lane, motion.Lane < 0 ? "◀ 왼쪽" : motion.Lane > 0 ? "오른쪽 ▶" : "가운데", skin.Centered(18, FontStyle.Bold));
-            string action = data.SecondsSinceJump < .6f ? "점프!" : motion.Crouch ? "숙이기" : data.SecondsSinceKneeStep < .7f ? "무릎·팔 당기기" : null;
+            string action = data.SecondsSinceJump < .6f ? "점프!" : motion.Crouch ? "숙이기" : data.SecondsSinceKneeStep < .7f ? "무릎·팔 번갈아" : null;
             if (action == null) return;
             var badge = new Rect(area.xMax - 158, area.y + 8, 150, 34);
             skin.Card(badge, Palette.A(Palette.Gold, .9f));

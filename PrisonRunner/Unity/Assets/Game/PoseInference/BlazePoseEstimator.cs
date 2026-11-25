@@ -338,7 +338,7 @@ namespace Muhanok.PoseInference
                 if (frame.Flipped) v = 1 - v;
                 float visibility = Activate(values[5 * i + 3]), presence = Activate(values[5 * i + 4]);
                 // Mirror view: the player's right side appears on the right of the screen.
-                target.Points[i] = new PoseLandmark { X = 1 - u, Y = 1 - v, Z = values[5 * i + 2], Visibility = Mathf.Min(visibility, presence) };
+                target.Points[i] = new PoseLandmark { X = 1 - u, Y = 1 - v, Visibility = Mathf.Min(visibility, presence) };
             }
             // Landmarks 33 and 34 are BlazePose's alignment points (hip centre, above the head) for the next crop.
             var nextHip = toImage.Apply(values[5 * 33], values[5 * 33 + 1]);

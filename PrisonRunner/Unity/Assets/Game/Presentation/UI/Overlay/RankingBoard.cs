@@ -11,7 +11,6 @@ namespace Muhanok.Presentation
     // One ranking row as drawn: the server board (회원 랭킹) or this PC's board (이 PC, member runs marked).
     public sealed class RankingRow
     {
-        // Runs with and without "달리기 속도 조절" share one ranking and are not marked.
         public int Rank; public string Name = ""; public int Score; public bool Member;
     }
 
@@ -27,8 +26,6 @@ namespace Muhanok.Presentation
         public bool MemberTab { get; private set; }
         public PlayStyle Mode { get; private set; }
         public bool TodayOnly { get; private set; }
-        // Today's challenge board (exercise plan 10): today's runs of the day's map, kept apart from the ordinary boards.
-        public bool Challenge { get; private set; }
         public bool ResultMode { get; private set; }
         public RankingStatus Status { get; private set; }
         public readonly List<RankingRow> Rows = new List<RankingRow>();
@@ -44,7 +41,7 @@ namespace Muhanok.Presentation
 
         public void OpenBoard(IHudData hud, IIdentityData account)
         {
-            data = hud; identity = account; ResultMode = MemberResult = false; MineEntry = null; Challenge = false;
+            data = hud; identity = account; ResultMode = MemberResult = false; MineEntry = null;
             MemberTab = SignedIn; Mode = hud?.SavedProfile?.Style ?? PlayStyle.FullBody;
             // Developer (exhibition) mode starts on today's tab.
             TodayOnly = hud != null && hud.DeveloperMode;
@@ -55,17 +52,14 @@ namespace Muhanok.Presentation
         {
             data = hud; identity = account; ResultMode = true; MineEntry = hud?.LastEntry;
             MemberResult = SignedIn; MemberTab = MemberResult;
-            Mode = hud?.Player?.Style ?? PlayStyle.Keyboard; TodayOnly = true; Challenge = hud != null && hud.ChallengeRun;
+            Mode = hud?.Player?.Style ?? PlayStyle.Keyboard; TodayOnly = true;
             Reload();
         }
-        public void Select(bool memberTab, PlayStyle mode, bool todayOnly, bool challenge = false)
+        public void Select(bool memberTab, PlayStyle mode, bool todayOnly)
         {
-            if (memberTab == MemberTab && mode == Mode && todayOnly == TodayOnly && challenge == Challenge) return;
-            MemberTab = memberTab; Mode = mode; TodayOnly = todayOnly; Challenge = challenge; Reload();
+            if (memberTab == MemberTab && mode == Mode && todayOnly == TodayOnly) return;
+            MemberTab = memberTab; Mode = mode; TodayOnly = todayOnly; Reload();
         }
-        // The server keeps challenge runs under their own mode numbers (DailyChallenge.Mode), always for today.
-        PlayStyle ServerMode => Challenge ? (PlayStyle)DailyChallenge.Mode(Mode) : Mode;
-        bool ServerToday => Challenge || TodayOnly;
 
         bool SignedIn => identity != null && identity.SignedIn;
         // Rows hold copied names: after this PC's records change (a guest named the run) the 이 PC tab is rebuilt.
@@ -80,10 +74,10 @@ namespace Muhanok.Presentation
             {
                 // 통합 랭킹: this PC's runs at once, then this PC's guest runs merged with every member's best from the server.
                 Status = RankingStatus.Ready;
-                var list = data?.Board == null ? new List<RankingEntry>() : Challenge ? data.Board.ChallengeView(DailyChallenge.Day(DateTime.UtcNow), Mode) : data.Board.View(TodayOnly, DateTime.Now, Mode);
+                var list = data?.Board != null ? data.Board.View(TodayOnly, DateTime.Now, Mode) : new List<RankingEntry>();
                 ShowLocal(list);
                 if (identity == null) { MembersMissing = true; return; }
-                identity.MemberLeaderboard(ServerMode, ServerToday, reply =>
+                identity.MemberLeaderboard(Mode, TodayOnly, reply =>
                 {
                     if (mine != request) return;
                     // Offline: keep this PC's rows (members included) and say the other PCs' members are missing.
@@ -96,7 +90,7 @@ namespace Muhanok.Presentation
             }
             if (identity == null) { Status = RankingStatus.Failed; return; }
             Status = RankingStatus.Loading;
-            identity.MemberLeaderboard(ServerMode, ServerToday, reply =>
+            identity.MemberLeaderboard(Mode, TodayOnly, reply =>
             {
                 // A later tab change wins over an older reply.
                 if (mine != request) return;
@@ -187,29 +181,13 @@ namespace Muhanok.Presentation
         }
         public bool NewBest => ResultMode && data != null && data.LastNewBest;
 
-        // Score version 3 started a new ranking: the result says so while the new season is just starting for this player.
-        // A member: a previous-season best exists for this play style and no new-season best before this run.
-        // Otherwise: this PC has older-formula records for the play style and at most three runs of the new season.
-        public const string NewSeasonText = "새 랭킹 시작";
-        public const string NewSeasonMemberLine = "점수 계산이 바뀌어 랭킹을 새로 시작했어요 · 이전 기록은 내 정보에", NewSeasonGuestLine = "점수 계산이 바뀌어 랭킹을 새로 시작했어요 · 이전 기록은 보관돼요";
-        public bool NewSeason
-        {
-            get
-            {
-                if (!ResultMode || data == null) return false;
-                if (MemberResult) return data.LastBestScore <= 0 && data.LastStats != null && data.LastStats.PreviousBest((int)Mode) > 0;
-                return data.Board != null && data.Board.HasOlderSeason(Mode) && data.Board.View(false, DateTime.Now, Mode).Count <= 3;
-            }
-        }
-        public string SeasonLine => !NewSeason ? "" : MemberResult ? NewSeasonMemberLine : NewSeasonGuestLine;
-
         // Calorie panel lines (label, value): this run, then a member's today and lifetime totals once /stats answered.
         public List<KeyValuePair<string, string>> KcalLines(RunSession session)
         {
             var lines = new List<KeyValuePair<string, string>>();
             bool camera = PlayStyleInfo.UsesCamera(data?.Player?.Style ?? PlayStyle.Keyboard);
             // Keyboard runs keep the existing note: this run's calories are not counted.
-            lines.Add(new KeyValuePair<string, string>("이번 판 (추정)", camera && session != null ? Kcal(session.Workout.EstimatedKcal) : "키보드 제외"));
+            lines.Add(new KeyValuePair<string, string>("이번 판", camera && session != null ? Kcal(session.Workout.EstimatedKcal) : "키보드 제외"));
             if (!MemberResult) return lines;
             var stats = data?.LastStats;
             if (stats != null)

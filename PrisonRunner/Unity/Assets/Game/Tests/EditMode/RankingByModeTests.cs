@@ -65,9 +65,9 @@ namespace Muhanok.Tests
             {
                 long t = DateTime.Now.Ticks; string folder = Path.Combine(root, "Player"); Directory.CreateDirectory(folder);
                 File.WriteAllText(Path.Combine(folder, "records.json"), "{\"Entries\":["
-                    + "{\"Name\":\"상체\",\"Score\":300,\"Distance\":300,\"ScoreVersion\":3,\"Style\":\"상체\",\"Ticks\":" + t + "},"
-                    + "{\"Name\":\"키보드\",\"Score\":200,\"Distance\":200,\"ScoreVersion\":3,\"Style\":\"키보드\",\"Ticks\":" + (t + 1) + "},"
-                    + "{\"Name\":\"라벨없음\",\"Score\":900,\"Distance\":900,\"ScoreVersion\":3,\"Ticks\":" + (t + 2) + "}],\"Stats\":{}}");
+                    + "{\"Name\":\"상체\",\"Score\":300,\"Distance\":300,\"ScoreVersion\":2,\"Style\":\"상체\",\"Ticks\":" + t + "},"
+                    + "{\"Name\":\"키보드\",\"Score\":200,\"Distance\":200,\"ScoreVersion\":2,\"Style\":\"키보드\",\"Ticks\":" + (t + 1) + "},"
+                    + "{\"Name\":\"라벨없음\",\"Score\":900,\"Distance\":900,\"ScoreVersion\":2,\"Ticks\":" + (t + 2) + "}],\"Stats\":{}}");
                 var store = new PlayerProgressStore(root);
                 var byName = new Dictionary<string, RankingEntry>(); foreach (var e in store.Board.All) byName[e.Name] = e;
                 Assert.AreEqual((int)PlayStyle.UpperBody, byName["상체"].Mode); Assert.AreEqual((int)PlayStyle.Keyboard, byName["키보드"].Mode);

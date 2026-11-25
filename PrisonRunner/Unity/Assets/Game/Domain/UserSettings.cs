@@ -52,14 +52,6 @@ namespace Muhanok.Domain
         public bool InGameCamera = true;
         // Exhibition setup: every item unlocked, a name per run, today's ranking first and operator keys.
         public bool DeveloperMode = false;
-        // "달리기 속도 조절" on the setup screen: camera runs take their pace from the cadence. Remembered on this PC.
-        public bool CadenceSpeed = true;
-        // Running ranking strip: everyone this week (default) or only this player's own runs on this PC.
-        public bool RankStripMine = false;
-        // 색약 모드: danger markers (banana rings) are drawn thicker so they do not rely on red alone.
-        public bool ColorBlind = false;
-        // Members (account ids) on this PC who were offered the short tutorial of the exercise update (once each).
-        public System.Collections.Generic.List<string> UpdatedTutorialSeen = new System.Collections.Generic.List<string>();
 
         public static readonly int[] FrameCaps = { 30, 60, 0 };
 

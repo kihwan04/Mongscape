@@ -2,9 +2,7 @@ using System;
 
 namespace Muhanok.Domain
 {
-    // Z is the model's depth value as it comes out of the landmark network (relative to the hips, crop units); only the
-    // pose recordings keep it, the classifier does not read it.
-    public struct PoseLandmark { public float X, Y, Z, Visibility; }
+    public struct PoseLandmark { public float X, Y, Visibility; }
 
     // BlazePose's 33 landmarks in the player's mirror view: X grows to the player's right, Y grows downward, both 0..1.
     public sealed class PoseFrame
@@ -83,52 +81,18 @@ namespace Muhanok.Domain
         // A take-off this soon after a crouch confirms cancels it; a rise this fast (body units/s) is a jump attempt that earns the landing grace.
         public float CrouchJumpCancelSeconds = .35f, JumpAttemptSpeed = .8f;
         public float JumpRise = .15f;
-        // A jump lifts both knees together; running in place lifts one at a time. Above this knee lift difference
-        // (body units) a rise is not a jump.
-        public float JumpKneeSymmetry = .12f;
-        // While running, the jump line rises to this many times the player's own running bounce (hip rise per step),
-        // never below JumpRise. The bounce follows the last steps (BounceFollow per step).
-        public float JumpBounceFactor = 2.5f, BounceFollow = .2f;
-        // Right before a duck row the jump line rises this many times, so a running bounce or a dip never reads as a jump there.
-        public float JumpDuckFactor = 1.5f;
-        // Steps per minute (both knees, last 3 s): up to RunCadence is walking, from SprintCadence sprinting.
-        public float RunCadence = 100f, SprintCadence = 150f;
         public float HighKneeLift = .20f, StepLift = .06f;
         public float UpperLaneEnter = .75f, UpperLaneExit = .42f, UpperCrouchDrop = .35f, UpperCrouchConfirmSeconds = .12f, UpperHandsAboveNose = .2f;
         // The upper body also leans by tilting the shoulder line (degrees from the calibrated tilt); the exit follows UpperLaneExit/Enter.
         public float UpperLeanEnterDegrees = 12f;
-        // Big movements (exercise plan 6): passing stays as easy as before, these only add the in-game reward and +1 MET.
-        // Full body: a crouch with the knee angle at or under DeepKneeAngle (half squat) or the hips down DeepHipDrop torsos;
-        // a jump whose hips and shoulders both stay over the jump line for BigJumpAirSeconds; a knee lifted to BigKneeHipRatio
-        // of the way to hip height; a side step moving hips and shoulders both BigSideStepWidths shoulder widths.
-        public float DeepKneeAngle = 105f, DeepHipDrop = .35f, BigJumpAirSeconds = .2f, BigKneeHipRatio = .85f, BigSideStepWidths = 1f;
-        // Upper body: arms straight above the head (elbow angle), shoulders down by a head (calibrated nose to shoulder line),
-        // a lean of BigLeanDegrees. The stair exercise is a pull-down: hands over the head, then down below the nose (a step each
-        // way); down below the shoulders is big.
-        public float UpperStraightArm = .9f, UpperBigLeanDegrees = 20f;
         public float ArmPumpAmplitude = .6f, ArmSwingAmplitude = .3f;
         public float LostSeconds = 2.5f, BaselineDrift = .01f;
-    }
-
-    public enum CadenceStage { Standing, Walk, Run, Sprint }
-    public static class Cadence
-    {
-        public const double WindowSeconds = 3;
-        public static CadenceStage Stage(float stepsPerMinute, MotionTuning tuning)
-        {
-            tuning ??= new MotionTuning();
-            if (stepsPerMinute <= 0) return CadenceStage.Standing;
-            return stepsPerMinute >= tuning.SprintCadence ? CadenceStage.Sprint : stepsPerMinute > tuning.RunCadence ? CadenceStage.Run : CadenceStage.Walk;
-        }
-        public static string Korean(CadenceStage stage) => stage == CadenceStage.Walk ? "걷기" : stage == CadenceStage.Run ? "달리기" : stage == CadenceStage.Sprint ? "전력" : "서 있음";
     }
 
     public sealed class MotionReading
     {
         public int Lane;
         public bool JumpEdge, KneeStep, Crouch, Active;
-        // Big movements: one-frame edges for jump, knee step and lane change; CrouchDeep holds while the crouch is deep.
-        public bool BigJump, BigKnee, BigLane, CrouchDeep;
-        public void Clear() { Lane = 0; JumpEdge = KneeStep = Crouch = Active = BigJump = BigKnee = BigLane = CrouchDeep = false; }
+        public void Clear() { Lane = 0; JumpEdge = KneeStep = Crouch = Active = false; }
     }
 }

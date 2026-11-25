@@ -13,8 +13,7 @@ namespace Muhanok.Presentation
         private static readonly Rect NoticeArea = new Rect(400, 588, 480, 48);
         // Bottom-right webcam: small while tracking, larger with status once recognition is lost. Both stay right of the notice and below the counters.
         private static readonly Rect CameraArea = new Rect(1056, 514, 200, 150), RecoveryCameraArea = new Rect(1020, 490, 236, 174);
-        public readonly RankStripView Strip;
-        public RunHud(HudSkin hudSkin, ProgressHud progressHud) { skin = hudSkin; progress = progressHud; Strip = new RankStripView(hudSkin); }
+        public RunHud(HudSkin hudSkin, ProgressHud progressHud) { skin = hudSkin; progress = progressHud; }
         public void Draw(RunSession session, float fade, IHudData data, Action pause)
         {
             GUI.color = new Color(1, 1, 1, fade);
@@ -49,7 +48,6 @@ namespace Muhanok.Presentation
                 skin.Card(rect, Palette.A(Palette.Ground, .82f));
                 GUI.Label(rect, Model.ItemLabels[i], skin.Centered(16, FontStyle.Bold));
             }
-            if (session.Flow.State == GameFlowState.Running && data != null) { DrawPaceEdges(data.PacePressure); Strip.Draw(data.Race, data.HazardNear, Time.unscaledTime); DrawCoach(data.BananaWarning ? BananaText : data.CoachText); DrawForkPreview(data); }
             if (session.Flow.State == GameFlowState.Running)
             {
                 if (Model.ShowSiren) DrawSiren();
@@ -70,73 +68,6 @@ namespace Muhanok.Presentation
             GUI.color = Color.white;
         }
         private static readonly string[] ForkArrows={"↖","↑","↗"};
-        // Below the target cadence the screen edges redden with the police pressure (pulsing gently); nothing in the middle.
-        public const string BananaText = "바나나 주의! 두 번 밟으면 잡혀요";
-        public const string Recommend = "추천";
-        // Three cards before the fork, then the chosen course's banner (exercise plan 3).
-        private void DrawForkPreview(IHudData data)
-        {
-            if (Model.CourseBanner != null)
-            {
-                var banner = new Rect(340, 236, 600, 70);
-                skin.Card(banner, Palette.A(Palette.Gold, .92f));
-                GUI.color = Palette.Outline; GUI.Label(banner, Model.CourseBanner, skin.Centered(34, FontStyle.Bold)); GUI.color = Color.white;
-                return;
-            }
-            if (!Model.ShowForkPreview) return;
-            string[] sides = { "◀ 왼쪽으로 기울이기", "가운데 유지", "오른쪽으로 기울이기 ▶" };
-            for (int lane = -1; lane <= 1; lane++)
-            {
-                int destination = Model.PreviewDestinations[lane + 1]; var kind = MapCourse.KindOf(destination);
-                bool lit = lane == Model.ForkLane;
-                var r = new Rect(298 + (lane + 1) * 232, 232, 220, 118);
-                skin.Card(r, lit ? Palette.A(Palette.Gold, .95f) : Palette.A(Palette.Ground, .8f));
-                GUI.color = lit ? Palette.Outline : Palette.Sand;
-                GUI.Label(new Rect(r.x, r.y + 4, r.width, 20), sides[lane + 1], skin.Centered(14, FontStyle.Normal));
-                GUI.color = lit ? Palette.Outline : Palette.Cream;
-                GUI.Label(new Rect(r.x, r.y + 26, r.width, 34), MapCourse.Name(destination) + " · " + MapCourse.Label(kind), skin.Centered(25, FontStyle.Bold));
-                GUI.Label(new Rect(r.x, r.y + 62, r.width, 24), MapCourse.Moves(kind), skin.Centered(17, FontStyle.Normal));
-                GUI.color = lit ? Palette.Outline : Palette.Gold;
-                GUI.Label(new Rect(r.x, r.y + 86, r.width, 26), MapCourse.DotText(kind), skin.Centered(18, FontStyle.Bold));
-                if (data.Recommended == kind)
-                {
-                    var tag = new Rect(r.xMax - 58, r.y - 10, 56, 24);
-                    skin.Card(tag, new Color(.25f, .7f, .35f, .95f));
-                    GUI.color = Color.white; GUI.Label(tag, Recommend, skin.Centered(15, FontStyle.Bold));
-                }
-                GUI.color = Color.white;
-            }
-        }
-        // Coach subtitle: above the notice line, short, in the encouragement colour.
-        public static readonly Rect CoachArea = new Rect(400, 528, 480, 48);
-        private void DrawCoach(string text)
-        {
-            if (string.IsNullOrEmpty(text)) return;
-            skin.Card(CoachArea, Palette.A(Palette.Ground, .85f));
-            GUI.color = Palette.Gold; GUI.Label(CoachArea, text, skin.Centered(24, FontStyle.Bold)); GUI.color = Color.white;
-        }
-        private static Texture2D edgeV, edgeH;
-        // A ramp from transparent to solid: vertical (rows) or horizontal (columns).
-        private static Texture2D Ramp(bool vertical)
-        {
-            var t = new Texture2D(vertical ? 1 : 64, vertical ? 64 : 1, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.HideAndDontSave };
-            for (int i = 0; i < 64; i++) { var c = new Color(1, 1, 1, Mathf.Pow(i / 63f, 2.2f)); if (vertical) t.SetPixel(0, i, c); else t.SetPixel(i, 0, c); }
-            t.Apply(); return t;
-        }
-        private static void DrawPaceEdges(float pressure)
-        {
-            if (pressure <= .01f) return;
-            edgeV ??= Ramp(true); edgeH ??= Ramp(false);
-            float a = Mathf.Clamp01(pressure / CadencePace.MaxPressure) * (.55f + .15f * Mathf.Sin(Time.unscaledTime * 5));
-            var old = GUI.color; GUI.color = new Color(.95f, .08f, .06f, a);
-            const float w = 110;
-            // Solid at the screen edge, fading toward the middle (texture v runs bottom to top, u left to right).
-            GUI.DrawTextureWithTexCoords(new Rect(0, 0, 1280, w), edgeV, new Rect(0, 0, 1, 1));
-            GUI.DrawTextureWithTexCoords(new Rect(0, 720 - w, 1280, w), edgeV, new Rect(0, 1, 1, -1));
-            GUI.DrawTextureWithTexCoords(new Rect(0, 0, w, 720), edgeH, new Rect(1, 0, -1, 1));
-            GUI.DrawTextureWithTexCoords(new Rect(1280 - w, 0, w, 720), edgeH, new Rect(0, 0, 1, 1));
-            GUI.color = old;
-        }
         private void DrawSiren()
         {
             bool redOn = Mathf.Repeat(Time.unscaledTime, .56f) < .28f;

@@ -42,30 +42,6 @@ namespace Muhanok.Bootstrap
         private float caughtTime, runFade, runStartedAt = -10, caughtAt = -10;
         private ParticleSystem dust, hit;
         private bool previousStumble;
-        // Counts steps, jumps, crouches, knee steps and lane changes of the run for the result report.
-        private readonly MoveTally moveTally = new MoveTally();
-        // Cadence -> runner speed and police (exercise plan 4); on for camera runs with the setup option on.
-        private readonly CadencePace pace = new CadencePace();
-        private bool cadenceRun;
-        // The running ranking strip (exercise plan 10-2): this week's board of the play style, loaded once per run.
-        private readonly RankRace race = new RankRace();
-        // Big movements (exercise plan 6) and the coach subtitles (plan 10).
-        private readonly Coach coach = new Coach();
-        private int seenBigJumps, seenBigKnees, seenBigLanes;
-        private bool wasDeep, wasCrouch;
-        private double bigUntil = -10, seenKneeStep = -10;
-        // Exercise plan 8: active seconds per course this run (for the weekly balance), the 20-minute rest notice, the first
-        // banana warning (once a session), today's challenge and the streak coins of the last run.
-        private readonly double[] kindSeconds = new double[4];
-        private float restUntil = -10, bananaUntil = -10, courseUntil = -10;
-        // First time on each course this session: a one-line hint (exercise plan 10-3).
-        private readonly bool[] courseSeen = new bool[4];
-        private ExerciseKind courseShown;
-        private bool restShown, bananaWarned, dailyChallenge, challengeRun;
-        private int lastStreakCoins;
-        public const float RestAfterSeconds = 20 * 60, NoticeSeconds = 6;
-        public const string RestText = "20분 달렸어요! 물 한 잔 마시고 잠깐 쉬어도 좋아요";
-        private int raceTicket;
         // The account (member or guest) is the only source of the current player.
         public AccountSession Account { get; } = new AccountSession();
         // Run settings of the current or next run, taken from the account; developer mode names each run instead.
@@ -118,8 +94,7 @@ namespace Muhanok.Bootstrap
             var flags=System.Environment.GetCommandLineArgs();
             automated=System.Array.IndexOf(flags,"--muhanok-smoke")>=0||System.Array.IndexOf(flags,"--muhanok-uicapture")>=0
                 ||System.Array.IndexOf(flags,"--mongscape-review")>=0||System.Array.IndexOf(flags,"--mongscape-tests")>=0
-                ||System.Array.IndexOf(flags,"--muhanok-capture")>=0||System.Array.IndexOf(flags,"--mongscape-recording")>=0
-                ||System.Array.IndexOf(flags,"--mongscape-exercise-review")>=0;
+                ||System.Array.IndexOf(flags,"--muhanok-capture")>=0||System.Array.IndexOf(flags,"--mongscape-recording")>=0;
             Session = new RunSession(Settings != null ? JsonUtility.FromJson<RunConfig>(JsonUtility.ToJson(Settings.Run)) : new RunConfig());
             if (ChunkPrefabs == null || ChunkPrefabs.Length < 5 || CameraRig == null || OutputCamera == null)
             { Debug.LogError("GameScene requires content references. Run Muhanok/Build GameScene."); enabled = false; return; }
@@ -141,9 +116,6 @@ namespace Muhanok.Bootstrap
             var mapRoot = new GameObject("ChunkPool"); mapRoot.transform.SetParent(transform, false);
             Map = new ChunkSpawner(ChunkPrefabs, mapRoot.transform, Session, Settings != null ? Settings.Render : new RenderBudget());
             Map.Decorator = new TutorialLayout(new RuntimeContent(mapRoot.transform, RunItems, Settings != null ? Settings.ItemChancePerChunk : .35f), Session);
-            // Right before a duck row (about 1.2 s ahead) the jump line rises, so a running bounce cannot jump into the bar.
-            Pose.DuckAhead = () => Session.Flow.State == GameFlowState.Running && !Session.Runner.Riding
-                && Map.ActionAhead(HazardAction.Crouch, Session.Runner.Z, Mathf.Max(6f, Session.CurrentSpeed * 1.2f));
             CameraRig.Configure(OutputCamera);
             if(OutputCamera.GetComponent<GameViewport>()==null) OutputCamera.gameObject.AddComponent<GameViewport>();
             if (HandsPrefab != null)
@@ -170,17 +142,10 @@ namespace Muhanok.Bootstrap
             hud.TextInput=KeyboardGameInput.SetTextInput; hud.Quit=QuitGame;
             hud.StartTutorial=StartTutorial; hud.OfferTutorial=OfferTutorial;
             Tutorial=gameObject.AddComponent<TutorialDirector>();
-            Tutorial.Framed=()=>Pose.Framing==FramingIssue.Ok;
-            Tutorial.NoCamera=()=>Pose.Status==PoseStatus.Off||Pose.Status==PoseStatus.NoCamera||Pose.Status==PoseStatus.NoModel;
-            Tutorial.MyPose=()=>Pose.UsesCamera&&Pose.Tracking?Pose.LastFrame:null; Tutorial.MyBaseline=()=>Pose.Baseline; Tutorial.Tuning=()=>Pose.Tuning;
-            Tutorial.StepsPerMinute=()=>Pose.StepsPerMinute; Tutorial.PaceScale=()=>pace.Scale; Tutorial.PacePressure=()=>pace.Pressure;
-            Tutorial.RunCadence=Settings!=null?Settings.Motion.RunCadence:100f;
-            Tutorial.Demo=gameObject.AddComponent<TutorialDemo>(); Tutorial.Demo.Configure(MonkeyPrefab);
             Tutorial.Configure(Session,Map,()=>Pose.Status==PoseStatus.Tracking||Pose.Status==PoseStatus.Off||Pose.Status==PoseStatus.NoCamera||Pose.Status==PoseStatus.NoModel,
-                RestartTutorial,FinishTutorial,()=>!hud.Hidden&&!hud.Loading&&!hud.Revealing&&RunCalibration==RunCalibrationState.None);
+                RestartTutorial,FinishTutorial,()=>!hud.Hidden&&!hud.Loading&&!hud.Revealing);
             audioPlayer = gameObject.AddComponent<GameAudio>();
             audioPlayer.Configure(Session, Settings != null ? Settings.MusicVolume : .35f, Settings != null ? Settings.EffectsVolume : .7f);
-            hud.RankCracked = audioPlayer.Crack;
             SetupSettings();
             if (userSettings.DeveloperMode) player = new PlayerProfile { Style = Account.Settings.Style };
             if(automated)player.Style=PlayStyle.Keyboard;
@@ -199,9 +164,7 @@ namespace Muhanok.Bootstrap
             graphics = new GraphicsSettingsApplier();
             overlay = gameObject.AddComponent<PerformanceOverlay>();
             // Pose diagnostics are a developer-mode tool; regular play never shows them.
-            // Developer mode also shows the cadence and the jump line in use (body units), for checking the step and jump tuning live.
-            overlay.PoseLine = () => Pose.UsesCamera && userSettings.DeveloperMode ? Pose.Diagnostics + " · 분당 " + Mathf.RoundToInt(Pose.StepsPerMinute) + "걸음 " + Cadence.Korean(Pose.CadenceStage)
-                + " · 들썩임 " + Pose.Bounce.ToString("0.00") + " 점프선 " + Pose.JumpThreshold.ToString("0.00") : "";
+            overlay.PoseLine = () => Pose.UsesCamera && userSettings.DeveloperMode ? Pose.Diagnostics : "";
             overlay.QualityLine = () => "화질 " + userSettings.Preset + " · 렌더 " + Mathf.RoundToInt((effectiveGraphics?.RenderScale ?? userSettings.RenderScale) * 100) + "% · 그림자 " + (effectiveGraphics?.Shadows ?? userSettings.Shadows) + (userSettings.AutoPerformance ? " · 자동 " + adaptive.Level : "") + (userSettings.FrameCap > 0 ? " · 상한 " + userSettings.FrameCap : "");
             var window = new GameObject("SettingsWindow"); window.transform.SetParent(transform, false);
             settingsWindow = window.AddComponent<SettingsWindow>();
@@ -226,7 +189,6 @@ namespace Muhanok.Bootstrap
             Pose.Configure(userSettings.CameraDevice, userSettings.LiteLandmarkModel, userSettings.LaneSensitivity);
             Pose.SetInferenceRate(30);
             if (overlay != null) overlay.Visible = userSettings.PerformanceOverlay;
-            HazardMarker.ThickOutline = userSettings.ColorBlind;
             if (hud != null && hud.RunModel != null) hud.RunModel.CameraEnabled = userSettings.InGameCamera;
             if (save) UserSettingsStore.Save(userSettings);
         }
@@ -270,8 +232,7 @@ namespace Muhanok.Bootstrap
         {
             if(Session.Flow.State!=GameFlowState.TitleIdle||hud.Loading||!Session.Workout.SetWeight(weight)) return;
             menuCamera=false;
-            playerRun=false; cadenceRun=false; race.Clear(); raceTicket++; Session.Workout.Met=PlayStyleInfo.Met(player.Style);Session.Workout.StyleScale=IntensityMet.Scale(player.Style);
-            Session.Workout.CadenceCounts=true;
+            playerRun=false; Session.Workout.Met=PlayStyleInfo.Met(player.Style);
             StartCoroutine(PrepareRun(723));
         }
         // Start from the setup screen: the run is recorded on the leaderboard. Outside developer mode
@@ -287,16 +248,10 @@ namespace Muhanok.Bootstrap
             player=profile; playerRun=true; KeyboardGameInput.SetTextInput(false);
             // The best to beat is read before the run (and before its save).
             RefreshMemberStats();
-            Session.Workout.Met=PlayStyleInfo.Met(profile.Style);Session.Workout.StyleScale=IntensityMet.Scale(profile.Style);
+            Session.Workout.Met=PlayStyleInfo.Met(profile.Style);
             Session.Workout.SetGoal(profile.CalorieGoal);
-            cadenceRun = PlayStyleInfo.UsesCamera(profile.Style) && userSettings.CadenceSpeed;
-            // Cadence off: stepping in place earns no calories, only jumps, crouches, knee raises and lane changes do.
-            Session.Workout.CadenceCounts = userSettings.CadenceSpeed;
-            LoadRace(profile.Style);
             menuCamera=false; Pose.SetStyle(profile.Style);
-            // Today's challenge: everyone runs the map of the KST date.
-            challengeRun = dailyChallenge;
-            StartCoroutine(PrepareRun(challengeRun ? DailyChallenge.Seed(System.DateTime.UtcNow) : Settings != null && Settings.Run.RandomizeLayout ? Random.Range(1, int.MaxValue) : 723));
+            StartCoroutine(PrepareRun(Settings != null && Settings.Run.RandomizeLayout ? Random.Range(1, int.MaxValue) : 723));
         }
         // Tutorial (main menu, after sign-up or the "게임 시작" offer): the same scene and map on a fixed lesson course.
         // It never reaches the result screen, so nothing goes to the ranking, coins or calories.
@@ -305,23 +260,17 @@ namespace Muhanok.Bootstrap
             if(Session.Flow.State!=GameFlowState.TitleIdle||hud.Loading) return;
             tutorialOffered=true; playerRun=false; KeyboardGameInput.SetTextInput(false);
             if(!PlayableStyle(player.Style)) player.Style=PlayStyle.Keyboard;
-            Session.Workout.SetWeight(""); Session.Workout.Met=PlayStyleInfo.Met(player.Style);Session.Workout.StyleScale=IntensityMet.Scale(player.Style);
+            Session.Workout.SetWeight(""); Session.Workout.Met=PlayStyleInfo.Met(player.Style);
             menuCamera=false; Pose.SetStyle(player.Style);
-            cadenceRun=PlayStyleInfo.UsesCamera(player.Style)&&userSettings.CadenceSpeed; race.Clear(); raceTicket++; Session.Workout.CadenceCounts=userSettings.CadenceSpeed;
-            Session.IsTutorial=true; Tutorial.Begin(player.Style,Session.Config.ExtendedRoutes,userSettings.CadenceSpeed,tutorialShort); tutorialShort=false;
+            Session.IsTutorial=true; Tutorial.Begin(player.Style,Session.Config.ExtendedRoutes);
             StartCoroutine(PrepareRun(TutorialCourse.Seed));
         }
         // Members who have not finished it and every guest are offered it once per session.
         private bool OfferTutorial()
         {
-            if(TutorialScript.ShouldOffer(Account.IsMember,Account.TutorialDone,tutorialOffered)){tutorialOffered=true;tutorialShort=false;return true;}
-            // Members who finished the earlier tutorial: the short version of what this update changed, offered once on this PC.
-            bool seen=Account.IsMember&&userSettings.UpdatedTutorialSeen.Contains(Account.Id);
-            if(!TutorialScript.ShouldOfferUpdate(Account.IsMember,Account.TutorialDone,seen,tutorialOffered)) return false;
-            tutorialOffered=true; tutorialShort=true; userSettings.UpdatedTutorialSeen.Add(Account.Id); UserSettingsStore.Save(userSettings); return true;
+            if(!TutorialScript.ShouldOffer(Account.IsMember,Account.TutorialDone,tutorialOffered)) return false;
+            tutorialOffered=true; return true;
         }
-        // The next tutorial start is the short update version (set by the offer, cleared when the tutorial begins).
-        private bool tutorialShort;
         // After a mistake: a fresh course, started at the given route z in front of the step.
         private void RestartTutorial(float z)
         {
@@ -345,10 +294,10 @@ namespace Muhanok.Bootstrap
             Session.Flow.Transition(GameFlowState.LoadingIntro);
             hud.BeginLoading(); hud.LoadingProgress=.12f;
             // Every run calibrates again: the player stands still during loading, and the countdown waits for it (WaitForCalibration).
-            Pose.Recalibrate(); runCalibrated = false; calibrationDoneAt = -1;
+            Pose.Recalibrate(); runCalibrated = false;
             yield return new WaitForSecondsRealtime(.25f);
             RouteSurface.UsePlan(Session.IsTutorial?TutorialCourse.Plan(Session.Config):new RoutePlan(Session.Config, seed));
-            Session.Reset(); moveTally.Reset(); pace.Reset(); ResetBigMoves(); System.Array.Clear(kindSeconds, 0, 4); restShown = false; restUntil = -10; keyboard.Clear(); poseInput.Clear(); hud.LoadingProgress=.42f;
+            Session.Reset(); keyboard.Clear(); poseInput.Clear(); hud.LoadingProgress=.42f;
             yield return new WaitForSecondsRealtime(.25f);
             Map.Reset(seed); Map.AnimateGates(Session.Runner.Z); hud.LoadingProgress=.78f;
             yield return new WaitForSecondsRealtime(.25f);
@@ -416,31 +365,19 @@ namespace Muhanok.Bootstrap
                 Tutorial.Tick(Time.realtimeSinceStartup);
                 // The finished tutorial has already gone back to the menu (Retry); nothing of the run may follow this frame.
                 if (Session.Flow.State != GameFlowState.Running) return;
-                // The cadence sets the pace on foot; below the target for 3 s the police close in (never a capture by itself).
-                var course = MapCourse.KindAt(RouteSurface.ActivePlan, RouteSurface.SequenceAt(Session.Runner.Z));
-                pace.Tick(dt, cadenceRun && !Session.Runner.Riding && Pose.Tracking, Pose.StepsPerMinute,
-                    Settings != null ? Settings.Motion : null, MapCourse.TargetCadence(course, Settings != null ? Settings.Motion : null));
-                TickNotices();
-                Session.CadenceScale = pace.Scale; Session.PacePressure = pace.Pressure;
-                TickBigMoves(dt);
                 float previousZ = Session.Runner.Z;
-                Session.Tick(dt); race.Update(Session.Score.Score); Map.Tick(Session.Runner.Z); Hero.Apply(Session.Runner); Map.Evaluate(previousZ);
+                Session.Tick(dt); Map.Tick(Session.Runner.Z); Hero.Apply(Session.Runner); Map.Evaluate(previousZ);
                 Map.AnimateGates(Session.Runner.Z);
-                // Intensity MET of this moment from the cadence; no grace period after the last step (standing counts nothing).
-                double clock=Time.realtimeSinceStartupAsDouble;
-                int activity=clock-Pose.LastJumpTime<.65?1:Pose.Reading.Crouch?2:clock-Pose.LastKneeStepTime<.7?3:Pose.Reading.Lane!=0?4:0;
-                bool tracked=Pose.UsesCamera&&Pose.Tracking;
-                if(tracked) moveTally.Observe(clock,Pose.StepCount,Pose.LastJumpTime,Pose.Reading.Crouch,Pose.LastKneeStepTime,Pose.Reading.Lane,Session.Workout);
-                double activeBefore=Session.Workout.ActiveSeconds;
-                Session.Workout.TickIntensity(dt,Session.Flow.State==GameFlowState.Running,tracked,Pose.CadenceStage,moveTally.Moving(clock),clock<bigUntil,activity);
-                kindSeconds[(int)course]+=Session.Workout.ActiveSeconds-activeBefore;
+                bool exercising = Pose.UsesCamera ? Pose.Tracking && Pose.Reading.Active : true;
+                int activity=Time.realtimeSinceStartupAsDouble-Pose.LastJumpTime<.65?1:Pose.Reading.Crouch?2:Time.realtimeSinceStartupAsDouble-Pose.LastKneeStepTime<.7?3:Pose.Reading.Lane!=0?4:0;
+                Session.Workout.TickActivity(dt,Session.Flow.State==GameFlowState.Running,Pose.UsesCamera&&Pose.Tracking,exercising,activity);
                 runFade += dt; hud.Fade = Mathf.Clamp01(runFade * 2f);
                 if (dust != null && !dust.isPlaying) dust.Play();
                 if (Session.Runner.Stumbling && !previousStumble && hit != null) hit.Play();
                 previousStumble = Session.Runner.Stumbling;
                 if (Session.Flow.State == GameFlowState.Running)
                 {
-                    float distance=Session.Runner.Slowing&&Session.SlipStrikes>0||Session.SlipPursuit?1.8f:Mathf.Lerp(15,1.8f,Session.PolicePressure);
+                    float distance=Session.Runner.Slowing&&Session.SlipStrikes>0||Session.SlipPursuit?1.8f:Mathf.Lerp(15,1.8f,Session.Chase.Pressure);
                     guardDistance=Mathf.MoveTowards(guardDistance,distance,dt*18);
                     guard.Pose(new Vector3(Session.Runner.X, 0, Session.Runner.Z-guardDistance), !Session.Runner.Riding);
                     guard.Play("AN_Guard_ChaseRun");
@@ -461,29 +398,19 @@ namespace Muhanok.Bootstrap
                 }
             }
         }
-        // Camera play never starts a run before its own calibration: the calibration screen (CalibrationPanel.DrawRun) shows the
-        // camera while the player is found and measured, then "보정 완료" for a second, then the countdown begins.
-        // A missing camera or model does not hold the run.
+        // Camera play never starts a run before its own calibration: the runner stands at the start with "바르게 서 주세요"
+        // while the player is found and measured, then the countdown begins. A missing camera or model does not hold the run.
         private bool runCalibrated = true;
-        private float calibrationDoneAt = -1;
-        private const float CalibrationDoneSeconds = 1f;
         private bool WaitForCalibration()
         {
             if (runCalibrated) return false;
             var status = Pose.Status;
             bool measuring = Pose.UsesCamera && (status == PoseStatus.Starting || status == PoseStatus.Searching || status == PoseStatus.Calibrating);
             runStartedAt = Time.realtimeSinceStartup;
-            if (measuring) { calibrationDoneAt = -1; return true; }
-            if (Pose.UsesCamera && status == PoseStatus.Tracking)
-            {
-                if (calibrationDoneAt < 0) calibrationDoneAt = Time.realtimeSinceStartup;
-                if (Time.realtimeSinceStartup - calibrationDoneAt < CalibrationDoneSeconds) return true;
-            }
-            runCalibrated = true; calibrationDoneAt = -1; bannerSounded = goSounded = false; Pose.ResetCommands();
+            if (measuring) return true;
+            runCalibrated = true; bannerSounded = goSounded = false; Pose.ResetCommands();
             return false;
         }
-        private RunCalibrationState RunCalibration => runCalibrated || Session.Flow.State != GameFlowState.Running || hud.Loading ? RunCalibrationState.None
-            : calibrationDoneAt >= 0 ? RunCalibrationState.Done : RunCalibrationState.Measuring;
         private void StartBannerSounds()
         {
             float banner = StartBanner;
@@ -499,8 +426,6 @@ namespace Muhanok.Bootstrap
             if (KeyboardGameInput.RecalibratePressed && !hud.MenuOpen) Pose.Recalibrate();
             if (KeyboardGameInput.DeveloperTogglePressed && Session.Flow.State == GameFlowState.TitleIdle) SetDeveloperMode(!userSettings.DeveloperMode);
             if (KeyboardGameInput.ClearRankingPressed && userSettings.DeveloperMode) { Store.ClearToday(); Debug.Log("Today's ranking cleared."); }
-            // F6 (developer mode): record the camera's joint coordinates for the recognition scorecard (never images).
-            if (KeyboardGameInput.PoseRecordPressed) TogglePoseRecording();
             // Player lock for crowded booths; the F3 overlay's pose line shows its state.
             if (KeyboardGameInput.PlayerLockPressed) { PoseEstimatorRegistry.PlayerLock = !PoseEstimatorRegistry.PlayerLock; Debug.Log("Player lock " + (PoseEstimatorRegistry.PlayerLock ? "on" : "off")); }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -511,17 +436,6 @@ namespace Muhanok.Bootstrap
 #endif
         }
         internal HUDPresenter Hud => hud;
-        internal RankRace Race => race;
-        internal Coach CoachState => coach;
-        // Recordings go to <persistent data>/PoseRecordings; copy them (with filled-in labels) to Tools/QA/PoseRecordings/team.
-        public static string PoseRecordingFolder => System.IO.Path.Combine(UnityEngine.Application.persistentDataPath, "PoseRecordings");
-        private void TogglePoseRecording()
-        {
-            if (Pose.Recording) { string path = Pose.StopRecording(); Debug.Log("Pose recording saved: " + path + " (" + Pose.RecordedFrames + " frames)"); return; }
-            if (userSettings == null || !userSettings.DeveloperMode || !Pose.UsesCamera) return;
-            string name = Pose.StartRecording(PoseRecordingFolder);
-            if (name != null) Debug.Log("Pose recording started: " + name);
-        }
         // Development builds can keep player data in another folder (--muhanok-data <dir>) for captures and tests.
         // On foot on a stair chunk, or within 3 m of one (people start lifting their knees a little early).
         private bool OnOrBeforeStairs()
@@ -590,7 +504,7 @@ namespace Muhanok.Bootstrap
                 bool tooling=System.Array.IndexOf(args,"--muhanok-capture")>=0||System.Array.IndexOf(args,"--muhanok-smoke")>=0
                     ||System.Array.IndexOf(args,"--mongscape-review")>=0||System.Array.IndexOf(args,"--mongscape-tests")>=0
                     ||System.Array.IndexOf(args,"--muhanok-uicapture")>=0;
-                lastEntry=null; lastStreakCoins=0; lastRank=lastTodayRank=0; lastBestScore=-1; lastNewBest=false; lastStats=null; lastStatsFailed=false;
+                lastEntry=null; lastRank=lastTodayRank=0; lastBestScore=-1; lastNewBest=false; lastStats=null; lastStatsFailed=false;
                 if(!tooling&&playerRun) RecordFinishedRun();
             }
         }
@@ -606,95 +520,20 @@ namespace Muhanok.Bootstrap
             var mode=player.Style;
             lastEntry=new RankingEntry{Name=name,Score=Session.Score.Score,Distance=Session.Score.Distance,Coins=Session.Score.Coins,
                 Style=PlayStyleInfo.Label(mode),Mode=(int)mode,Kcal=PlayStyleInfo.UsesCamera(mode)?Session.Workout.EstimatedKcal:0,
-                Challenge=challengeRun?DailyChallenge.Day(System.DateTime.UtcNow):"",
                 Ticks=now.Ticks,AccountId=Account.IsMember?Account.Id:"",ScoreVersion=RunScore.Version};
             lastStats=null; lastStatsFailed=false;
             // Personal best per play style: a member's from /stats read before this save; an exhibition run's from this PC by its name; none for guests.
             int previousBest=Account.IsMember?MemberBest(mode):developer?Store.Board.BestScore(lastEntry.Style,name):-1;
             lastNewBest=previousBest>=0&&lastEntry.Score>previousBest; lastBestScore=previousBest>0?previousBest:-1;
             lastRank=Store.Record(lastEntry,Session.Workout.EstimatedKcal);
-            // Weekly goal and streak: camera runs only. The streak is this PC's; a member's weekly minutes also go to the
-            // server with the run (moderate_seconds). Members get the streak coins with this run.
-            lastStreakCoins=PlayStyleInfo.UsesCamera(mode)?Store.RecordExercise(ExerciseOwner,System.DateTime.UtcNow,Session.Workout.ActiveSeconds,Session.Workout.ModerateSeconds,kindSeconds):0;
-            if(!Account.IsMember||developer)lastStreakCoins=0;
             lastTodayRank=Store.Board.RankOf(lastEntry,true,mode);
             if(!Account.IsMember) return;
             // The result screen shows the member's totals once the server has this run.
             string id=Account.Id;
-            var record=AccountRun.Create(Session,mode,developer?0:Session.Score.Coins+lastStreakCoins);
-            if(challengeRun)record.mode=DailyChallenge.Mode(mode);
-            runs.Save(record,saved=>
+            runs.Save(AccountRun.Create(Session,mode,developer?0:Session.Score.Coins),saved=>
             {
                 if(!saved){if(Account.Id==id)lastStatsFailed=true;return;}
                 RefreshMemberStats(reply=>{if(Account.Id!=id)return;lastStats=reply!=null&&reply.ok?reply:null;lastStatsFailed=lastStats==null;});
-            });
-        }
-        // The rest notice after 20 minutes of play (once a run) and the first banana warning (once a session).
-        private void TickNotices()
-        {
-            float now = Time.realtimeSinceStartup;
-            if (!restShown && !Session.IsTutorial && Session.Elapsed >= RestAfterSeconds) { restShown = true; restUntil = now + NoticeSeconds; }
-            var kind = MapCourse.KindAt(RouteSurface.ActivePlan, RouteSurface.SequenceAt(Session.Runner.Z));
-            if (kind != ExerciseKind.Warmup && !Session.IsTutorial && !courseSeen[(int)kind]) { courseSeen[(int)kind] = true; courseShown = kind; courseUntil = now + 2.5f; }
-            if (!bananaWarned && !Session.IsTutorial && !Session.Runner.Riding && Map.BananaAhead(Session.Runner.Z, Mathf.Max(12f, Session.CurrentSpeed * 2.5f))) { bananaWarned = true; bananaUntil = now + 3f; }
-        }
-        public static string CourseHint(ExerciseKind kind) => kind == ExerciseKind.Strength ? "근력 코스 · 깊게 숙이기, 무릎 높이" : kind == ExerciseKind.Cardio ? "유산소 코스 · 연속 점프, 옆으로 크게" : kind == ExerciseKind.Balance ? "균형 코스 · 골고루" : "";
-        private string ExerciseOwner => Account.IsMember ? Account.Id : "";
-        private void ResetBigMoves()
-        {
-            coach.Reset(); seenBigJumps = Pose.BigJumps; seenBigKnees = Pose.BigKnees; seenBigLanes = Pose.BigLanes;
-            wasDeep = wasCrouch = false; bigUntil = -10; seenKneeStep = Pose.LastKneeStepTime;
-        }
-        // Each new big movement gets its in-game effect once (a coin when the matching hazard is close) and counts +1 MET for a
-        // second; the coach reacts to the depth and the pace. Keyboard play never has big movements.
-        private void TickBigMoves(float dt)
-        {
-            double clock = Time.realtimeSinceStartupAsDouble;
-            bool camera = Pose.UsesCamera && Pose.Tracking;
-            var reading = Pose.Reading;
-            bool bigJump = Pose.BigJumps > seenBigJumps, bigKnee = Pose.BigKnees > seenBigKnees, bigLane = Pose.BigLanes > seenBigLanes;
-            seenBigJumps = Pose.BigJumps; seenBigKnees = Pose.BigKnees; seenBigLanes = Pose.BigLanes;
-            bool kneeStep = Pose.LastKneeStepTime > seenKneeStep; seenKneeStep = Pose.LastKneeStepTime;
-            bool deep = camera && reading.CrouchDeep, crouch = camera && reading.Crouch, deepStart = deep && !wasDeep;
-            bool crouchStart = crouch && !wasCrouch, crouchEnd = !crouch && wasCrouch;
-            wasDeep = deep; wasCrouch = crouch;
-            if (!camera) return;
-            if (bigJump && Session.Big(RunSession.BigMove.Jump)) bigUntil = clock + 1;
-            if (deep) { Session.Runner.DeepSlide(); bigUntil = System.Math.Max(bigUntil, clock + .3); }
-            if (deepStart && Session.Big(RunSession.BigMove.Crouch)) bigUntil = clock + 1;
-            if (bigKnee && Session.Big(RunSession.BigMove.Knee)) bigUntil = clock + 1;
-            if (bigLane && Session.Big(RunSession.BigMove.Lane)) bigUntil = clock + 1;
-            if (Session.IsTutorial) return;
-            var line = coach.Tick(Time.realtimeSinceStartup, dt, new Coach.Input
-            {
-                Lagging = pace.Lagging, OnStairs = OnOrBeforeStairs(), KneeStep = kneeStep, BigKnee = bigKnee, CrouchStart = crouchStart, CrouchEnd = crouchEnd,
-                CrouchDeep = deep, DeepStart = deepStart, BigJump = bigJump, BigLane = bigLane, Sprinting = Pose.CadenceStage == CadenceStage.Sprint,
-            });
-            if (line != CoachLine.None) audioPlayer.Bonk();
-        }
-        // The ranking strip's rows: this week's member board (best per member, without the player's own row) and this PC's guest
-        // runs of the week, or with "내 기록만" only the player's own runs on this PC. The live score is the HUD's.
-        private void LoadRace(PlayStyle mode)
-        {
-            race.Clear(); int mine = ++raceTicket;
-            var now = System.DateTime.Now; var weekStart = now.Date.AddDays(-(((int)now.DayOfWeek + 6) % 7));
-            var rows = new System.Collections.Generic.List<RankRace.Row>();
-            string me = Account.IsMember ? Account.Id : "";
-            foreach (var e in Store.Board.View(false, now, mode))
-            {
-                if (new System.DateTime(e.Ticks) < weekStart) continue;
-                bool own = Account.IsMember ? e.AccountId == me : !e.Member;
-                if (userSettings.RankStripMine ? own : !e.Member) rows.Add(new RankRace.Row(userSettings.RankStripMine ? "내 기록" : e.Name, e.Score));
-            }
-            if (userSettings.RankStripMine || gateway == null) { race.Load(rows); return; }
-            race.Load(rows);
-            gateway.WeekLeaderboard(Account.IsMember ? Account.Token : "", mode, reply =>
-            {
-                if (mine != raceTicket || reply == null || !reply.ok || reply.entries == null) return;
-                int own = reply.me != null ? reply.me.rank : 0;
-                foreach (var e in reply.entries) if (e != null && e.rank != own) rows.Add(new RankRace.Row(e.name, e.score));
-                // Loaded again before the run starts moving; the strip only shows once the run is under way.
-                race.Load(rows);
             });
         }
         // The member's best score for one play style from the last /stats; -1 when it is not known.
@@ -710,12 +549,7 @@ namespace Muhanok.Bootstrap
             string id=Account.Id;
             gateway.Stats(Account.Token,reply=>
             {
-                if(reply!=null&&reply.ok&&Account.IsMember&&Account.Id==id)
-                {
-                    memberStats=reply;memberStatsId=id;
-                    // The weekly goal bar follows the server's sum over every PC of the member.
-                    Store.Exercise.SyncWeek(id,System.DateTime.UtcNow,reply.week_moderate_seconds);
-                }
+                if(reply!=null&&reply.ok&&Account.IsMember&&Account.Id==id){memberStats=reply;memberStatsId=id;}
                 done?.Invoke(reply);
             });
         }
@@ -822,12 +656,6 @@ namespace Muhanok.Bootstrap
         float IHudData.CalibrationProgress => Pose.CalibrationProgress;
         bool IHudData.PoseKneesMissing => Pose.KneesMissing;
         float IHudData.StepsPerMinute => Pose.StepsPerMinute;
-        CadenceStage IHudData.Cadence => Pose.CadenceStage;
-        bool IHudData.PoseCalibrationMoving => Pose.CalibrationMoving;
-        FramingIssue IHudData.PoseFraming => Pose.Framing;
-        RunCalibrationState IHudData.RunCalibration => RunCalibration;
-        bool IHudData.TutorialRun => Session.IsTutorial;
-        bool IHudData.PoseRecording => Pose.Recording;
         bool IHudData.BodyActive => Pose.Tracking && Pose.Reading.Active;
         // Developer mode keeps this PC's exhibition wallet with every item open; players see their account.
         PlayerWallet IHudData.Wallet { get { if (userSettings == null || !userSettings.DeveloperMode) return Account.Wallet; Store.Wallet.UnlockAll = true; return Store.Wallet; } }
@@ -871,29 +699,13 @@ namespace Muhanok.Bootstrap
             if(!userSettings.DeveloperMode)player=Account.Profile.Clone();
         }
         void IHudData.Recalibrate() => Pose.Recalibrate();
-        bool IHudData.CadenceSpeed => userSettings == null || userSettings.CadenceSpeed;
-        void IHudData.SetCadenceSpeed(bool on) { if (userSettings == null || userSettings.CadenceSpeed == on) return; userSettings.CadenceSpeed = on; UserSettingsStore.Save(userSettings); }
-        RankRace IHudData.Race => Session.IsTutorial || !playerRun ? null : race;
-        bool IHudData.HazardNear => Session.Flow.State == GameFlowState.Running && Map.HazardAhead(Session.Runner.Z, Mathf.Max(8f, Session.CurrentSpeed * 1.2f));
-        float IHudData.PacePressure => Session.PacePressure;
-        string IHudData.CoachText => Session.Flow.State != GameFlowState.Running ? "" : Time.realtimeSinceStartup < restUntil ? RestText
-            : Time.realtimeSinceStartup < courseUntil ? CourseHint(courseShown)
-            : coach.Showing(Time.realtimeSinceStartup) ? Coach.Text(coach.Line, player.Style) : "";
-        ExerciseKind IHudData.Recommended => Store.Exercise.Recommend(ExerciseOwner, System.DateTime.UtcNow);
-        double IHudData.WeekMinutes => Store.Exercise.WeekModerateMinutes(ExerciseOwner, System.DateTime.UtcNow);
-        int IHudData.Streak => Store.Exercise.Streak(ExerciseOwner, System.DateTime.UtcNow);
-        int IHudData.LastStreakCoins => lastStreakCoins;
-        bool IHudData.ChallengeRun => challengeRun;
-        bool IHudData.DailyChallenge => dailyChallenge;
-        void IHudData.SetDailyChallenge(bool on) => dailyChallenge = on;
-        bool IHudData.BananaWarning => Session.Flow.State == GameFlowState.Running && Time.realtimeSinceStartup < bananaUntil;
 
         // A new member (or back to a guest) replaces the player and the face badge; coin or setting updates do not.
         private void AccountChanged()
         {
             string id = Account.IsMember ? Account.Id : "";
             if (id == shownAccount) return;
-            shownAccount = id; tutorialOffered = false; bananaWarned = false; System.Array.Clear(courseSeen, 0, courseSeen.Length);
+            shownAccount = id; tutorialOffered = false;
             if (!Account.IsMember) ClearPortrait();
             faceAvatar.Apply(portrait);
             // The HUD best and the next result compare with this member's /stats.

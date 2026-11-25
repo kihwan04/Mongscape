@@ -94,9 +94,9 @@ namespace Muhanok.Domain
             float local = z - start * RouteSurface.Length;
             if (local < CartFork.Decision || choices.ContainsKey(c) || !ForkCycle(c)) return;
             lane = Math.Max(-1, Math.Min(1, lane)); choices[c] = lane;
-            // The three directions are shuffled each lap; the signs and the preview show where each leads (exercise plan 3).
+            // No destination is exposed before commitment; all three directions are shuffled each lap.
             int[] lap = ExtendedLap(destinations[c][lane + 1]);
-            PlaceStairs(c, start, lap, destinations[c][lane + 1]);
+            PlaceStairs(c, start, lap);
             for (int i = CartFork.ConnectorChunk; i < lap.Length; i++) types[start + i] = lap[i];
             RebuildBases(start + CartFork.ConnectorChunk);
         }
@@ -105,9 +105,6 @@ namespace Muhanok.Domain
             int c = CycleAt(sequence);
             return choices.TryGetValue(c, out int lane) ? destinations[c][lane + 1] : int.MinValue;
         }
-        // Where a branch of the coming fork leads (shown on the signs and the preview before the choice).
-        public int DestinationFor(int sequence, int lane) { int c = CycleAt(sequence); return destinations[c][Math.Max(-1, Math.Min(1, lane)) + 1]; }
-        public bool HasFork(int sequence) => Extended && ForkCycle(CycleAt(sequence));
         public static string DestinationName(int destination) => destination < 0 ? "동물원" : destination > 0 ? "광산" : "감옥";
         private static int[] ExtendedLap(int lane)
         {
@@ -132,12 +129,11 @@ namespace Muhanok.Domain
         // Turns some walking chunks of the chosen branch into the biome's stair (mine 0 -> 13, zoo 12 -> 14, prison corridor 4/5 -> 7).
         // Seeded from (seed, lap), so the same seed and choices always give the same layout; chunks before the destination entrance,
         // the lap's return chunk and neighbours of transition chunks are never used.
-        private void PlaceStairs(int lapIndex, int lapStart, int[] lap, int destination)
+        private void PlaceStairs(int lapIndex, int lapStart, int[] lap)
         {
             if (config == null) return;
             float progress = new DifficultyDirector().Progress(lapStart * RouteSurface.Length, config);
-            // The course's knee share: the prison gets one more stair, the zoo one fewer (never none).
-            int want = MapCourse.Stairs(StairsPerLap(progress), destination);
+            int want = StairsPerLap(progress);
             var stairs = new List<int>();
             for (int i = 0; i < lap.Length; i++) if (RouteSurface.IsStair(lap[i])) stairs.Add(i);
             var rng = new Random(unchecked(seed * 486187739 + lapIndex * 1013904223 + 12345));

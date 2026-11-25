@@ -21,9 +21,6 @@ namespace Muhanok.Presentation
         public StatsReply Stats { get; private set; }
         public string StatsNote { get; private set; } = "";
         public ProfileDeleteStep Deleting { get; private set; }
-        // This week's moderate minutes (goal 150) and the daily streak, read when the page opens (this PC for now).
-        public double WeekMinutes { get; private set; }
-        public int Streak { get; private set; }
         private IIdentityData identity;
         private int opened;
 
@@ -31,7 +28,6 @@ namespace Muhanok.Presentation
         {
             identity = account; int mine = ++opened;
             Busy = Failed = false; Message = ""; Deleting = ProfileDeleteStep.None; Stats = null;
-            WeekMinutes = data?.WeekMinutes ?? 0; Streak = data?.Streak ?? 0;
             var profile = data?.SavedProfile ?? new PlayerProfile();
             Nickname = profile.Name; Weight = profile.Weight; Style = profile.Style; Goal = profile.CalorieGoal.ToString("0.##", Num);
             StatsNote = "기록을 불러오는 중…";
@@ -71,9 +67,6 @@ namespace Muhanok.Presentation
         }
         public void CancelDelete() { if (!Busy) Deleting = ProfileDeleteStep.None; }
         private void Fail(string reason) { Failed = true; Message = reason; }
-        public const string PreviousSeasonLabel = "이전 시즌 기록 ";
-        // "이전 시즌 기록 3,210점", or "" when the member has none for that play style.
-        public static string Previous(StatsReply stats, int mode) { int best = stats?.PreviousBest(mode) ?? 0; return best > 0 ? PreviousSeasonLabel + best.ToString("N0", Num) + "점" : ""; }
     }
 
     // 내 정보 (members only): nickname, weight, default style and calorie goal, server totals, logout and account deletion.
@@ -131,7 +124,6 @@ namespace Muhanok.Presentation
 
             DrawStats(form, new Rect(x + 450, 130, w - 450, 300));
             if (asking) DrawDeleteQuestion(form, new Rect(x, 462, w, 128), delete, escape);
-            else DrawWeek(form, new Rect(x + 450, 444, w - 450, 110));
 
             GUI.enabled = wasEnabled && !form.Busy && !asking;
             if (skin.Button(new Rect(242, 606, 190, 56), "저장", Palette.Gold, Color.clear, Palette.Outline, 22) || enter && GUI.enabled) form.Save();
@@ -157,19 +149,6 @@ namespace Muhanok.Presentation
             GUI.enabled = wasEnabled;
         }
 
-        // "이번 주 달린 분" bar toward the WHO 150 minutes (5 MET or more), and the streak.
-        void DrawWeek(ProfileForm form, Rect r)
-        {
-            skin.BorderBox(r, Palette.A(Palette.Panel, 0.95f), Palette.Wood, 2);
-            skin.Text(new Rect(r.x + 24, r.y + 10, r.width - 48, 28), "이번 주 달린 분", 18, Palette.Gold, TextAnchor.MiddleLeft, false, true);
-            skin.Text(new Rect(r.x + 24, r.y + 10, r.width - 48, 28), WorkoutReport.WeekGoal(form.WeekMinutes).Replace("주간 목표 ", ""), 18, Palette.Cream, TextAnchor.MiddleRight, false, true);
-            var track = new Rect(r.x + 24, r.y + 46, r.width - 48, 12);
-            skin.Box(track, Palette.A(Palette.Ground, .9f));
-            float share = Mathf.Clamp01((float)(form.WeekMinutes / ExerciseLog.WeeklyGoalMinutes));
-            if (share > 0) skin.Box(new Rect(track.x, track.y, Mathf.Max(4, track.width * share), track.height), share >= 1 ? new Color(.4f, 1, .6f) : Palette.Gold);
-            string streak = form.Streak > 0 ? "연속 " + form.Streak.ToString(Num) + "일째 운동 중 · 하루 10분이면 이어져요" : "하루 10분 운동하면 연속 기록이 시작돼요";
-            skin.Text(new Rect(r.x + 24, r.y + 68, r.width - 48, 30), streak, 14, Palette.Sand, TextAnchor.MiddleLeft, false, true);
-        }
         void DrawStats(ProfileForm form, Rect r)
         {
             skin.BorderBox(r, Palette.A(Palette.Panel, 0.95f), Palette.Wood, 2);
@@ -181,10 +160,7 @@ namespace Muhanok.Presentation
             for (int i = 0; i < labels.Length; i++)
             {
                 float y = r.y + 62 + i * 46;
-                // Best scores keep the previous season's record (the score formula changed and the ranking started anew) under the label.
-                string previous = i >= 2 ? ProfileForm.Previous(stats, i - 2) : "";
-                skin.Text(new Rect(r.x + 24, previous.Length > 0 ? y - 4 : y, 200, previous.Length > 0 ? 28 : 40), labels[i], 17, Palette.Sand, TextAnchor.MiddleLeft, false, true);
-                if (previous.Length > 0) skin.Text(new Rect(r.x + 24, y + 22, 220, 20), previous, 13, Palette.Sand, TextAnchor.MiddleLeft, false, true);
+                skin.Text(new Rect(r.x + 24, y, 200, 40), labels[i], 17, Palette.Sand, TextAnchor.MiddleLeft, false, true);
                 skin.Text(new Rect(r.xMax - 184, y, 160, 40), values[i], 22, Palette.Cream, TextAnchor.MiddleRight);
             }
         }
