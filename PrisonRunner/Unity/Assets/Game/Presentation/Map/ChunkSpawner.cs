@@ -122,6 +122,8 @@ namespace Muhanok.Presentation.Map
                 chunk.Prepare(sequence, session.Difficulty.Odds(sequence * RouteSurface.Length, session.Config), random, Pacer, session.PlannedSpeed(sequence * RouteSurface.Length));
                 chunk.gameObject.SetActive(true); active.Add(new ActiveChunk(type, chunk));
                 Decorator?.Decorate(chunk, sequence, type, random);
+                // After the decorators: they may swap or hide exercise rows (lane blocks, the tutorial's lessons).
+                chunk.PlaceBonusCoins();
                 nextPosition = chunk.Exit.position; sequence++;
             }
             if (budget != null && Time.unscaledTime >= nextBudgetUpdate)

@@ -25,8 +25,6 @@ namespace Muhanok.Presentation.Map
             else if (hazard == TutorialHazard.RailGap && chunk.RailGaps != null && chunk.RailGaps.Length > TutorialCourse.RailGapIndex
                 && chunk.RailGaps[TutorialCourse.RailGapIndex] != null)
                 chunk.RailGaps[TutorialCourse.RailGapIndex].Configure(TutorialCourse.RailMissingSide);
-            // The jump and duck lessons show their coins in the air and under the bars (exercise plan 10-3, steps 5 and 6).
-            chunk.PlaceBonusCoins();
         }
         public void Release(MuhanokMapChunk chunk) => inner?.Release(chunk);
 

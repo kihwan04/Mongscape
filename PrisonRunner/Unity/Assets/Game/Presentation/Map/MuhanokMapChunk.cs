@@ -116,7 +116,6 @@ namespace Muhanok.Presentation.Map
                 obstacle.ResetPass();obstacle.FullExerciseRow=true;obstacle.gameObject.SetActive(Layout.Slots[Obstacles.Length+i]);
             }
             if (Coins != null) foreach(var coin in Coins) { coin.ResetCoin(); coin.RequiresKneeStep=Layout.Stair; coin.gameObject.SetActive(sequence>0); }
-            PlaceBonusCoins();
             if(Layout.Stair){PlaceStairCoins(sequence);return;}
             if(RouteType==1||RouteType==2)
             {
