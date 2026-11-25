@@ -104,14 +104,14 @@ namespace Muhanok.Tests
             game.Session.Score.Advance(300);game.RecordFinishedRun();
             Board.OpenResult(Data,Identity);
             var guest=Board.KcalLines(game.Session);
-            Assert.AreEqual(1,guest.Count);Assert.AreEqual("이번 판",guest[0].Key);Assert.AreEqual(RankingBoard.GuestKcalNote,Board.KcalNote);
+            Assert.AreEqual(1,guest.Count);Assert.AreEqual("이번 판 (추정)",guest[0].Key);Assert.AreEqual(RankingBoard.GuestKcalNote,Board.KcalNote);
             CollectionAssert.DoesNotContain(fake.Calls,"stats");
 
             SignIn(400);
             game.RecordFinishedRun();
             Board.OpenResult(Data,Identity);
             var member=Board.KcalLines(game.Session);
-            Assert.IsTrue(Has(member,"이번 판"));Assert.IsTrue(Has(member,"오늘 합계"));Assert.IsTrue(Has(member,"누적 합계"));
+            Assert.IsTrue(Has(member,"이번 판 (추정)"));Assert.IsTrue(Has(member,"오늘 합계"));Assert.IsTrue(Has(member,"누적 합계"));
             Assert.AreEqual("52.1 kcal",member[1].Value);Assert.AreEqual("310 kcal",member[2].Value);Assert.AreEqual("",Board.KcalNote);
             Assert.AreEqual(1,fake.SavedRuns.Count,"The totals are read after the run was saved");
 

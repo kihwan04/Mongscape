@@ -21,7 +21,13 @@ ITEM_PRICES={0:30,1:60,2:100} # ItemKind: magnet, coin x2, shield; same as clien
 MODES=range(3) # PlayStyle: 0 full body, 1 upper body, 2 keyboard
 DEFAULT_WEIGHT=65; WEIGHT_MIN,WEIGHT_MAX=10,350; LEADERBOARD_SIZE=50; CONSENT_VERSION='account-v3' # weight range = the game's WorkoutEstimate
 KST=9*3600
+# RunScore.Version of the game: only this formula ranks. Version 3 (intensity MET) started a new ranking; the best of the
+# previous formula stays readable as the profile's previous-season record. Older runs are kept, never deleted.
+SCORE_VERSION=3; PREVIOUS_SCORE_VERSION=2
+WEEK=7*86400
 def kst_midnight(now): return (int(now)+KST)//86400*86400-KST
+# Monday 00:00 KST of the week holding now (1970-01-01 was a Thursday).
+def kst_week_start(now): day=kst_midnight(now); return day-((day+KST)//86400+3)%7*86400
 def number(data,key,low,high,integer=False,message=None):
     v=data.get(key) # bool is not accepted: type() is checked, not isinstance()
     if type(v) not in ((int,) if integer else (int,float)) or not math.isfinite(v) or v<low or v>high: raise ApiError(message or '잘못된 값: '+key)
@@ -141,7 +147,7 @@ class App:
             mode=number(data,'mode',0,2,True) if 'mode' in data else None
             coins=number(data,'coins',0,5000,True) if 'coins' in data else 0
             play_seconds=number(data,'play_seconds',0,86400) if 'play_seconds' in data else 0
-            version=number(data,'score_version',1,2,True) if 'score_version' in data else 1
+            version=number(data,'score_version',1,SCORE_VERSION,True) if 'score_version' in data else 1
             try: rid=str(uuid.UUID(str(data.get('id',''))))
             except ValueError: raise ApiError('기록 ID 오류')
             with self.store.db:
@@ -165,8 +171,16 @@ class App:
         if path=='/stats':
             today,total=self.store.db.execute('SELECT COALESCE(SUM(CASE WHEN created_at>=? THEN kcal ELSE 0 END),0),COALESCE(SUM(kcal),0) FROM runs WHERE profile_id=?',
                 (kst_midnight(time.time()),pid)).fetchone()
-            best=dict(self.store.db.execute('SELECT mode,MAX(score) FROM runs WHERE profile_id=? AND score_version=2 AND mode IS NOT NULL GROUP BY mode',(pid,)).fetchall())
-            return dict(ok=True,today_kcal=float(today),total_kcal=float(total),best_score=[int(best.get(m,0)) for m in MODES])
+            def best(version): return dict(self.store.db.execute('SELECT mode,MAX(score) FROM runs WHERE profile_id=? AND score_version=? AND mode IS NOT NULL GROUP BY mode',(pid,version)).fetchall())
+            current,previous=best(SCORE_VERSION),best(PREVIOUS_SCORE_VERSION)
+            # This week (from Monday 00:00 KST) and the week before: calories and play minutes, for the result report.
+            week=kst_week_start(time.time())
+            weeks=self.store.db.execute('SELECT COALESCE(SUM(CASE WHEN created_at>=? THEN kcal ELSE 0 END),0),COALESCE(SUM(CASE WHEN created_at>=? THEN play_seconds ELSE 0 END),0),'
+                'COALESCE(SUM(CASE WHEN created_at<? THEN kcal ELSE 0 END),0),COALESCE(SUM(CASE WHEN created_at<? THEN play_seconds ELSE 0 END),0) FROM runs WHERE profile_id=? AND created_at>=?',
+                (week,week,week,week,pid,week-WEEK)).fetchone()
+            return dict(ok=True,today_kcal=float(today),total_kcal=float(total),best_score=[int(current.get(m,0)) for m in MODES],
+                previous_best=[int(previous.get(m,0)) for m in MODES],week_kcal=float(weeks[0]),week_seconds=float(weeks[1]),
+                last_week_kcal=float(weeks[2]),last_week_seconds=float(weeks[3]))
         if path=='/history':
             rows=self.store.db.execute('SELECT distance,score,kcal,goal,created_at FROM runs WHERE profile_id=? ORDER BY created_at DESC LIMIT 20',(pid,)).fetchall()
             return dict(ok=True,runs=[dict(zip(('distance','score','kcal','goal','created_at'),row)) for row in rows])
@@ -178,8 +192,8 @@ class App:
         # Best record per member (score, then the earlier record); only the current score formula ranks.
         rows=self.store.db.execute('SELECT p.name,r.score,r.distance,r.created_at,r.profile_id FROM ('
             'SELECT profile_id,score,distance,created_at,ROW_NUMBER() OVER (PARTITION BY profile_id ORDER BY score DESC,created_at,id) AS n '
-            'FROM runs WHERE mode=? AND score_version=2 AND created_at>=?) r JOIN profiles p ON p.id=r.profile_id '
-            'WHERE r.n=1 ORDER BY r.score DESC,r.created_at,r.profile_id',(mode,kst_midnight(time.time()) if today else 0)).fetchall()
+            'FROM runs WHERE mode=? AND score_version=? AND created_at>=?) r JOIN profiles p ON p.id=r.profile_id '
+            'WHERE r.n=1 ORDER BY r.score DESC,r.created_at,r.profile_id',(mode,SCORE_VERSION,kst_midnight(time.time()) if today else 0)).fetchall()
         result=dict(ok=True,entries=[dict(rank=i+1,name=r[0],score=r[1],distance=r[2],created_at=r[3]) for i,r in enumerate(rows[:LEADERBOARD_SIZE])])
         try: pid=self.store.authorize(token) if token else None
         except ApiError: pid=None # the board is public; an expired token only hides "me"

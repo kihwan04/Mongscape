@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest import mock
 BASE=Path(__file__).resolve().parent
 sys.path.insert(0,str(BASE/'.runtime'))
-from server import App,Store,Faces,ApiError,kst_midnight
+from server import App,Store,Faces,ApiError,kst_midnight,kst_week_start
 from storage import SCHEMA_VERSION,ConfigError,SchemaError
 from prepare_secrets import prepare
 import migrate_account
@@ -37,7 +37,7 @@ CREATE TABLE runs (id TEXT PRIMARY KEY, profile_id TEXT NOT NULL REFERENCES prof
 CREATE INDEX runs_profile_created ON runs (profile_id, created_at DESC);
 CREATE INDEX sessions_expiry ON sessions (expires_at);
 CREATE INDEX sessions_profile ON sessions (profile_id);'''
-def run(**fields):return dict(dict(id=str(uuid.uuid4()),distance=100,score=100,kcal=1,goal=50,activities=[1,0,0,0,0],mode=0,coins=0,play_seconds=60,score_version=2),**fields)
+def run(**fields):return dict(dict(id=str(uuid.uuid4()),distance=100,score=100,kcal=1,goal=50,activities=[1,0,0,0,0],mode=0,coins=0,play_seconds=60,score_version=3),**fields)
 class IdentityTests(PostgresCase):
  @classmethod
  def setUpClass(cls):
@@ -59,9 +59,9 @@ class IdentityTests(PostgresCase):
   with self.store.db:self.store.db.execute('INSERT INTO profiles (id,name,name_key,coins,created_at,consent_version) VALUES(?,?,?,?,?,?)',
    (pid,name,''.join(name.split()).casefold(),coins,created,'test'))
   return pid,self.store.issue(pid)
- def record(self,pid,score,mode=0,version=2,created=None,kcal=1.0):
-  with self.store.db:self.store.db.execute('INSERT INTO runs (id,profile_id,distance,score,kcal,goal,activities,created_at,mode,score_version) VALUES(?,?,?,?,?,?,?,?,?,?)',
-   (str(uuid.uuid4()),pid,score/2,score,kcal,50,'[0,0,0,0,0]',int(time.time()) if created is None else created,mode,version))
+ def record(self,pid,score,mode=0,version=3,created=None,kcal=1.0,seconds=0.0):
+  with self.store.db:self.store.db.execute('INSERT INTO runs (id,profile_id,distance,score,kcal,goal,activities,created_at,mode,score_version,play_seconds) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+   (str(uuid.uuid4()),pid,score/2,score,kcal,50,'[0,0,0,0,0]',int(time.time()) if created is None else created,mode,version,seconds))
  def status(self,path,data,token=''):
   with self.assertRaises(ApiError) as caught:self.app.handle(path,data,token)
   return caught.exception.status
@@ -144,12 +144,12 @@ class IdentityTests(PostgresCase):
   self.assertEqual(self.app.handle('/runs',first,token),dict(ok=True,coins=15)) # resend: stored and credited once
   self.assertEqual(self.app.handle('/runs',run(coins=5,mode=2,score_version=1,play_seconds=0),token),dict(ok=True,coins=20))
   for fields in (dict(mode=3),dict(mode=-1),dict(mode='0'),dict(mode=None),dict(mode=True),dict(coins=5001),dict(coins=1.5),dict(coins=-1),
-                 dict(score_version=3),dict(score_version=0),dict(play_seconds=86401),dict(play_seconds=-1),dict(id='x'),dict(goal=0),dict(activities=[1])):
+                 dict(score_version=4),dict(score_version=0),dict(play_seconds=86401),dict(play_seconds=-1),dict(id='x'),dict(goal=0),dict(activities=[1])):
    self.assertEqual(self.status('/runs',run(**fields),token),400,fields)
   legacy=run();[legacy.pop(k) for k in ('mode','coins','play_seconds','score_version')]
   self.assertEqual(self.app.handle('/runs',legacy,token)['coins'],20) # clients before accounts still save, unranked
   rows=self.store.db.execute('SELECT mode,coins,score_version,play_seconds FROM runs').fetchall()
-  self.assertEqual(set(map(tuple,rows)),{(0,12,2,60),(2,5,1,0),(None,0,1,0)})
+  self.assertEqual(set(map(tuple,rows)),{(0,12,3,60),(2,5,1,0),(None,0,1,0)})
  def test_shop_buy(self):
   pid,token=self.member('Shopper',coins=100)
   self.assertEqual(self.status('/shop/buy',dict(item=0)),401)
@@ -187,10 +187,24 @@ class IdentityTests(PostgresCase):
  def test_stats(self):
   pid,token=self.member('Stats')
   self.assertEqual(self.status('/stats',{}),401)
-  self.assertEqual(self.app.handle('/stats',{},token),dict(ok=True,today_kcal=0.0,total_kcal=0.0,best_score=[0,0,0]))
+  empty=dict(ok=True,today_kcal=0.0,total_kcal=0.0,best_score=[0,0,0],previous_best=[0,0,0],week_kcal=0.0,week_seconds=0.0,last_week_kcal=0.0,last_week_seconds=0.0)
+  self.assertEqual(self.app.handle('/stats',{},token),empty)
   self.record(pid,300,mode=0);self.record(pid,700,mode=0);self.record(pid,900,mode=0,version=1);self.record(pid,40,mode=2,kcal=0)
+  self.record(pid,1500,mode=0,version=2);self.record(pid,800,mode=1,version=2) # the previous season's formula: kept, shown apart
   self.app.handle('/runs',{k:v for k,v in run(score=5000).items() if k!='mode'},token) # no mode: counts kcal, never ranks
-  self.assertEqual(self.app.handle('/stats',{},token),dict(ok=True,today_kcal=4.0,total_kcal=4.0,best_score=[700,0,40]))
+  stats=self.app.handle('/stats',{},token)
+  self.assertEqual((stats['today_kcal'],stats['best_score'],stats['previous_best']),(6.0,[700,0,40],[1500,800,0]))
+  self.assertEqual(self.app.handle('/leaderboard',dict(mode=0),token)['me']['score'],700) # only version 3 ranks
+ def test_week_totals(self):
+  utc=lambda *parts:int(datetime(*parts,tzinfo=timezone.utc).timestamp())
+  self.assertEqual(kst_week_start(utc(2026,11,25,3,0)),utc(2026,11,22,15,0)) # Wednesday noon KST -> Monday 23rd 00:00 KST
+  self.assertEqual(kst_week_start(utc(2026,11,22,15,0)),utc(2026,11,22,15,0)) # Monday 00:00 KST itself
+  self.assertEqual(kst_week_start(utc(2026,11,22,14,59)),utc(2026,11,15,15,0)) # Sunday 23:59 KST -> the week before
+  pid,token=self.member('Weekly');week=kst_week_start(time.time())
+  self.record(pid,10,created=week,kcal=5,seconds=300);self.record(pid,10,created=week-1,kcal=2,seconds=120)
+  self.record(pid,10,created=week-7*86400,kcal=1,seconds=60);self.record(pid,10,created=week-7*86400-1,kcal=50,seconds=600)
+  stats=self.app.handle('/stats',{},token)
+  self.assertEqual((stats['week_kcal'],stats['week_seconds'],stats['last_week_kcal'],stats['last_week_seconds']),(5.0,300.0,3.0,180.0))
  def test_no_face_and_malformed_images_rejected(self):
   _,image=self.cv.imencode('.jpg',self.np.zeros((480,640,3),self.np.uint8))
   blank=base64.b64encode(image).decode()
