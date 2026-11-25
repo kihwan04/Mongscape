@@ -51,9 +51,6 @@ namespace Muhanok.Presentation
             int pct = (int)Math.Round(Math.Abs(change));
             return pct == 0 ? "지난주와 같아요" : "지난주보다 " + pct.ToString(Num) + "% " + (change > 0 ? "더" : "덜");
         }
-        // "주간 목표 37 / 150분" (moderate minutes this week, this PC) and "연속 3일" (days with 10 active minutes).
-        public static string WeekGoal(double minutes) => "주간 목표 " + ((int)Math.Floor(Math.Max(0, minutes))).ToString(Num) + " / " + ExerciseLog.WeeklyGoalMinutes.ToString("0", Num) + "분";
-        public static string StreakLine(int days, int coins) => days <= 0 ? "" : "연속 " + days.ToString(Num) + "일" + (coins > 0 ? " · 코인 +" + coins.ToString(Num) : "");
         static string Kcal(double v) => Math.Max(0, v).ToString(v >= 100 ? "N0" : "F1", Num) + "kcal";
         static string Minutes(double seconds) => ((int)Math.Round(Math.Max(0, seconds) / 60)).ToString("N0", Num) + "분";
     }

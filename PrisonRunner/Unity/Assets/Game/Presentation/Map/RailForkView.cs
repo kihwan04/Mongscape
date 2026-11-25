@@ -14,8 +14,6 @@ namespace Muhanok.Presentation.Map
         private static Mesh signBoard;
         private static readonly Mesh[] signArrows=new Mesh[3];
         private readonly Renderer[] signs=new Renderer[3];
-        // Where each branch leads (exercise plan 3): course name, exercise, two moves and the intensity dots.
-        private readonly TextMesh[] signTexts=new TextMesh[3];
         private int visualLane=99;
         public int HighlightedBranch {get;private set;}
         private static readonly Material[] branchMaterials=new Material[3];
@@ -77,7 +75,7 @@ namespace Muhanok.Presentation.Map
             selectedRailMaterial=new Material(shader){name="Selected fork rail",color=new Color(1,.69f,.18f)};
             dimRailMaterial=new Material(shader){name="Unselected fork rail",color=new Color(.27f,.31f,.34f)};
             signMaterial=new Material(shader){name="Fork sign backing",color=new Color(.12f,.075f,.04f)};
-            var plate=new RouteMesh();plate.Box(new Vector3(0,-.35f,0),new Vector3(2.4f,1.65f,.12f));signBoard=plate.Build("Fork direction board");
+            var plate=new RouteMesh();plate.Box(Vector3.zero,new Vector3(1.5f,.9f,.12f));signBoard=plate.Build("Fork direction board");
             for(int branch=-1;branch<=1;branch++)signArrows[branch+1]=BuildArrow(branch);
             for(int i=0;i<3;i++)branchMaterials[i]=new Material(shader){name="Fork rail "+i,color=colors[i]};
             ravineMaterial=new Material(shader){name="Fork stone",color=new Color(.13f,.115f,.095f)};
@@ -94,12 +92,6 @@ namespace Muhanok.Presentation.Map
                 arrow.AddComponent<MeshFilter>().sharedMesh=signArrows[branch+1];
                 var icon=arrow.AddComponent<MeshRenderer>();icon.sharedMaterial=branchMaterials[branch+1];icon.shadowCastingMode=ShadowCastingMode.Off;
                 signs[branch+1]=icon;
-                arrow.transform.localPosition=new Vector3(0,.12f,-.075f);arrow.transform.localScale=Vector3.one*.55f;
-                var label=new GameObject("DestinationText");label.transform.SetParent(marker.transform,false);label.transform.localPosition=new Vector3(0,-.62f,-.08f);
-                var text=label.AddComponent<TextMesh>();text.anchor=TextAnchor.MiddleCenter;text.alignment=TextAlignment.Center;text.fontSize=64;text.characterSize=.038f;text.lineSpacing=.95f;
-                text.color=new Color(1,.93f,.78f);
-                var font=Muhanok.Presentation.UiFont.Main;if(font!=null){text.font=font;label.GetComponent<MeshRenderer>().sharedMaterial=font.material;}
-                signTexts[branch+1]=text;
             }
             var surface=new GameObject("TraversableDeck");surface.transform.SetParent(transform,false);
             deck=surface.AddComponent<MeshFilter>();surface.AddComponent<MeshRenderer>().sharedMaterial=deckMaterial;
@@ -146,14 +138,10 @@ namespace Muhanok.Presentation.Map
             sequence=chunk.Sequence;geometryMode=99;visualLane=99;RefreshSelection(chunk);ground.gameObject.SetActive(false);
             float lampZ=localSequence==CartFork.FirstChunk?23:18;
             float signZ=localSequence==CartFork.FirstChunk?21:18;
-            var plan=RouteSurface.ActivePlan;
             for(int branch=-1;branch<=1;branch++)
             {
                 var marker=signs[branch+1].transform.parent;
                 marker.localPosition=new Vector3(CartFork.Offset(localSequence*24+signZ,branch),3.35f,signZ);
-                if(plan!=null&&plan.HasFork(chunk.Sequence)){int destination=plan.DestinationFor(chunk.Sequence,branch);var kind=MapCourse.KindOf(destination);
-                    signTexts[branch+1].text=MapCourse.Name(destination)+" · "+MapCourse.Label(kind)+"\n"+MapCourse.Moves(kind)+"\n"+MapCourse.DotText(kind);}
-                else signTexts[branch+1].text="";
             }
             for(int branch=-1;branch<=1;branch++)lampGlass[branch+1].localPosition=new Vector3(CartFork.Offset(localSequence*24+lampZ,branch)-1.1f,3.6f,lampZ-.25f);
             for(int branch=-1;branch<=1;branch++)for(int side=0;side<2;side++)

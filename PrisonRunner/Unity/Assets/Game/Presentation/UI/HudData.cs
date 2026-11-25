@@ -81,18 +81,6 @@ namespace Muhanok.Presentation
         float PacePressure { get; }
         // The coach subtitle showing now, or "".
         string CoachText { get; }
-        // The course done least this week, marked "추천" on the fork preview.
-        ExerciseKind Recommended { get; }
-        // Weekly goal (moderate minutes, of 150) and the daily streak of the current player; today's challenge state.
-        double WeekMinutes { get; }
-        int Streak { get; }
-        // Streak coins the last run earned (0 when none), and whether the last run was today's challenge (with its day rank).
-        int LastStreakCoins { get; }
-        bool ChallengeRun { get; }
-        bool DailyChallenge { get; }
-        void SetDailyChallenge(bool on);
-        // A banana is just ahead and this player has not been warned yet this session.
-        bool BananaWarning { get; }
     }
 
     // Draws the mirrored webcam image with the detected skeleton; returns the video rect for overlays.

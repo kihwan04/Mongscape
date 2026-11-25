@@ -19,8 +19,6 @@ LIMIT_WINDOW=60; FACE_LIMIT=15; FACE_LIMIT_ALL=60; NAME_CHECK_LIMIT=60; NAME_CHE
 LEADERBOARD_LIMIT=120; RUNS_LIMIT=20 # per client IP / per account
 ITEM_PRICES={0:30,1:60,2:100} # ItemKind: magnet, coin x2, shield; same as client ItemCatalog
 MODES=range(3) # PlayStyle: 0 full body, 1 upper body, 2 keyboard
-# Today's challenge (everyone runs the map of the KST date): the same play styles + 10, ranked per day, apart from the ordinary boards.
-CHALLENGE_MODES=range(10,13)
 DEFAULT_WEIGHT=65; WEIGHT_MIN,WEIGHT_MAX=10,350; LEADERBOARD_SIZE=50; CONSENT_VERSION='account-v3' # weight range = the game's WorkoutEstimate
 KST=9*3600
 # RunScore.Version of the game: only this formula ranks. Version 3 (intensity MET) started a new ranking; the best of the
@@ -146,8 +144,7 @@ class App:
             activities=data.get('activities',[])
             if not isinstance(activities,list) or len(activities)!=5 or any(type(v) not in (float,int) or not math.isfinite(v) or v<0 for v in activities): raise ApiError('동작별 기록 오류')
             # Clients built before accounts send no mode; their records are kept unranked (mode NULL, version 1).
-            mode=number(data,'mode',0,12,True) if 'mode' in data else None
-            if mode is not None and mode not in MODES and mode not in CHALLENGE_MODES: raise ApiError('잘못된 값: mode')
+            mode=number(data,'mode',0,2,True) if 'mode' in data else None
             coins=number(data,'coins',0,5000,True) if 'coins' in data else 0
             play_seconds=number(data,'play_seconds',0,86400) if 'play_seconds' in data else 0
             version=number(data,'score_version',1,SCORE_VERSION,True) if 'score_version' in data else 1
@@ -190,7 +187,7 @@ class App:
         raise ApiError('경로 없음',404)
     def leaderboard(self,data,token):
         mode=data.get('mode'); today=data.get('today',False); week=data.get('week',False)
-        if type(mode) is not int or (mode not in MODES and mode not in CHALLENGE_MODES): raise ApiError('잘못된 모드')
+        if type(mode) is not int or mode not in MODES: raise ApiError('잘못된 모드')
         if type(today) is not bool: raise ApiError('잘못된 값: today')
         if type(week) is not bool: raise ApiError('잘못된 값: week')
         since=kst_midnight(time.time()) if today else kst_week_start(time.time()) if week else 0 # week: the running ranking strip

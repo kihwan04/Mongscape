@@ -15,7 +15,7 @@ namespace Muhanok.Presentation
         // card slots left to right: 2nd, 1st, 3rd
         static readonly int[] SlotRank = { 1, 0, 2 };
         static readonly float[] SlotHeight = { 138, 158, 128 };
-        static readonly string[] SourceTabs = { "회원 랭킹", "통합 랭킹" }, ModeTabs = { "전신", "상체", "키보드" }, PeriodTabs = { "전체", "오늘", "도전" };
+        static readonly string[] SourceTabs = { "회원 랭킹", "통합 랭킹" }, ModeTabs = { "전신", "상체", "키보드" }, PeriodTabs = { "전체", "오늘" };
 
         readonly OverlaySkin skin;
         readonly RankingBoard board;
@@ -86,7 +86,7 @@ namespace Muhanok.Presentation
             DrawTabs(x, w);
             // 통합 랭킹 without the server: a small note in the gap between the mode and period tabs.
             if (!board.MemberTab && board.MembersMissing)
-                skin.Text(new Rect(x + 512, 104, w - 760, 44), RankingBoard.MembersMissingText, 13, Palette.Sand, TextAnchor.MiddleCenter, false, true);
+                skin.Text(new Rect(x + 512, 104, w - 680, 44), RankingBoard.MembersMissingText, 13, Palette.Sand, TextAnchor.MiddleCenter, false, true);
             if (board.Status != RankingStatus.Ready)
             {
                 skin.Text(new Rect(x, 200, w, 60), board.StatusText, 20, Palette.Sand, TextAnchor.MiddleCenter, false, true);
@@ -163,7 +163,6 @@ namespace Muhanok.Presentation
             skin.Text(new Rect(panel.x + 14, panel.y + 10, panel.width - 28, 28), "지난주와 비교", 19, Palette.Gold, TextAnchor.MiddleLeft);
             note ??= new GUIStyle(skin.Style(14, false, TextAnchor.UpperLeft)) { wordWrap = true, clipping = TextClipping.Clip };
             var old = GUI.color;
-            DrawGoal(data, panel);
             if (!board.MemberResult) { GUI.color = Palette.Gold; GUI.Label(new Rect(panel.x + 14, panel.y + 48, panel.width - 28, 64), WorkoutReport.GuestWeekNote, note); GUI.color = old; return; }
             var stats = data?.LastStats;
             if (stats == null) { GUI.color = Palette.Sand; GUI.Label(new Rect(panel.x + 14, panel.y + 48, panel.width - 28, 64), board.KcalNote, note); GUI.color = old; return; }
@@ -174,20 +173,7 @@ namespace Muhanok.Presentation
                 skin.Text(new Rect(panel.x + 14, y, panel.width - 28, 18), lines[i].Key, 13, Palette.Sand, TextAnchor.MiddleLeft, false, true);
                 skin.Text(new Rect(panel.x + 14, y + 18, panel.width - 28, 24), lines[i].Value, 15, Palette.Cream, TextAnchor.MiddleLeft, false, true);
             }
-            GUI.color = Palette.Gold; GUI.Label(new Rect(panel.x + 14, panel.y + 132, panel.width - 28, 22), WorkoutReport.WeekChange(stats), note); GUI.color = old;
-        }
-        // Bottom of the week panel: the weekly goal bar (moderate minutes, this PC) and the streak with its coins.
-        void DrawGoal(IHudData data, Rect panel)
-        {
-            if (data == null) return;
-            double minutes = data.WeekMinutes;
-            skin.Text(new Rect(panel.x + 14, panel.y + 150, panel.width - 28, 18), WorkoutReport.WeekGoal(minutes), 12, Palette.Sand, TextAnchor.MiddleLeft, false, true);
-            var track = new Rect(panel.x + 14, panel.y + 170, panel.width - 28, 6);
-            skin.Box(track, Palette.A(Palette.Ground, .9f));
-            float share = Mathf.Clamp01((float)(minutes / ExerciseLog.WeeklyGoalMinutes));
-            if (share > 0) skin.Box(new Rect(track.x, track.y, Mathf.Max(3, track.width * share), track.height), share >= 1 ? new Color(.4f, 1, .6f) : Palette.Gold);
-            string streak = WorkoutReport.StreakLine(data.Streak, data.LastStreakCoins);
-            if (streak.Length > 0) skin.Text(new Rect(panel.x + 14, panel.y + 178, panel.width - 28, 18), streak, 12, Palette.Cream, TextAnchor.MiddleLeft, false, true);
+            GUI.color = Palette.Gold; GUI.Label(new Rect(panel.x + 14, panel.y + 140, panel.width - 28, 52), WorkoutReport.WeekChange(stats), note); GUI.color = old;
         }
 
         // Right panel: this run, and for a member today's and lifetime totals from /stats; a guest sees the sign-up note.
@@ -216,10 +202,10 @@ namespace Muhanok.Presentation
         {
             int source = Group(new Rect(x, 104, 232, 44), SourceTabs, board.MemberTab ? 0 : 1);
             int mode = Group(new Rect(x + 252, 104, 252, 44), ModeTabs, (int)board.Mode);
-            int period = Group(new Rect(x + w - 240, 104, 240, 44), PeriodTabs, board.Challenge ? 2 : board.TodayOnly ? 1 : 0);
-            if (source >= 0) board.Select(source == 0, board.Mode, board.TodayOnly, board.Challenge);
-            if (mode >= 0) board.Select(board.MemberTab, (PlayStyle)mode, board.TodayOnly, board.Challenge);
-            if (period >= 0) board.Select(board.MemberTab, board.Mode, period == 1, period == 2);
+            int period = Group(new Rect(x + w - 160, 104, 160, 44), PeriodTabs, board.TodayOnly ? 1 : 0);
+            if (source >= 0) board.Select(source == 0, board.Mode, board.TodayOnly);
+            if (mode >= 0) board.Select(board.MemberTab, (PlayStyle)mode, board.TodayOnly);
+            if (period >= 0) board.Select(board.MemberTab, board.Mode, period == 1);
         }
 
         // One tab row; returns the pressed tab (mouse or hand pointing), -1 otherwise.
@@ -270,7 +256,7 @@ namespace Muhanok.Presentation
                 if (list[rank].CadenceTag.Length > 0) skin.Text(new Rect(r.x, r.yMax - 24, r.width, 20), list[rank].CadenceTag, 12, Palette.Sand, TextAnchor.MiddleCenter, false, true);
             }
             if (list.Count == 0)
-                skin.Text(new Rect(x, 200, w, 60), board.Challenge ? "오늘의 도전 첫 기록을 남겨 보세요! (모두 같은 맵)" : board.TodayOnly ? "오늘은 아직 기록이 없어요. 첫 기록을 남겨 보세요!" : "아직 기록이 없어요. 첫 기록을 남겨 보세요!", 18, Palette.Sand, TextAnchor.MiddleCenter, false, true);
+                skin.Text(new Rect(x, 200, w, 60), board.TodayOnly ? "오늘은 아직 기록이 없어요. 첫 기록을 남겨 보세요!" : "아직 기록이 없어요. 첫 기록을 남겨 보세요!", 18, Palette.Sand, TextAnchor.MiddleCenter, false, true);
         }
 
         void DrawRows(float x, float w)

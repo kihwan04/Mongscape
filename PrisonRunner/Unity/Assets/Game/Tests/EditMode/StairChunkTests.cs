@@ -49,7 +49,7 @@ namespace Muhanok.Tests
                         int branch = plan.DestinationAt(lap * Lap);
                         var types = new int[Lap]; for (int i = 0; i < Lap; i++) types[i] = plan.TypeAt(lap * Lap + i);
                         var stairs = new List<int>(); for (int i = 0; i < Lap; i++) if (RouteSurface.IsStair(types[i])) stairs.Add(i);
-                        int expected = MapCourse.Stairs(lap + 1, branch); // the course shifts the count: prison +1, zoo -1 (exercise plan 3)
+                        int expected = lap + 1;
                         string note = "seed " + seed + " lap " + lap + " branch " + branch;
                         if (branch == 0)
                         {

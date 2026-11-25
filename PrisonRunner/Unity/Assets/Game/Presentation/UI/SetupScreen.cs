@@ -33,8 +33,6 @@ namespace Muhanok.Presentation
             GUI.color = Palette.Gold; GUI.Label(new Rect(195, 92, 500, 50), "탈출 준비", skin.Style(36, FontStyle.Bold));
             if (openSettings != null && skin.FlatButton(new Rect(950, 92, 140, 44), "설정", false)) openSettings();
             if (back != null && skin.FlatButton(new Rect(800, 92, 140, 44), "뒤로", false)) back();
-            // Today's challenge: the same map for everyone today, with its own ranking (exercise plan 10).
-            if (data != null && skin.FlatButton(new Rect(600, 92, 190, 44), ChallengeLabel(data.DailyChallenge), data.DailyChallenge)) data.SetDailyChallenge(!data.DailyChallenge);
             GUI.color = Color.white;
             if (perRun)
             {
@@ -94,7 +92,6 @@ namespace Muhanok.Presentation
                 if (skin.FlatButton(new Rect(860, 500, 230, 40), CadenceLabel(on), on)) data.SetCadenceSpeed(!on);
             }
         }
-        public static string ChallengeLabel(bool on) => on ? "오늘의 도전 ✓" : "오늘의 도전";
         public static string CadenceLabel(bool on) => "발구름 속도 조절 " + (on ? "켜짐" : "꺼짐");
         public const string NoCameraGuide = "카메라가 연결되어 있지 않아 키보드로만 플레이할 수 있어요. 카메라를 연결하면 전신·상체를 고를 수 있어요.";
         private bool Choice(Rect rect, string text, bool selected, bool enabled = true)

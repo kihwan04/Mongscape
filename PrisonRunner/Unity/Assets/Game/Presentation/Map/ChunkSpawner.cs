@@ -161,19 +161,6 @@ namespace Muhanok.Presentation.Map
             }
             return false;
         }
-        // A banana peel (authored or placed) within the given metres ahead and not yet passed.
-        public bool BananaAhead(float runnerZ, float metres)
-        {
-            foreach (var item in active)
-            {
-                var chunk = item.Chunk;
-                if (chunk.FloorItems != null) foreach (var peel in chunk.FloorItems) if (Peel(peel, runnerZ, metres)) return true;
-                foreach (var peel in chunk.DynamicFloorItems) if (Peel(peel, runnerZ, metres)) return true;
-            }
-            return false;
-        }
-        private static bool Peel(FloorItemController item, float z, float metres)
-            => item != null && item.Kind == FloorItemKind.BananaPeel && item.gameObject.activeInHierarchy && !item.Passed && item.transform.position.z >= z && item.transform.position.z <= z + metres;
         // Any hazard (row, blocker, banana, animal) within the given metres ahead.
         public bool HazardAhead(float runnerZ, float metres)
             => ActionAhead(HazardAction.Jump, runnerZ, metres) || ActionAhead(HazardAction.Crouch, runnerZ, metres) || ActionAhead(HazardAction.Dodge, runnerZ, metres);
