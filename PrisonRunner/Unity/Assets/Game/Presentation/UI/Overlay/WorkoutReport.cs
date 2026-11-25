@@ -18,10 +18,15 @@ namespace Muhanok.Presentation
         public static string MoveLabel(MoveKind kind) => kind == MoveKind.Step ? "걸음" : kind == MoveKind.Jump ? "점프" : kind == MoveKind.Crouch ? "숙이기" : kind == MoveKind.KneeStep ? "무릎 들기" : "옆걸음";
         public static string Clock(double seconds) { int s = (int)Math.Round(Math.Max(0, double.IsNaN(seconds) ? 0 : seconds)); return (s / 60).ToString(Num) + ":" + (s % 60).ToString("00", Num); }
 
-        // (label, seconds, share of the walking + running + sprinting time).
+        // With "발구름으로 속도 조절" off, stepping earns nothing: the report shows one row, the time of the motion moments.
+        public const string MoveRowLabel = "동작", CadenceOffNote = "발구름 꺼짐 · 점프·숙이기·무릎·옆걸음만 칼로리";
+        public static bool CadenceOff(WorkoutEstimate workout) => workout != null && !workout.CadenceCounts;
+        public static string IntensityTitle(WorkoutEstimate workout) => CadenceOff(workout) ? "동작한 시간" : "강도별 시간";
+        // (label, seconds, share of the walking + running + sprinting time); cadence off: the motion-moment time alone.
         public static List<(string label, double seconds, float share)> Intensity(WorkoutEstimate workout)
         {
             var rows = new List<(string, double, float)>();
+            if (CadenceOff(workout)) { rows.Add((MoveRowLabel, workout.MoveSeconds, workout.MoveSeconds > 0 ? 1f : 0f)); return rows; }
             double total = 0; foreach (var s in Stages) total += workout?.StageSeconds(s) ?? 0;
             foreach (var s in Stages) { double v = workout?.StageSeconds(s) ?? 0; rows.Add((StageLabel(s), v, total > 0 ? (float)(v / total) : 0f)); }
             return rows;

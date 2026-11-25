@@ -100,7 +100,7 @@ class HttpTests(PostgresCase):
         self.assertEqual(call('/shop/buy',dict(item=0),self.token)[0],409)
         self.assertEqual(call('/leaderboard',dict(mode=9))[0],400)
         self.assertEqual(call('/leaderboard',dict(mode=0,today=True)),(200,dict(ok=True,entries=[])))
-        self.assertEqual(call('/stats',{},self.token),(200,dict(ok=True,today_kcal=0,total_kcal=0,best_score=[0,0,0],previous_best=[0,0,0],week_kcal=0,week_seconds=0,last_week_kcal=0,last_week_seconds=0)))
+        self.assertEqual(call('/stats',{},self.token),(200,dict(ok=True,today_kcal=0,total_kcal=0,best_score=[0,0,0],previous_best=[0,0,0],week_kcal=0,week_seconds=0,last_week_kcal=0,last_week_seconds=0,week_moderate_seconds=0,last_week_moderate_seconds=0)))
 
     def test_wildcard_hosts_rejected(self):
         with self.assertRaises(ValueError):create_server('127.0.0.1',0,None,None,'*')

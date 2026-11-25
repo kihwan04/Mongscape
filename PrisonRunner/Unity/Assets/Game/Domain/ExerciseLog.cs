@@ -15,9 +15,9 @@ namespace Muhanok.Domain
         public bool StreakPaid;
     }
 
-    // Weekly goal, daily streak and course balance (exercise plan 8). Kept on this PC for now; every read and write goes
-    // through this class (and PlayerProgressStore saves it), so an account-server column can back it later without
-    // touching the screens.
+    // Weekly goal, daily streak and course balance (exercise plan 8). Every read and write goes through this class (and
+    // PlayerProgressStore saves it). A member's weekly moderate minutes come from the account server (runs.moderate_seconds,
+    // every PC) once /stats has answered; guests, and members before that answer or offline, use this PC's days.
     public sealed class ExerciseLog
     {
         // WHO: 150 minutes of moderate activity a week. A day of 10 active minutes keeps the streak.
@@ -27,6 +27,16 @@ namespace Muhanok.Domain
         // Keep about two months of days per owner.
         public const int KeepDays = 62;
         private readonly List<ExerciseDay> days = new List<ExerciseDay>();
+        // Member id -> (KST week key, moderate seconds) from the last /stats, plus the runs recorded on this PC since.
+        private readonly Dictionary<string, (string week, double seconds)> server = new Dictionary<string, (string, double)>();
+        static string WeekKey(DateTime utcNow) => DayKey(WeekStart(Kst(utcNow)));
+        // The server's sum for this member's current week; negative, NaN or guest ("") values are ignored.
+        public void SyncWeek(string owner, DateTime utcNow, double moderateSeconds)
+        {
+            if (string.IsNullOrEmpty(owner) || double.IsNaN(moderateSeconds) || double.IsInfinity(moderateSeconds) || moderateSeconds < 0) return;
+            server[owner] = (WeekKey(utcNow), moderateSeconds);
+        }
+        public bool HasServerWeek(string owner, DateTime utcNow) => !string.IsNullOrEmpty(owner) && server.TryGetValue(owner, out var w) && w.week == WeekKey(utcNow);
         public IReadOnlyList<ExerciseDay> Days => days;
         public static string DayKey(DateTime kstDate) => kstDate.ToString("yyyyMMdd");
         // KST calendar date of a UTC time.
@@ -50,6 +60,8 @@ namespace Muhanok.Domain
             var today = Kst(utcNow); var day = Get(owner, DayKey(today));
             bool before = day.Active / 60 >= StreakDayMinutes;
             day.Active += Math.Max(0, active); day.Moderate += Math.Max(0, moderate);
+            // Until the next /stats replaces it, the server figure includes this run too.
+            if (HasServerWeek(owner, utcNow)) server[owner] = (server[owner].week, server[owner].seconds + Math.Max(0, moderate));
             if (kinds != null) for (int i = 0; i < 4 && i < kinds.Length; i++) day.Kinds[i] += Math.Max(0, kinds[i]);
             Trim(owner, today);
             if (before || day.Active / 60 < StreakDayMinutes || day.StreakPaid || Streak(owner, utcNow) < 2) return 0;
@@ -62,9 +74,10 @@ namespace Muhanok.Domain
         }
         // Monday of the KST week holding the date.
         public static DateTime WeekStart(DateTime kstDate) => kstDate.AddDays(-(((int)kstDate.DayOfWeek + 6) % 7));
-        // Moderate minutes from Monday to today.
+        // Moderate minutes from Monday to today: the server's sum for a member when known, otherwise this PC's days.
         public double WeekModerateMinutes(string owner, DateTime utcNow)
         {
+            if (HasServerWeek(owner, utcNow)) return server[owner].seconds / 60;
             var today = Kst(utcNow); double sum = 0;
             for (var d = WeekStart(today); d <= today; d = d.AddDays(1)) { var day = Find(owner, DayKey(d)); if (day != null) sum += day.Moderate; }
             return sum / 60;

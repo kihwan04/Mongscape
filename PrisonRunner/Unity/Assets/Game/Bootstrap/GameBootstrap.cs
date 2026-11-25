@@ -270,6 +270,7 @@ namespace Muhanok.Bootstrap
             if(Session.Flow.State!=GameFlowState.TitleIdle||hud.Loading||!Session.Workout.SetWeight(weight)) return;
             menuCamera=false;
             playerRun=false; cadenceRun=false; race.Clear(); raceTicket++; Session.Workout.Met=PlayStyleInfo.Met(player.Style);Session.Workout.StyleScale=IntensityMet.Scale(player.Style);
+            Session.Workout.CadenceCounts=true;
             StartCoroutine(PrepareRun(723));
         }
         // Start from the setup screen: the run is recorded on the leaderboard. Outside developer mode
@@ -288,6 +289,8 @@ namespace Muhanok.Bootstrap
             Session.Workout.Met=PlayStyleInfo.Met(profile.Style);Session.Workout.StyleScale=IntensityMet.Scale(profile.Style);
             Session.Workout.SetGoal(profile.CalorieGoal);
             cadenceRun = PlayStyleInfo.UsesCamera(profile.Style) && userSettings.CadenceSpeed;
+            // Cadence off: stepping in place earns no calories, only jumps, crouches, knee raises and lane changes do.
+            Session.Workout.CadenceCounts = userSettings.CadenceSpeed;
             LoadRace(profile.Style);
             menuCamera=false; Pose.SetStyle(profile.Style);
             // Today's challenge: everyone runs the map of the KST date.
@@ -303,7 +306,7 @@ namespace Muhanok.Bootstrap
             if(!PlayableStyle(player.Style)) player.Style=PlayStyle.Keyboard;
             Session.Workout.SetWeight(""); Session.Workout.Met=PlayStyleInfo.Met(player.Style);Session.Workout.StyleScale=IntensityMet.Scale(player.Style);
             menuCamera=false; Pose.SetStyle(player.Style);
-            cadenceRun=PlayStyleInfo.UsesCamera(player.Style)&&userSettings.CadenceSpeed; race.Clear(); raceTicket++;
+            cadenceRun=PlayStyleInfo.UsesCamera(player.Style)&&userSettings.CadenceSpeed; race.Clear(); raceTicket++; Session.Workout.CadenceCounts=userSettings.CadenceSpeed;
             Session.IsTutorial=true; Tutorial.Begin(player.Style,Session.Config.ExtendedRoutes,userSettings.CadenceSpeed,tutorialShort); tutorialShort=false;
             StartCoroutine(PrepareRun(TutorialCourse.Seed));
         }
@@ -602,21 +605,22 @@ namespace Muhanok.Bootstrap
             var mode=player.Style;
             lastEntry=new RankingEntry{Name=name,Score=Session.Score.Score,Distance=Session.Score.Distance,Coins=Session.Score.Coins,
                 Style=PlayStyleInfo.Label(mode),Mode=(int)mode,Kcal=PlayStyleInfo.UsesCamera(mode)?Session.Workout.EstimatedKcal:0,
-                CadenceSpeed=PlayStyleInfo.UsesCamera(mode)?(cadenceRun?1:0):-1,Challenge=challengeRun?DailyChallenge.Day(System.DateTime.UtcNow):"",
+                Challenge=challengeRun?DailyChallenge.Day(System.DateTime.UtcNow):"",
                 Ticks=now.Ticks,AccountId=Account.IsMember?Account.Id:"",ScoreVersion=RunScore.Version};
             lastStats=null; lastStatsFailed=false;
             // Personal best per play style: a member's from /stats read before this save; an exhibition run's from this PC by its name; none for guests.
             int previousBest=Account.IsMember?MemberBest(mode):developer?Store.Board.BestScore(lastEntry.Style,name):-1;
             lastNewBest=previousBest>=0&&lastEntry.Score>previousBest; lastBestScore=previousBest>0?previousBest:-1;
             lastRank=Store.Record(lastEntry,Session.Workout.EstimatedKcal);
-            // Weekly goal and streak (this PC): camera runs only. Members get the streak coins with this run.
+            // Weekly goal and streak: camera runs only. The streak is this PC's; a member's weekly minutes also go to the
+            // server with the run (moderate_seconds). Members get the streak coins with this run.
             lastStreakCoins=PlayStyleInfo.UsesCamera(mode)?Store.RecordExercise(ExerciseOwner,System.DateTime.UtcNow,Session.Workout.ActiveSeconds,Session.Workout.ModerateSeconds,kindSeconds):0;
             if(!Account.IsMember||developer)lastStreakCoins=0;
             lastTodayRank=Store.Board.RankOf(lastEntry,true,mode);
             if(!Account.IsMember) return;
             // The result screen shows the member's totals once the server has this run.
             string id=Account.Id;
-            var record=AccountRun.Create(Session,mode,developer?0:Session.Score.Coins+lastStreakCoins,lastEntry.CadenceSpeed);
+            var record=AccountRun.Create(Session,mode,developer?0:Session.Score.Coins+lastStreakCoins);
             if(challengeRun)record.mode=DailyChallenge.Mode(mode);
             runs.Save(record,saved=>
             {
@@ -705,7 +709,12 @@ namespace Muhanok.Bootstrap
             string id=Account.Id;
             gateway.Stats(Account.Token,reply=>
             {
-                if(reply!=null&&reply.ok&&Account.IsMember&&Account.Id==id){memberStats=reply;memberStatsId=id;}
+                if(reply!=null&&reply.ok&&Account.IsMember&&Account.Id==id)
+                {
+                    memberStats=reply;memberStatsId=id;
+                    // The weekly goal bar follows the server's sum over every PC of the member.
+                    Store.Exercise.SyncWeek(id,System.DateTime.UtcNow,reply.week_moderate_seconds);
+                }
                 done?.Invoke(reply);
             });
         }

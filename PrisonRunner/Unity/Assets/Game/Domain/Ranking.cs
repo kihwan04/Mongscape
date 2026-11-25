@@ -43,8 +43,6 @@ namespace Muhanok.Domain
         public int Mode = -1;
         // Calories of the run (0 for keyboard play).
         public double Kcal;
-        // "발구름으로 속도 조절" of a camera run: 1 on, 0 off, -1 unknown (keyboard, older records). Distance depends on it.
-        public int CadenceSpeed = -1;
         // Today's challenge (KST day "yyyyMMdd") the run belonged to; empty for ordinary runs. Challenge runs rank only on the challenge board.
         public string Challenge = "";
         public bool IsChallenge => !string.IsNullOrEmpty(Challenge);
