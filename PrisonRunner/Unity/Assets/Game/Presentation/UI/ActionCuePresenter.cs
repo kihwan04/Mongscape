@@ -45,7 +45,7 @@ namespace Muhanok.Presentation
             if (d > Mathf.Max(9f, session.TargetSpeed * 1.35f) || d >= nearest) return;
             nearest = d; cue = StairCue(style);
         }
-        public static string StairCue(PlayStyle style) => style == PlayStyle.Keyboard ? "W 연타!" : style == PlayStyle.UpperBody ? "팔 번갈아!" : "걷듯이 무릎!";
+        public static string StairCue(PlayStyle style) => style == PlayStyle.Keyboard ? "W 연타!" : style == PlayStyle.UpperBody ? "팔 당겨 내리기!" : "걷듯이 무릎!";
         public const string JumpCue = "↑  점프!", CrouchCue = "↓  숙이기!", LaneCue = "←  옆으로 피하기  →";
         public enum CueAction { Lane, Jump, Crouch }
         public static CueAction ActionOf(ObstacleController hazard) =>
