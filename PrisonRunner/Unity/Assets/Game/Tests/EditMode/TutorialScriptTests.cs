@@ -8,13 +8,33 @@ namespace Muhanok.Tests
         [Test]
         public void StepsFollowThePlayStyle()
         {
-            CollectionAssert.AreEqual(new[] { TutorialStep.Calibrate, TutorialStep.Lane, TutorialStep.Jump, TutorialStep.Crouch, TutorialStep.HighKnee, TutorialStep.Rail, TutorialStep.Fork, TutorialStep.Done },
-                new TutorialScript(PlayStyle.FullBody).Steps);
+            CollectionAssert.AreEqual(new[] { TutorialStep.Camera, TutorialStep.Calibrate, TutorialStep.Cadence, TutorialStep.Police, TutorialStep.Lane, TutorialStep.Jump, TutorialStep.Crouch,
+                TutorialStep.HighKnee, TutorialStep.Banana, TutorialStep.Rail, TutorialStep.Fork, TutorialStep.Done }, new TutorialScript(PlayStyle.FullBody).Steps);
             CollectionAssert.AreEqual(new TutorialScript(PlayStyle.FullBody).Steps, new TutorialScript(PlayStyle.UpperBody).Steps);
-            CollectionAssert.AreEqual(new[] { TutorialStep.Lane, TutorialStep.Jump, TutorialStep.Crouch, TutorialStep.HighKnee, TutorialStep.Rail, TutorialStep.Fork, TutorialStep.Done },
-                new TutorialScript(PlayStyle.Keyboard).Steps, "Keyboard play needs no calibration");
+            CollectionAssert.AreEqual(new[] { TutorialStep.Lane, TutorialStep.Jump, TutorialStep.Crouch, TutorialStep.HighKnee, TutorialStep.Banana, TutorialStep.Rail, TutorialStep.Fork, TutorialStep.Done },
+                new TutorialScript(PlayStyle.Keyboard).Steps, "Keyboard play skips the camera check, calibration, cadence and police");
             CollectionAssert.DoesNotContain(new TutorialScript(PlayStyle.Keyboard, false).Steps, TutorialStep.Fork, "A route without forks has no lean lesson");
             CollectionAssert.Contains(new TutorialScript(PlayStyle.Keyboard, false).Steps, TutorialStep.Rail, "Every lap layout rides the cart, so the broken rail stays");
+            var off = new TutorialScript(PlayStyle.FullBody, true, false);
+            CollectionAssert.Contains(off.Steps, TutorialStep.Cadence, "Cadence off still shows that stepping turns into calories");
+            CollectionAssert.DoesNotContain(off.Steps, TutorialStep.Police, "Cadence off: no police lesson");
+            CollectionAssert.AreEqual(new[] { TutorialStep.Camera, TutorialStep.Calibrate, TutorialStep.Cadence, TutorialStep.Police, TutorialStep.Banana, TutorialStep.Rail, TutorialStep.Fork, TutorialStep.Done },
+                new TutorialScript(PlayStyle.FullBody, true, true, true).Steps, "The short version for members: only what changed (0~3, 8, 9)");
+        }
+
+        [Test]
+        public void TheDemoUsesOnlyClipsThatExistAndFollowAlongAfterThreeMisses()
+        {
+            Assert.AreEqual("AN_Monkey_Jump", TutorialScript.DemoClip(TutorialStep.Jump, PlayStyle.FullBody));
+            Assert.AreEqual("AN_Monkey_HighKnee", TutorialScript.DemoClip(TutorialStep.HighKnee, PlayStyle.FullBody));
+            Assert.IsNull(TutorialScript.DemoClip(TutorialStep.Jump, PlayStyle.UpperBody), "No upper-body clips yet");
+            Assert.IsNull(TutorialScript.DemoClip(TutorialStep.Camera, PlayStyle.FullBody));
+            var script = new TutorialScript(PlayStyle.FullBody);
+            script.Fail(); script.Fail(); Assert.IsFalse(script.FollowAlong); script.Fail(); Assert.IsTrue(script.FollowAlong);
+            script.Pass(); Assert.IsFalse(script.FollowAlong, "A new step starts small again");
+            Assert.IsTrue(TutorialScript.ShouldOfferUpdate(true, true, false, false)); Assert.IsFalse(TutorialScript.ShouldOfferUpdate(true, true, true, false));
+            Assert.IsFalse(TutorialScript.ShouldOfferUpdate(false, false, false, false), "Guests get the full tutorial instead");
+            foreach (var step in new TutorialScript(PlayStyle.FullBody).Steps) { Assert.IsNotEmpty(TutorialScript.Title(step)); Assert.IsNotEmpty(TutorialScript.Instruction(step, PlayStyle.FullBody)); }
         }
 
         [Test]
@@ -46,7 +66,7 @@ namespace Muhanok.Tests
         [Test]
         public void FailureRetriesTheSameStepAndCountsRetries()
         {
-            var script = new TutorialScript(PlayStyle.FullBody); script.Pass(); script.Pass();
+            var script = new TutorialScript(PlayStyle.Keyboard); script.Pass();
             Assert.AreEqual(TutorialStep.Jump, script.Current);
             script.Fail(); script.Fail();
             Assert.AreEqual(TutorialStep.Jump, script.Current); Assert.AreEqual(2, script.Retries); Assert.AreEqual(2, script.TotalRetries);
@@ -63,6 +83,7 @@ namespace Muhanok.Tests
             Assert.IsTrue(run.Hit(true)); Assert.IsTrue(run.Fail(CaptureReason.BrokenRail));
             Assert.AreEqual(GameFlowState.Running, run.Flow.State); Assert.AreEqual(2, run.TutorialMisses); Assert.AreEqual(0, run.Chase.Pressure);
             run.SpeedScale = 0; float z = run.Runner.Z; run.Tick(.5f); Assert.AreEqual(z, run.Runner.Z, "A held tutorial runner does not move");
+            Assert.IsTrue(run.Slip(SlipSource.Banana)); Assert.AreEqual(3, run.TutorialMisses, "A banana in the tutorial is a counted miss"); Assert.AreEqual(0, run.SlipStrikes, "never a strike");
             run.IsTutorial = false; Assert.AreEqual(0, run.TutorialMisses);
             Assert.IsTrue(run.Hit(true)); Assert.AreEqual(GameFlowState.Caught, run.Flow.State);
         }
@@ -83,7 +104,9 @@ namespace Muhanok.Tests
             Assert.AreEqual(TutorialHazard.LaneBlock, TutorialCourse.HazardAt(TutorialCourse.LaneChunk));
             Assert.AreEqual(TutorialHazard.StairChunk, TutorialCourse.HazardAt(TutorialCourse.StairChunk)); Assert.AreEqual(RouteSurface.MineStair, plan.TypeAt(TutorialCourse.StairChunk));
             for (int i = 0; i < TutorialCourse.ForkLapStart; i++) Assert.IsTrue(RouteSurface.IsMine(plan.TypeAt(i)), "The warm-up lap stays in the mine (no prison or zoo)");
-            Assert.AreEqual(TutorialCourse.ForkLapStart - 1, TutorialCourse.StairChunk, "The mine stair is the last warm-up chunk, right before the cart lap");
+            Assert.AreEqual(TutorialCourse.ForkLapStart - 1, TutorialCourse.BananaChunk, "The banana lesson closes the warm-up, right before the cart lap");
+            Assert.AreEqual(TutorialHazard.Bananas, TutorialCourse.HazardAt(TutorialCourse.BananaChunk));
+            Assert.Less(TutorialCourse.PaceHoldZ, TutorialCourse.LaneChunk * RouteSurface.Length, "The pace lessons hold before the side-step lesson");
             Assert.Greater(TutorialCourse.RestartZ(TutorialStep.HighKnee), TutorialCourse.RestartZ(TutorialStep.Crouch) + 20f, "A stair retry starts past the slide lesson");
             Assert.Less(TutorialCourse.RestartZ(TutorialStep.HighKnee), TutorialCourse.StairChunk * RouteSurface.Length, "and in front of the stair");
             Assert.AreEqual(TutorialHazard.None, TutorialCourse.HazardAt(0));

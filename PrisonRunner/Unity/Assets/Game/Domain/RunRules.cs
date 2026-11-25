@@ -384,6 +384,8 @@ namespace Muhanok.Domain
         {
             if(Flow.State!=GameFlowState.Running||Paused||Runner.Riding||Invincible&&!tutorial)return false;
             DodgeStreak=0;
+            // The tutorial's banana lesson: stepping on a peel is a counted miss that restarts the step, never a strike or pursuit.
+            if(tutorial&&source==SlipSource.Banana){Runner.Slip();lastHit=clock;TutorialMisses++;return true;}
             // The shield also absorbs one slip: no slowdown, no banana count, so no pursuit starts.
             if(Items.ConsumeShield()){ShieldSaves++;lastHit=clock;return false;}
             Runner.Slip();
