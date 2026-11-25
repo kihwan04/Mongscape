@@ -172,6 +172,7 @@ namespace Muhanok.Bootstrap
             Tutorial=gameObject.AddComponent<TutorialDirector>();
             Tutorial.Framed=()=>Pose.Framing==FramingIssue.Ok;
             Tutorial.NoCamera=()=>Pose.Status==PoseStatus.Off||Pose.Status==PoseStatus.NoCamera||Pose.Status==PoseStatus.NoModel;
+            Tutorial.MyPose=()=>Pose.UsesCamera&&Pose.Tracking?Pose.LastFrame:null; Tutorial.MyBaseline=()=>Pose.Baseline; Tutorial.Tuning=()=>Pose.Tuning;
             Tutorial.StepsPerMinute=()=>Pose.StepsPerMinute; Tutorial.PaceScale=()=>pace.Scale; Tutorial.PacePressure=()=>pace.Pressure;
             Tutorial.RunCadence=Settings!=null?Settings.Motion.RunCadence:100f;
             Tutorial.Demo=gameObject.AddComponent<TutorialDemo>(); Tutorial.Demo.Configure(MonkeyPrefab);

@@ -90,6 +90,9 @@ namespace Muhanok.Infrastructure
         public readonly PoseFrame LastFrame = new PoseFrame();
         public PlayStyle Style { get; private set; } = PlayStyle.Keyboard;
         public MotionReading Reading => classifier.Reading;
+        // The calibrated pose and the thresholds in use (the tutorial's joint comparison draws the same lines).
+        public PoseBaseline Baseline => classifier.Baseline(LastFrame.Aspect);
+        public MotionTuning Tuning => tuning;
         public float CalibrationProgress => classifier.CalibrationProgress;
         public bool KneesMissing => UsesCamera && classifier.KneesMissing && classifier.Status == PoseStatus.Calibrating;
         public float StepsPerMinute => classifier.StepsPerMinute;
