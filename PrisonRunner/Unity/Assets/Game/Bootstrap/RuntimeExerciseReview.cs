@@ -50,7 +50,6 @@ namespace Muhanok.Bootstrap
             yield return Stage3();
             yield return Stage5();
             yield return Stage6();
-            yield return FollowupCadenceOff();
             if (failure != null) { Fail(failure); yield break; }
             Debug.Log("MONGSCAPE_EXERCISE_REVIEW_PASS: " + destination);
             UnityEngine.Application.Quit(0);
@@ -123,12 +122,11 @@ namespace Muhanok.Bootstrap
             wait = Time.realtimeSinceStartup;
             while (game.Session.Flow.State != GameFlowState.Result) { if (Time.realtimeSinceStartup - wait > 30) { Fail("result did not appear"); yield break; } yield return null; }
             game.ExitToMenu(); yield return new WaitForSecondsRealtime(.5f);
-            // Runs with the cadence option on and off share one board, without an on/off tag.
-            game.Store.Record(new RankingEntry { Name = "발구름끄고", Score = 640, Distance = 600, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", Ticks = DateTime.Now.Ticks }, 3);
-            game.Store.Record(new RankingEntry { Name = "발구름켜고", Score = 720, Distance = 650, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", Ticks = DateTime.Now.Ticks + 1 }, 3);
-            for (int i = 0; i < 4; i++) game.Store.Record(new RankingEntry { Name = "게스트" + i, Score = 500 - i * 40, Distance = 400, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", Ticks = DateTime.Now.Ticks + 2 + i }, 2);
+            game.Store.Record(new RankingEntry { Name = "발구름꺼짐", Score = 640, Distance = 600, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", CadenceSpeed = 0, Ticks = DateTime.Now.Ticks }, 3);
+            game.Store.Record(new RankingEntry { Name = "발구름켜짐", Score = 720, Distance = 650, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", CadenceSpeed = 1, Ticks = DateTime.Now.Ticks + 1 }, 3);
+            for (int i = 0; i < 4; i++) game.Store.Record(new RankingEntry { Name = "게스트" + i, Score = 500 - i * 40, Distance = 400, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", CadenceSpeed = i % 2, Ticks = DateTime.Now.Ticks + 2 + i }, 2);
             game.Hud.ShowPage(MenuPage.Ranking); game.Hud.Ranking.Select(false, PlayStyle.FullBody, false); yield return new WaitForSecondsRealtime(1f);
-            yield return Shot("F1_03_Ranking_Merged");
+            yield return Shot("S3_07_Ranking_CadenceTags");
             game.OpenMainMenu();
         }
         // Stage 5: fork preview and signs, the course banner, a banana with its danger marker, a challenge result with the
@@ -170,35 +168,6 @@ namespace Muhanok.Bootstrap
             game.Hud.ShowPage(MenuPage.Profile); yield return new WaitForSecondsRealtime(1f);
             yield return Shot("S5_06_Profile_WeekGoal");
             game.OpenMainMenu();
-        }
-        // Follow-up 1: "발구름으로 속도 조절" off. Stepping earns nothing; the report shows the motion-moment time. The goal bar
-        // shows the server's weekly minutes (every PC of the member).
-        private IEnumerator FollowupCadenceOff()
-        {
-            game.ExitToMenu(); yield return new WaitForSecondsRealtime(.5f);
-            var hud = (IHudData)game; hud.SetCadenceSpeed(false);
-            game.OpenStartSetup(); yield return new WaitForSecondsRealtime(.6f);
-            yield return Shot("F1_01_Setup_CadenceOff");
-            game.Hud.CloseSetup();
-            game.Session.Invincible = true;
-            game.StartPlayerRun(new PlayerProfile { Name = "리뷰", Weight = "65", Style = PlayStyle.FullBody, CalorieGoal = 50 });
-            float wait = Time.realtimeSinceStartup;
-            while (game.IsLoading || game.IsRevealing || game.Session.Flow.State != GameFlowState.Running) { if (Time.realtimeSinceStartup - wait > 60) { Fail("run did not start"); yield break; } yield return null; }
-            yield return new WaitForSecondsRealtime(2f);
-            var w = game.Session.Workout;
-            w.TickIntensity(300, true, true, CadenceStage.Run, false, false, 0); // stepping: counts nothing with the option off
-            w.TickIntensity(140, true, true, CadenceStage.Run, true, false, 1);
-            w.TickIntensity(45, true, true, CadenceStage.Standing, true, true, 2);
-            w.CountMove(MoveKind.Step, 640); w.CountMove(MoveKind.Jump, 31); w.CountMove(MoveKind.Crouch, 22); w.CountMove(MoveKind.SideStep, 38);
-            if (w.CadenceCounts || w.StageSeconds(CadenceStage.Run) > 0) { Fail("cadence-off run counted stepping"); yield break; }
-            game.Session.Score.Advance(900);
-            game.Session.Invincible = false; game.Session.ForceCatch();
-            wait = Time.realtimeSinceStartup;
-            while (game.Session.Flow.State != GameFlowState.Result) { if (Time.realtimeSinceStartup - wait > 30) { Fail("result did not appear"); yield break; } yield return null; }
-            yield return new WaitForSecondsRealtime(1.5f);
-            yield return Shot("F1_02_Result_CadenceOff_ServerWeekGoal");
-            hud.SetCadenceSpeed(true);
-            game.ExitToMenu(); yield return new WaitForSecondsRealtime(.5f);
         }
         // Stage 6: the new tutorial (camera check, pace gauge with the demo window, police, a lesson with the demo, the
         // follow-along view after three misses, the banana lesson). The camera inputs are synthetic.
@@ -281,8 +250,6 @@ namespace Muhanok.Bootstrap
             {
                 ok = true, today_kcal = 38.2, total_kcal = 412, best_score = new[] { savedRuns > 0 ? 3460 : 0, 0, 0 }, previous_best = new[] { 4210, 1880, 0 },
                 week_kcal = 96.4, week_seconds = 2460, last_week_kcal = 74.1, last_week_seconds = 1980,
-                // 62 minutes from this member's other PCs and runs: the goal bar shows this, not the PC's own log.
-                week_moderate_seconds = 3720 + savedRuns * 300, last_week_moderate_seconds = 5400,
             });
             public void Logout(string token, Action<AccountReply> done) => done?.Invoke(new AccountReply { ok = true });
             public void Delete(string token, Action<AccountReply> done) => done?.Invoke(new AccountReply { ok = true });

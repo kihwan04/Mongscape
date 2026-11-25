@@ -37,7 +37,7 @@ CREATE TABLE runs (id TEXT PRIMARY KEY, profile_id TEXT NOT NULL REFERENCES prof
 CREATE INDEX runs_profile_created ON runs (profile_id, created_at DESC);
 CREATE INDEX sessions_expiry ON sessions (expires_at);
 CREATE INDEX sessions_profile ON sessions (profile_id);'''
-def run(**fields):return dict(dict(id=str(uuid.uuid4()),distance=100,score=100,kcal=1,goal=50,activities=[1,0,0,0,0],mode=0,coins=0,play_seconds=60,moderate_seconds=30,score_version=3),**fields)
+def run(**fields):return dict(dict(id=str(uuid.uuid4()),distance=100,score=100,kcal=1,goal=50,activities=[1,0,0,0,0],mode=0,coins=0,play_seconds=60,score_version=3),**fields)
 class IdentityTests(PostgresCase):
  @classmethod
  def setUpClass(cls):
@@ -59,9 +59,9 @@ class IdentityTests(PostgresCase):
   with self.store.db:self.store.db.execute('INSERT INTO profiles (id,name,name_key,coins,created_at,consent_version) VALUES(?,?,?,?,?,?)',
    (pid,name,''.join(name.split()).casefold(),coins,created,'test'))
   return pid,self.store.issue(pid)
- def record(self,pid,score,mode=0,version=3,created=None,kcal=1.0,seconds=0.0,moderate=0.0):
-  with self.store.db:self.store.db.execute('INSERT INTO runs (id,profile_id,distance,score,kcal,goal,activities,created_at,mode,score_version,play_seconds,moderate_seconds) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
-   (str(uuid.uuid4()),pid,score/2,score,kcal,50,'[0,0,0,0,0]',int(time.time()) if created is None else created,mode,version,seconds,moderate))
+ def record(self,pid,score,mode=0,version=3,created=None,kcal=1.0,seconds=0.0):
+  with self.store.db:self.store.db.execute('INSERT INTO runs (id,profile_id,distance,score,kcal,goal,activities,created_at,mode,score_version,play_seconds) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+   (str(uuid.uuid4()),pid,score/2,score,kcal,50,'[0,0,0,0,0]',int(time.time()) if created is None else created,mode,version,seconds))
  def status(self,path,data,token=''):
   with self.assertRaises(ApiError) as caught:self.app.handle(path,data,token)
   return caught.exception.status
@@ -146,10 +146,10 @@ class IdentityTests(PostgresCase):
   for fields in (dict(mode=3),dict(mode=-1),dict(mode='0'),dict(mode=None),dict(mode=True),dict(coins=5001),dict(coins=1.5),dict(coins=-1),
                  dict(score_version=4),dict(score_version=0),dict(play_seconds=86401),dict(play_seconds=-1),dict(id='x'),dict(goal=0),dict(activities=[1])):
    self.assertEqual(self.status('/runs',run(**fields),token),400,fields)
-  legacy=run();[legacy.pop(k) for k in ('mode','coins','play_seconds','moderate_seconds','score_version')]
+  legacy=run();[legacy.pop(k) for k in ('mode','coins','play_seconds','score_version')]
   self.assertEqual(self.app.handle('/runs',legacy,token)['coins'],20) # clients before accounts still save, unranked
-  rows=self.store.db.execute('SELECT mode,coins,score_version,play_seconds,moderate_seconds FROM runs').fetchall()
-  self.assertEqual(set(map(tuple,rows)),{(0,12,3,60,30),(2,5,1,0,30),(None,0,1,0,0)})
+  rows=self.store.db.execute('SELECT mode,coins,score_version,play_seconds FROM runs').fetchall()
+  self.assertEqual(set(map(tuple,rows)),{(0,12,3,60),(2,5,1,0),(None,0,1,0)})
  def test_shop_buy(self):
   pid,token=self.member('Shopper',coins=100)
   self.assertEqual(self.status('/shop/buy',dict(item=0)),401)
@@ -187,8 +187,7 @@ class IdentityTests(PostgresCase):
  def test_stats(self):
   pid,token=self.member('Stats')
   self.assertEqual(self.status('/stats',{}),401)
-  empty=dict(ok=True,today_kcal=0.0,total_kcal=0.0,best_score=[0,0,0],previous_best=[0,0,0],week_kcal=0.0,week_seconds=0.0,last_week_kcal=0.0,last_week_seconds=0.0,
-   week_moderate_seconds=0.0,last_week_moderate_seconds=0.0)
+  empty=dict(ok=True,today_kcal=0.0,total_kcal=0.0,best_score=[0,0,0],previous_best=[0,0,0],week_kcal=0.0,week_seconds=0.0,last_week_kcal=0.0,last_week_seconds=0.0)
   self.assertEqual(self.app.handle('/stats',{},token),empty)
   self.record(pid,300,mode=0);self.record(pid,700,mode=0);self.record(pid,900,mode=0,version=1);self.record(pid,40,mode=2,kcal=0)
   self.record(pid,1500,mode=0,version=2);self.record(pid,800,mode=1,version=2) # the previous season's formula: kept, shown apart
@@ -217,14 +216,10 @@ class IdentityTests(PostgresCase):
   self.assertEqual(kst_week_start(utc(2026,11,22,15,0)),utc(2026,11,22,15,0)) # Monday 00:00 KST itself
   self.assertEqual(kst_week_start(utc(2026,11,22,14,59)),utc(2026,11,15,15,0)) # Sunday 23:59 KST -> the week before
   pid,token=self.member('Weekly');week=kst_week_start(time.time())
-  self.record(pid,10,created=week,kcal=5,seconds=300,moderate=240);self.record(pid,10,created=week-1,kcal=2,seconds=120,moderate=100)
-  self.record(pid,10,created=week-7*86400,kcal=1,seconds=60,moderate=30);self.record(pid,10,created=week-7*86400-1,kcal=50,seconds=600,moderate=600)
+  self.record(pid,10,created=week,kcal=5,seconds=300);self.record(pid,10,created=week-1,kcal=2,seconds=120)
+  self.record(pid,10,created=week-7*86400,kcal=1,seconds=60);self.record(pid,10,created=week-7*86400-1,kcal=50,seconds=600)
   stats=self.app.handle('/stats',{},token)
   self.assertEqual((stats['week_kcal'],stats['week_seconds'],stats['last_week_kcal'],stats['last_week_seconds']),(5.0,300.0,3.0,180.0))
-  self.assertEqual((stats['week_moderate_seconds'],stats['last_week_moderate_seconds']),(240.0,130.0)) # the weekly goal, every PC
-  self.app.handle('/runs',run(moderate_seconds=60.5),token)
-  self.assertEqual(self.app.handle('/stats',{},token)['week_moderate_seconds'],300.5)
-  for value in (86401,-1,'30',True,None):self.assertEqual(self.status('/runs',run(moderate_seconds=value),token),400,value)
  def test_no_face_and_malformed_images_rejected(self):
   _,image=self.cv.imencode('.jpg',self.np.zeros((480,640,3),self.np.uint8))
   blank=base64.b64encode(image).decode()
@@ -239,30 +234,14 @@ class IdentityTests(PostgresCase):
   try:decoded=self.cv.imdecode(huge,self.cv.IMREAD_COLOR)
   except self.cv.error:decoded=None
   self.assertIsNone(decoded) # refused from the header by OPENCV_IO_MAX_IMAGE_PIXELS, before allocating pixels
- def test_fresh_db_is_v3_and_newer_schema_refused(self):
-  self.assertEqual(self.store.version(),3);self.assertIn('moderate_seconds',self.store.columns('runs'));self.assertTrue({'profiles_name_key','runs_mode_score'}<=self.store.indexes())
+ def test_fresh_db_is_v2_and_newer_schema_refused(self):
+  self.assertEqual(self.store.version(),2);self.assertTrue({'profiles_name_key','runs_mode_score'}<=self.store.indexes())
   self.assertEqual(migrate_account.migrate(database_url=self.url),[])
   self.store.db.close();self.store=self.make_store() # a restart keeps the single version row
   self.assertEqual(self.store.db.execute('SELECT version FROM schema_version').fetchall(),[(SCHEMA_VERSION,)])
-  with self.store.db:self.store.db.execute('UPDATE schema_version SET version=4')
+  with self.store.db:self.store.db.execute('UPDATE schema_version SET version=3')
   self.store.db.close()
   with self.assertRaisesRegex(SchemaError,'newer'):self.store=self.make_store()
- def test_v2_db_gains_moderate_seconds_and_keeps_runs(self):
-  # The live DB before this change: schema v2, runs without moderate_seconds. Migration only adds the column.
-  pid,token=self.member('Before',coins=7);self.record(pid,500,kcal=4,seconds=120);self.record(pid,800,version=2)
-  with self.store.db:
-   self.store.db.execute('ALTER TABLE runs DROP COLUMN moderate_seconds');self.store.db.execute('UPDATE schema_version SET version=2')
-  before=self.store.db.execute('SELECT id,profile_id,distance,score,kcal,goal,activities,created_at,mode,coins,score_version,play_seconds FROM runs ORDER BY id').fetchall()
-  self.store.db.close()
-  with self.assertRaisesRegex(SchemaError,'v2'):self.store=self.make_store()
-  self.assertEqual(migrate_account.migrate(database_url=self.url),['add_run_columns','set_schema_version'])
-  self.assertEqual(migrate_account.migrate(database_url=self.url),[])
-  self.store=self.make_store();self.app=App(self.store,self.faces)
-  self.assertEqual(self.store.version(),3)
-  self.assertEqual(self.store.db.execute('SELECT id,profile_id,distance,score,kcal,goal,activities,created_at,mode,coins,score_version,play_seconds FROM runs ORDER BY id').fetchall(),before)
-  self.assertEqual({row[0] for row in self.store.db.execute('SELECT moderate_seconds FROM runs')},{0.0})
-  self.assertEqual(self.app.handle('/stats',{},token)['best_score'],[500,0,0]) # records and ranking kept
-  self.assertEqual(self.app.handle('/profile',{},token)['profile']['coins'],7)
  def test_v1_db_refused_until_migrated(self):
   features,_=self.faces.samples(dict(images=self.images))
   with self.store.db:
@@ -283,7 +262,7 @@ class IdentityTests(PostgresCase):
   self.assertEqual(migrate_account.migrate(database_url=self.url),[name for name,_ in migrate_account.STEPS])
   self.assertEqual(migrate_account.migrate(database_url=self.url),[])
   self.store=self.make_store();self.app=App(self.store,self.faces)
-  self.assertEqual(self.store.version(),3);self.assertNotIn('avatar',self.store.columns('profiles'))
+  self.assertEqual(self.store.version(),2);self.assertNotIn('avatar',self.store.columns('profiles'))
   names=dict(self.store.db.execute('SELECT id,name FROM profiles').fetchall())
   self.assertEqual(names,dict(legacy='Legacy exp',c='Kim',b='kim3',a='kim2',d='T win',e='Twin2',f='탐험가'))
   self.assertEqual(dict(self.store.db.execute('SELECT id,name_key FROM profiles').fetchall())['e'],'twin2')

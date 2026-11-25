@@ -9,7 +9,7 @@ import time
 import unicodedata
 
 BASE=Path(__file__).resolve().parent
-SCHEMA_VERSION=3 # 3: runs.moderate_seconds (weekly goal minutes)
+SCHEMA_VERSION=2
 NAME_MAX=10
 POSTGRES_REQUIRED='PostgreSQL settings are required: set IDENTITY_DATABASE_URL, or PGHOST/PGPORT/PGDATABASE/PGUSER with PGPASSWORD_FILE.'
 

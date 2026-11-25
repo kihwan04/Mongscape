@@ -89,16 +89,13 @@ namespace Muhanok.Presentation
             if (data != null && PlayStyleInfo.UsesCamera(style))
             {
                 if (skin.FlatButton(new Rect(640, 500, 210, 40), "자세 다시 맞추기 (R)", false)) data.Recalibrate();
-                // Cadence -> speed: on by default and remembered. Off keeps the base speed and stepping in place earns no calories
-                // (only jumps, crouches, knee raises and lane changes). Both share one ranking.
+                // Cadence -> speed: on by default and remembered. Off keeps the base speed; calories and score are counted the same.
                 bool on = data.CadenceSpeed;
                 if (skin.FlatButton(new Rect(860, 500, 230, 40), CadenceLabel(on), on)) data.SetCadenceSpeed(!on);
-                if (!on) { GUI.color = Palette.Cream; GUI.Label(new Rect(860, 580, 360, 28), CadenceOffHint, skin.Style(16, FontStyle.Normal)); GUI.color = Color.white; }
             }
         }
         public static string ChallengeLabel(bool on) => on ? "오늘의 도전 ✓" : "오늘의 도전";
         public static string CadenceLabel(bool on) => "발구름 속도 조절 " + (on ? "켜짐" : "꺼짐");
-        public const string CadenceOffHint = "꺼짐: 걸음은 칼로리에서 빠져요";
         public const string NoCameraGuide = "카메라가 연결되어 있지 않아 키보드로만 플레이할 수 있어요. 카메라를 연결하면 전신·상체를 고를 수 있어요.";
         private bool Choice(Rect rect, string text, bool selected, bool enabled = true)
         {
