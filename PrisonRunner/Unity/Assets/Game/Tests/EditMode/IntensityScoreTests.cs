@@ -131,13 +131,13 @@ namespace Muhanok.Tests
             Assert.AreEqual("120kcal · 30분", WorkoutReport.Week(stats)[0].Value);
             // A Sunday (KST) has the whole week: the daily averages compare like the totals.
             var sunday = new DateTime(2026, 11, 29, 3, 0, 0, DateTimeKind.Utc);
-            Assert.AreEqual("하루 평균 지난주보다 20% 더", WorkoutReport.WeekChange(stats, sunday));
-            Assert.AreEqual("하루 평균 지난주보다 50% 덜", WorkoutReport.WeekChange(new StatsReply { week_kcal = 50, last_week_kcal = 100 }, sunday));
+            Assert.AreEqual("하루 평균 20% 더", WorkoutReport.WeekChange(stats, sunday));
+            Assert.AreEqual("하루 평균 50% 덜", WorkoutReport.WeekChange(new StatsReply { week_kcal = 50, last_week_kcal = 100 }, sunday));
             Assert.AreEqual("지난주 기록 없음 · 이번 주가 시작이에요", WorkoutReport.WeekChange(new StatsReply { week_kcal = 5 }, sunday));
             // QA 2026-11-25 L1: on a Monday, 20 kcal against last week's 140 (20 a day) is the same pace, not "86% 덜".
             var monday = new DateTime(2026, 11, 23, 3, 0, 0, DateTimeKind.Utc);
-            Assert.AreEqual("하루 평균 지난주와 같아요", WorkoutReport.WeekChange(new StatsReply { week_kcal = 20, last_week_kcal = 140 }, monday));
-            Assert.AreEqual("하루 평균 지난주보다 50% 더", WorkoutReport.WeekChange(new StatsReply { week_kcal = 30, last_week_kcal = 140 }, monday));
+            Assert.AreEqual("하루 평균 같아요", WorkoutReport.WeekChange(new StatsReply { week_kcal = 20, last_week_kcal = 140 }, monday));
+            Assert.AreEqual("하루 평균 50% 더", WorkoutReport.WeekChange(new StatsReply { week_kcal = 30, last_week_kcal = 140 }, monday));
             Assert.IsEmpty(WorkoutReport.Week(null));
         }
     }

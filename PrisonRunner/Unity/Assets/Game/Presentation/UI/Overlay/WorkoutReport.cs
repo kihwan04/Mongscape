@@ -47,7 +47,7 @@ namespace Muhanok.Presentation
             rows.Add(new KeyValuePair<string, string>("지난주", Kcal(stats.last_week_kcal) + " · " + Minutes(stats.last_week_seconds)));
             return rows;
         }
-        // "하루 평균 지난주보다 12% 더", "… 5% 덜", "지난주 기록 없음" (by calories). This week is only part done, so it is
+        // "하루 평균 12% 더", "하루 평균 5% 덜", "지난주 기록 없음" (by calories; short enough for the 162 px column). This week is only part done, so it is
         // compared as a daily average over its days so far (Monday counts 1 day) with last week's over 7 (QA 2026-11-25 L1).
         public static string WeekChange(StatsReply stats) => WeekChange(stats, DateTime.UtcNow);
         public static string WeekChange(StatsReply stats, DateTime utcNow)
@@ -59,7 +59,7 @@ namespace Muhanok.Presentation
             double now = stats.week_kcal / days, before = stats.last_week_kcal / 7;
             double change = (now - before) / before * 100;
             int pct = (int)Math.Round(Math.Abs(change));
-            return pct == 0 ? "하루 평균 지난주와 같아요" : "하루 평균 지난주보다 " + pct.ToString(Num) + "% " + (change > 0 ? "더" : "덜");
+            return pct == 0 ? "하루 평균 같아요" : "하루 평균 " + pct.ToString(Num) + "% " + (change > 0 ? "더" : "덜");
         }
         // The weekly goal counts moderate exercise only (5 MET or more: running in place, or the moments of a jump, crouch,
         // knee raise or side step); walking in place and the upper body's arm swings are lighter (QA 2026-11-25 L2).
