@@ -13,7 +13,6 @@
 | 다음 개발 순서 | [개발 계획](DEVELOPMENT_PLAN.md) |
 | 로그인·프로필·상점·회원/PC 랭킹 | [게임 UI](GAME_FLOW_UI.md) |
 | 전신·상체·키보드 조작과 보정 | [몸동작 인식](BODY_TRACKING.md) |
-| 동작 녹화·라벨·인식 점수표 | [관절 녹화와 인식 점수표](POSE_RECORDINGS.md) |
 | 여러 PC용 Docker·HTTPS 서버 | [서버 배포 안내](../Services/Identity/README_DOCKER.md) |
 | 설정 화면을 수정 | [설정 UI](SETTINGS_UI.md) |
 | 화질·성능 측정 | [성능 안내](PERFORMANCE.md) |

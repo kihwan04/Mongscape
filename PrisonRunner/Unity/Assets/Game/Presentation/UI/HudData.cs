@@ -4,9 +4,6 @@ using UnityEngine;
 
 namespace Muhanok.Presentation
 {
-    // The visible calibration before a camera run starts its countdown (and before the tutorial's first lesson).
-    public enum RunCalibrationState { None, Measuring, Done }
-
     // What the screens need from the running game; implemented by the bootstrap.
     public interface IHudData
     {
@@ -30,18 +27,7 @@ namespace Muhanok.Presentation
         float CalibrationProgress { get; }
         // Full body calibration waits for both knees to be in view.
         bool PoseKneesMissing { get; }
-        // Calibration restarted just now because the player moved ("움직이지 마세요").
-        bool PoseCalibrationMoving { get; }
-        // How the player stands in the camera picture; Ok when everything from the head to the ankles shows.
-        FramingIssue PoseFraming { get; }
         float StepsPerMinute { get; }
-        CadenceStage Cadence { get; }
-        // The run is held on the calibration screen (Measuring), or shows "보정 완료" for a second (Done).
-        RunCalibrationState RunCalibration { get; }
-        // A tutorial run: the calibration screen explains itself once.
-        bool TutorialRun { get; }
-        // Developer mode joint recording (F6) is on.
-        bool PoseRecording { get; }
         bool BodyActive { get; }
         PlayerWallet Wallet { get; }
         Leaderboard Board { get; }
@@ -137,15 +123,10 @@ namespace Muhanok.Presentation
             if ((status == PoseStatus.NoCamera || status == PoseStatus.NoModel) && !string.IsNullOrEmpty(data.PoseMessage))
                 GUI.Label(new Rect(area.x + 16, area.y + 16, area.width - 32, area.height - 70), data.PoseMessage, skin.Style(16, FontStyle.Normal));
             string text = status == PoseStatus.Calibrating && data.PoseKneesMissing ? KneesHint : PoseStatusText.Korean(status);
-            if (status == PoseStatus.Tracking && data.StepsPerMinute > 0) text += " (분당 " + Mathf.RoundToInt(data.StepsPerMinute) + "걸음 · " + Domain.Cadence.Korean(data.Cadence) + ")";
-            // Camera setup: a body cut off at the picture's edge (or standing too far or to one side) gets a hint instead.
-            string hint = FramingHint(data, status);
-            if (hint != null) text = hint;
+            if (status == PoseStatus.Tracking && data.StepsPerMinute > 0) text += " (분당 " + Mathf.RoundToInt(data.StepsPerMinute) + "걸음)";
             var label = new Rect(area.x, area.yMax - 34, area.width, 30);
             skin.Card(label, new Color(0, 0, 0, .6f));
-            if (hint != null) GUI.color = Palette.Warn;
             GUI.Label(label, text, skin.Centered(18, FontStyle.Bold));
-            GUI.color = Color.white;
             if (status == PoseStatus.Tracking && data.Motion != null) DrawMotion(skin, area, data);
             // Diagnostics for tuning: tracking mode, shoulder confidence, detector score, inference rate.
             if (!string.IsNullOrEmpty(data.PoseDiagnostics) && area.width > 300)
@@ -159,14 +140,6 @@ namespace Muhanok.Presentation
                 GUI.color = Color.white;
             }
             return view;
-        }
-        // The camera setup hint for this frame, or null (also null without a body style, a camera or a model).
-        public static string FramingHint(IHudData data, PoseStatus status)
-        {
-            if (data?.Player == null || (status != PoseStatus.Tracking && status != PoseStatus.Calibrating && status != PoseStatus.Searching)) return null;
-            var issue = data.PoseFraming;
-            if (status == PoseStatus.Calibrating && data.PoseKneesMissing) return KneesHint;
-            return issue == FramingIssue.Ok ? null : CameraFraming.Hint(issue, data.Player.Style);
         }
         private static void NoCamera(HudSkin skin, Rect area)
         {
