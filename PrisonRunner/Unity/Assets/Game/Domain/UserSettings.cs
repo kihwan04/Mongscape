@@ -56,6 +56,8 @@ namespace Muhanok.Domain
         public bool CadenceSpeed = true;
         // Running ranking strip: everyone this week (default) or only this player's own runs on this PC.
         public bool RankStripMine = false;
+        // 색약 모드: danger markers (banana rings) are drawn thicker so they do not rely on red alone.
+        public bool ColorBlind = false;
 
         public static readonly int[] FrameCaps = { 30, 60, 0 };
 

@@ -94,7 +94,7 @@ namespace Muhanok.Presentation.Map
             bool boarding=sequence<=0||plan!=null&&!ObstacleLayout.IsCart(plan.TypeAt(sequence-1));
             // A calm opening cart is planned like a fork chunk: both rails stay whole.
             bool calm=plan!=null&&plan.CalmCart(sequence);
-            Layout.Plan(random,RouteType,sequence,slots,floorSlots,odds,plan!=null&&plan.Extended,fork||calm,boarding,pacer,speed);
+            Layout.Plan(random,RouteType,sequence,slots,floorSlots,odds,plan!=null&&plan.Extended,fork||calm,boarding,pacer,speed,MapCourse.Mix(MapCourse.KindAt(plan,sequence)));
             if(Gates!=null) foreach(var gate in Gates) gate.ResetGate();
             if(SlideGates!=null)foreach(var gate in SlideGates)gate.ResetGate();
             if(FloorItems!=null)for(int i=0;i<FloorItems.Length;i++){FloorItems[i].ResetItem();FloorItems[i].gameObject.SetActive(Layout.FloorItems[i]);}

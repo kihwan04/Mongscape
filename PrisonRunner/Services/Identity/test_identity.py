@@ -195,6 +195,15 @@ class IdentityTests(PostgresCase):
   stats=self.app.handle('/stats',{},token)
   self.assertEqual((stats['today_kcal'],stats['best_score'],stats['previous_best']),(6.0,[700,0,40],[1500,800,0]))
   self.assertEqual(self.app.handle('/leaderboard',dict(mode=0),token)['me']['score'],700) # only version 3 ranks
+ def test_challenge_runs_rank_apart(self):
+  pid,token=self.member('Challenger')
+  self.assertEqual(self.app.handle('/runs',run(score=900,mode=10),token)['ok'],True)
+  self.app.handle('/runs',run(score=300,mode=0),token)
+  self.assertEqual([e['score'] for e in self.app.handle('/leaderboard',dict(mode=10,today=True))['entries']],[900])
+  self.assertEqual([e['score'] for e in self.app.handle('/leaderboard',dict(mode=0))['entries']],[300])
+  self.assertEqual(self.app.handle('/stats',{},token)['best_score'],[300,0,0]) # challenge runs stay off the ordinary best
+  for mode in (3,9,13):self.assertEqual(self.status('/runs',run(mode=mode),token),400,mode)
+  self.assertEqual(self.status('/leaderboard',dict(mode=5)),400)
  def test_week_board(self):
   week=kst_week_start(time.time());a,_=self.member('ThisWeek');b,_=self.member('LastWeek')
   self.record(a,100,created=week);self.record(b,900,created=week-1)

@@ -57,6 +57,8 @@
                     </ui:VisualElement>
                     <ui:VisualElement name="page-display" class="settings-page">
                         <ui:Toggle name="ingame-camera" label="플레이 중 웹캠 화면" class="settings-row" />
+                        <ui:Toggle name="colorblind-mode" label="색약 모드 (위험 표시 굵게)" class="settings-row" />
+                        <ui:Toggle name="rank-strip-mine" label="달리는 중 랭킹: 내 기록만" class="settings-row" />
                         <ui:Toggle name="performance-overlay" label="성능 측정 표시 (F3)" class="settings-row" />
                         <ui:Toggle name="pose-diagnostics" label="몸동작 진단 정보" class="settings-row" />
                     </ui:VisualElement>

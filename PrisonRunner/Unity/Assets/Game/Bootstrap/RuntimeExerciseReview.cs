@@ -48,6 +48,7 @@ namespace Muhanok.Bootstrap
             yield return Stage2Result();
             yield return Stage2Profile();
             yield return Stage3();
+            yield return Stage5();
             if (failure != null) { Fail(failure); yield break; }
             Debug.Log("MONGSCAPE_EXERCISE_REVIEW_PASS: " + destination);
             UnityEngine.Application.Quit(0);
@@ -126,6 +127,56 @@ namespace Muhanok.Bootstrap
             game.Hud.ShowPage(MenuPage.Ranking); game.Hud.Ranking.Select(false, PlayStyle.FullBody, false); yield return new WaitForSecondsRealtime(1f);
             yield return Shot("S3_07_Ranking_CadenceTags");
             game.OpenMainMenu();
+        }
+        // Stage 5: fork preview and signs, the course banner, a banana with its danger marker, a challenge result with the
+        // weekly goal and streak, the profile's week card.
+        private IEnumerator Stage5()
+        {
+            var owner = "review"; var now = DateTime.UtcNow;
+            for (int d = 1; d <= 3; d++) game.Store.RecordExercise(owner, now.AddDays(-d), 900, 700, new double[] { 0, 400, 0, 300 });
+            game.OpenStartSetup(); yield return new WaitForSecondsRealtime(.5f);
+            ((IHudData)game).SetDailyChallenge(true); yield return Shot("S5_01_Setup_DailyChallenge");
+            game.Hud.CloseSetup();
+            game.Session.Invincible = true;
+            game.StartPlayerRun(new PlayerProfile { Name = "리뷰", Weight = "65", Style = PlayStyle.FullBody, CalorieGoal = 50 });
+            float wait = Time.realtimeSinceStartup;
+            while (game.IsLoading || game.IsRevealing || game.Session.Flow.State != GameFlowState.Running) { if (Time.realtimeSinceStartup - wait > 60) { Fail("run did not start"); yield break; } yield return null; }
+            yield return new WaitForSecondsRealtime(2.5f);
+            game.enabled = false; game.Race.Clear();
+            Seek(CartFork.Decision - 22, 1); yield return new WaitForSecondsRealtime(.6f);
+            yield return Shot("S5_02_Fork_Preview_Signs");
+            Seek(CartFork.Decision + 3, 1); yield return new WaitForSecondsRealtime(.15f);
+            ScreenCapture.CaptureScreenshot(Path.Combine(destination, "S5_03_Course_Banner.png")); yield return new WaitForSecondsRealtime(1.5f);
+            // A banana ahead on the course.
+            float peel = -1; int peelLane = 0;
+            for (float z = 300; z < 3000 && peel < 0; z += 96)
+            {
+                Seek(z, 0);
+                foreach (var item in game.Map.Active) foreach (var b in item.Chunk.Layout.Bananas) { float at = item.Chunk.Sequence * RouteSurface.Length + b.Z; if (at > z + 6 && (peel < 0 || at < peel)) { peel = at; peelLane = b.Lane; } }
+            }
+            if (peel > 0) { Seek(peel - 5, peelLane); yield return new WaitForSecondsRealtime(.6f); yield return Shot("S5_04_Banana_DangerMarker"); }
+            else Debug.LogWarning("EXERCISE_REVIEW: no banana found for the shot");
+            game.enabled = true; game.Session.Workout.TickIntensity(700, true, true, CadenceStage.Run, false, false, 0);
+            game.Session.Invincible = false; game.Session.ForceCatch();
+            wait = Time.realtimeSinceStartup;
+            while (game.Session.Flow.State != GameFlowState.Result) { if (Time.realtimeSinceStartup - wait > 30) { Fail("result did not appear"); yield break; } yield return null; }
+            yield return new WaitForSecondsRealtime(1.2f);
+            yield return Shot("S5_05_Result_Challenge_WeekGoal_Streak");
+            ((IHudData)game).SetDailyChallenge(false);
+            game.ExitToMenu(); yield return new WaitForSecondsRealtime(.5f);
+            game.Hud.ShowPage(MenuPage.Profile); yield return new WaitForSecondsRealtime(1f);
+            yield return Shot("S5_06_Profile_WeekGoal");
+            game.OpenMainMenu();
+        }
+        // Puts the frozen run at route z (the review's own plan), leaning toward a branch.
+        private void Seek(float z, int branch)
+        {
+            var run = game.Session;
+            run.Runner.Command(branch < 0 ? MotionCommand.Left : branch > 0 ? MotionCommand.Right : MotionCommand.Center); run.Runner.Tick(.25f, 0);
+            for (int i = 0; i < 3 && run.Runner.Lane != branch; i++) { run.Runner.Command(run.Runner.Lane > branch ? MotionCommand.Left : MotionCommand.Right); run.Runner.Tick(.25f, 0); }
+            for (float at = run.Runner.Z; at < z; at += 12) game.Map.Tick(at);
+            game.Map.Tick(z); run.Runner.SetStartZ(z); game.Hero.Apply(run.Runner); game.Map.AnimateGates(z);
+            if (run.Runner.Riding) game.CameraRig.FollowCart(game.Hero.Head, 1, -run.Runner.CartLean * 12); else game.CameraRig.Follow(game.Hero.Head, false, 1);
         }
         private IEnumerator Shot(string name)
         {
