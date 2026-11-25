@@ -18,7 +18,8 @@ PROFILE_COLUMNS=(('name_key',"TEXT NOT NULL DEFAULT ''"),('weight','DOUBLE PRECI
     ('coins','INTEGER NOT NULL DEFAULT 0 CHECK (coins >= 0)'),('unlocked',"JSONB NOT NULL DEFAULT '[]'"),
     ('tutorial_done','BOOLEAN NOT NULL DEFAULT FALSE'))
 RUN_COLUMNS=(('mode','INTEGER'),('coins','INTEGER NOT NULL DEFAULT 0'),
-    ('score_version','INTEGER NOT NULL DEFAULT 1'),('play_seconds','DOUBLE PRECISION NOT NULL DEFAULT 0'))
+    ('score_version','INTEGER NOT NULL DEFAULT 1'),('play_seconds','DOUBLE PRECISION NOT NULL DEFAULT 0'),
+    ('moderate_seconds','DOUBLE PRECISION NOT NULL DEFAULT 0')) # v3: seconds at 5 MET or more, for the weekly goal
 
 def add_columns(store,table,columns):
     existing=store.columns(table);missing=[column for column in columns if column[0] not in existing]

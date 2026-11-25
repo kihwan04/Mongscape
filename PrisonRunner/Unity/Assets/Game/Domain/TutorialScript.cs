@@ -92,7 +92,8 @@ namespace Muhanok.Domain
             {
                 case TutorialStep.Camera: return upper ? "허리 위가 화면에 다 들어오게 앉거나 서 주세요." : "머리부터 발끝까지 화면에 들어오게 서 주세요.";
                 case TutorialStep.Calibrate: return "카메라 앞에 바르게 서 주세요. 자세를 맞추면 출발합니다.";
-                case TutorialStep.Cadence: return !cadenceSpeed ? (upper ? "팔을 번갈아 흔들어 보세요. 움직임이 칼로리가 돼요!" : "제자리에서 뛰어 보세요. 발구름이 칼로리가 돼요!")
+                // Cadence off: stepping earns no calories (only jumps, crouches, knee raises and lane changes do).
+                case TutorialStep.Cadence: return !cadenceSpeed ? (upper ? "팔을 흔들어 보세요. 발구름을 끄면 점프·숙이기·옆 이동만 칼로리가 돼요." : "제자리에서 걸어 보세요. 발구름을 끄면 점프·숙이기·무릎·옆걸음만 칼로리가 돼요.")
                     : upper ? "팔을 번갈아 빠르게 흔들어 보세요. 빠를수록 빨리 달려요!" : "제자리에서 뛰어 보세요. 발구름이 빠를수록 빨리 달려요!";
                 case TutorialStep.Police: return "잠깐 멈춰 보세요. 느려지면 경찰이 다가와요!";
                 case TutorialStep.Lane: return keys ? "A·D(←·→) 키로 옆 줄로 피하세요." : upper ? "상체를 옆으로 기울여 피하세요." : "옆으로 크게 한 걸음! 상체만 기울이면 안 돼요.";

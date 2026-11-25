@@ -102,6 +102,9 @@ namespace Muhanok.Application
         public int[] previous_best = new int[3];
         // This week (from Monday 00:00 KST) and last week: calories and play seconds, for the result report.
         public double week_kcal, week_seconds, last_week_kcal, last_week_seconds;
+        // This week's and last week's seconds at moderate intensity (5 MET or more), from every PC of the member: the weekly goal.
+        // -1 when the server predates the field (the PC's own log is used then).
+        public double week_moderate_seconds = -1, last_week_moderate_seconds = -1;
         public int PreviousBest(int mode) => previous_best != null && mode >= 0 && mode < previous_best.Length ? previous_best[mode] : 0;
     }
 
@@ -121,23 +124,26 @@ namespace Muhanok.Application
         public string id = ""; public float distance; public int score; public double kcal, goal = AccountSettings.DefaultGoal;
         public double[] activities = new double[5];
         public int mode, coins; public double play_seconds; public int score_version = 1;
-        // "발구름으로 속도 조절": 1 on, 0 off, -1 not a camera run. The server does not store it yet (no column).
-        public int cadence_speed = -1;
+        // Seconds at moderate intensity or more (the weekly goal of 150 minutes); the server sums them per week.
+        public double moderate_seconds;
 
         // Score uses the current formula (RunScore.Version); play seconds are the run clock without pauses.
-        public static AccountRun Create(RunSession run, PlayStyle mode, int coins, int cadenceSpeed = -1)
+        // Runs with and without "발구름으로 속도 조절" share one ranking, so the option is not sent.
+        public static AccountRun Create(RunSession run, PlayStyle mode, int coins)
         {
-            double playSeconds = run.Elapsed;
+            double playSeconds = run.Elapsed, moderate = run.Workout.ModerateSeconds;
             var record = new AccountRun
             {
                 id = Guid.NewGuid().ToString(), distance = Math.Max(0f, run.Score.Distance), score = Math.Max(0, run.Score.Score),
                 kcal = Math.Max(0, run.Workout.EstimatedKcal), goal = run.Workout.GoalKcal, mode = (int)mode,
-                coins = Math.Max(0, Math.Min(MaxCoins, coins)), score_version = RunScore.Version, cadence_speed = cadenceSpeed,
-                play_seconds = double.IsNaN(playSeconds) || double.IsInfinity(playSeconds) ? 0 : Math.Max(0, Math.Min(86400, playSeconds)),
+                coins = Math.Max(0, Math.Min(MaxCoins, coins)), score_version = RunScore.Version,
+                play_seconds = Seconds(playSeconds), moderate_seconds = Seconds(moderate),
             };
             for (int i = 0; i < 5; i++) record.activities[i] = Math.Max(0, run.Workout.KcalFor(i));
             return record;
         }
+        // The server accepts 0 to 86400 seconds.
+        static double Seconds(double value) => double.IsNaN(value) || double.IsInfinity(value) ? 0 : Math.Max(0, Math.Min(86400, value));
     }
 
     // /profile/update sends only the fields that are set.

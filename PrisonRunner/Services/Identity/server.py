@@ -150,13 +150,15 @@ class App:
             if mode is not None and mode not in MODES and mode not in CHALLENGE_MODES: raise ApiError('잘못된 값: mode')
             coins=number(data,'coins',0,5000,True) if 'coins' in data else 0
             play_seconds=number(data,'play_seconds',0,86400) if 'play_seconds' in data else 0
+            # Seconds at moderate intensity (5 MET or more) for the weekly goal; older clients send none (0).
+            moderate_seconds=number(data,'moderate_seconds',0,86400) if 'moderate_seconds' in data else 0
             version=number(data,'score_version',1,SCORE_VERSION,True) if 'score_version' in data else 1
             try: rid=str(uuid.UUID(str(data.get('id',''))))
             except ValueError: raise ApiError('기록 ID 오류')
             with self.store.db:
-                added=self.store.db.execute('INSERT INTO runs (id,profile_id,distance,score,kcal,goal,activities,created_at,mode,coins,score_version,play_seconds) '
-                    'VALUES(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING',
-                    (rid,pid,distance,int(score),kcal,goal,json.dumps(activities),int(time.time()),mode,coins,version,play_seconds)).rowcount
+                added=self.store.db.execute('INSERT INTO runs (id,profile_id,distance,score,kcal,goal,activities,created_at,mode,coins,score_version,play_seconds,moderate_seconds) '
+                    'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING',
+                    (rid,pid,distance,int(score),kcal,goal,json.dumps(activities),int(time.time()),mode,coins,version,play_seconds,moderate_seconds)).rowcount
                 # A resent record id (retry after a lost reply) is stored once and credits coins once.
                 if added and coins: self.store.db.execute('UPDATE profiles SET coins=coins+? WHERE id=?',(coins,pid))
                 balance=self.store.db.execute('SELECT coins FROM profiles WHERE id=?',(pid,)).fetchone()[0]
@@ -176,14 +178,17 @@ class App:
                 (kst_midnight(time.time()),pid)).fetchone()
             def best(version): return dict(self.store.db.execute('SELECT mode,MAX(score) FROM runs WHERE profile_id=? AND score_version=? AND mode IS NOT NULL GROUP BY mode',(pid,version)).fetchall())
             current,previous=best(SCORE_VERSION),best(PREVIOUS_SCORE_VERSION)
-            # This week (from Monday 00:00 KST) and the week before: calories and play minutes, for the result report.
+            # This week (from Monday 00:00 KST) and the week before: calories, play minutes and moderate minutes
+            # (the weekly goal, from every PC of the member), for the result report and the goal bar.
             week=kst_week_start(time.time())
             weeks=self.store.db.execute('SELECT COALESCE(SUM(CASE WHEN created_at>=? THEN kcal ELSE 0 END),0),COALESCE(SUM(CASE WHEN created_at>=? THEN play_seconds ELSE 0 END),0),'
-                'COALESCE(SUM(CASE WHEN created_at<? THEN kcal ELSE 0 END),0),COALESCE(SUM(CASE WHEN created_at<? THEN play_seconds ELSE 0 END),0) FROM runs WHERE profile_id=? AND created_at>=?',
-                (week,week,week,week,pid,week-WEEK)).fetchone()
+                'COALESCE(SUM(CASE WHEN created_at<? THEN kcal ELSE 0 END),0),COALESCE(SUM(CASE WHEN created_at<? THEN play_seconds ELSE 0 END),0),'
+                'COALESCE(SUM(CASE WHEN created_at>=? THEN moderate_seconds ELSE 0 END),0),COALESCE(SUM(CASE WHEN created_at<? THEN moderate_seconds ELSE 0 END),0) '
+                'FROM runs WHERE profile_id=? AND created_at>=?',
+                (week,week,week,week,week,week,pid,week-WEEK)).fetchone()
             return dict(ok=True,today_kcal=float(today),total_kcal=float(total),best_score=[int(current.get(m,0)) for m in MODES],
                 previous_best=[int(previous.get(m,0)) for m in MODES],week_kcal=float(weeks[0]),week_seconds=float(weeks[1]),
-                last_week_kcal=float(weeks[2]),last_week_seconds=float(weeks[3]))
+                last_week_kcal=float(weeks[2]),last_week_seconds=float(weeks[3]),week_moderate_seconds=float(weeks[4]),last_week_moderate_seconds=float(weeks[5]))
         if path=='/history':
             rows=self.store.db.execute('SELECT distance,score,kcal,goal,created_at FROM runs WHERE profile_id=? ORDER BY created_at DESC LIMIT 20',(pid,)).fetchall()
             return dict(ok=True,runs=[dict(zip(('distance','score','kcal','goal','created_at'),row)) for row in rows])

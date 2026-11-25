@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS runs (
     mode INTEGER,
     coins INTEGER NOT NULL DEFAULT 0,
     score_version INTEGER NOT NULL DEFAULT 1,
-    play_seconds DOUBLE PRECISION NOT NULL DEFAULT 0
+    play_seconds DOUBLE PRECISION NOT NULL DEFAULT 0,
+    moderate_seconds DOUBLE PRECISION NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX IF NOT EXISTS profiles_name_key ON profiles (name_key);
 CREATE INDEX IF NOT EXISTS runs_profile_created ON runs (profile_id, created_at DESC);
