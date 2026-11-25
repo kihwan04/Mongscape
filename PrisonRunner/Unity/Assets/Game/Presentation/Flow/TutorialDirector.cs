@@ -36,17 +36,31 @@ namespace Muhanok.Presentation
         public string Message { get; private set; }
         // The big call on screen ("↑  점프!", "←  옆으로 피하기  →", ...), null while a timed call is not due yet.
         public string Cue => cue;
+        // Inputs of the camera, pace and police lessons (set by the bootstrap): the body framed head to ankles (waist up for the
+        // upper body), steps a minute, the speed share from the cadence, the pace pressure, and the running line.
+        public Func<bool> Framed;
+        // No camera or model (developer tests, a missing webcam): the camera and pace lessons pass at once instead of waiting forever.
+        public Func<bool> NoCamera;
+        public Func<float> StepsPerMinute, PaceScale, PacePressure;
+        public float RunCadence = 100f;
+        // The demo window (character clip); null keeps it hidden.
+        public TutorialDemo Demo;
+        // Seconds the camera lesson waits for a framed body, the pace lesson for a held pace.
+        public const float FramedSeconds = 3f, PacedSeconds = 5f, PoliceNear = .3f;
+        private float framedFor, pacedFor;
+        private bool policeCame;
+        private int bigAtStart;
 
         public void Configure(RunSession run, ChunkSpawner spawner, Func<bool> calibrated, Action<float> restartAt, Action complete, Func<bool> canDraw)
         {
             session = run; map = spawner; poseReady = calibrated; restart = restartAt; finished = complete; visible = canDraw;
         }
-        public void Begin(PlayStyle style, bool forks)
+        public void Begin(PlayStyle style, bool forks, bool cadenceSpeed = true, bool shortVersion = false)
         {
-            Script = new TutorialScript(style, forks); seenMisses = session.TutorialMisses; retryAt = doneAt = praiseUntil = forgiveUntilZ = -1;
+            Script = new TutorialScript(style, forks, cadenceSpeed, shortVersion); TutorialCourse.Script = Script; framedFor = pacedFor = 0; policeCame = false; bigAtStart = BigTotal; seenMisses = session.TutorialMisses; retryAt = doneAt = praiseUntil = forgiveUntilZ = -1;
             Waiting = false; LessonDistance = float.PositiveInfinity; Message = null; cue = null;
         }
-        public void End() { Script = null; Waiting = false; retryAt = doneAt = praiseUntil = forgiveUntilZ = -1; Message = cue = null; if (session != null) session.SpeedScale = 1; }
+        public void End() { TutorialCourse.Script = null; Demo?.Show(null); Script = null; Waiting = false; retryAt = doneAt = praiseUntil = forgiveUntilZ = -1; Message = cue = null; if (session != null) session.SpeedScale = 1; }
 
         public void Tick(float now)
         {
@@ -69,8 +83,53 @@ namespace Muhanok.Presentation
             }
             session.SpeedScale = 1;
             var step = Script.Current;
+            Demo?.Show(TutorialScript.DemoClip(step, Script.Style));
             switch (Script.Condition)
             {
+                case TutorialPass.Framed:
+                {
+                    // Head to ankles (waist up for the upper body) in view for three seconds in a row.
+                    session.SpeedScale = 0; Waiting = true; cue = TutorialScript.Title(step);
+                    Message = TutorialScript.Instruction(step, Script.Style);
+                    if (NoCamera != null && NoCamera()) { Next(now); return; }
+                    framedFor = Framed == null || Framed() ? framedFor + Time.deltaTime : 0;
+                    if (Framed == null || framedFor >= FramedSeconds) Next(now);
+                    return;
+                }
+                case TutorialPass.Paced:
+                {
+                    // Run in place: the pace gauge fills with the cadence; five seconds at a running pace (or any stepping when
+                    // the cadence option is off) pass. The runner waits at the end of the pace chunk.
+                    if (NoCamera != null && NoCamera()) { Next(now); return; }
+                    Hold(); Waiting = true; cue = TutorialScript.Title(step);
+                    Message = TutorialScript.Instruction(step, Script.Style, Script.CadenceSpeed);
+                    float spm = StepsPerMinute?.Invoke() ?? 0;
+                    bool paced = Script.CadenceSpeed ? spm >= RunCadence : spm > 0;
+                    pacedFor = paced ? pacedFor + Time.deltaTime : Mathf.Max(0, pacedFor - Time.deltaTime);
+                    if (StepsPerMinute == null || pacedFor >= PacedSeconds) Next(now);
+                    return;
+                }
+                case TutorialPass.PoliceShaken:
+                {
+                    // Stop: the police come close (red edges); run again until they fall back.
+                    if (NoCamera != null && NoCamera()) { Next(now); return; }
+                    Hold(); Waiting = true; cue = TutorialScript.Title(step);
+                    float pressure = PacePressure?.Invoke() ?? 0;
+                    if (pressure >= PoliceNear) policeCame = true;
+                    Message = policeCame ? TutorialScript.PoliceAway : TutorialScript.Instruction(step, Script.Style);
+                    if (PacePressure == null || policeCame && pressure <= .02f) Next(now);
+                    return;
+                }
+                case TutorialPass.ObstaclePassed when step == TutorialStep.Banana:
+                {
+                    FindBananas();
+                    if (peels.Count == 0) { Hide(); return; }
+                    bool passed = true; foreach (var peel in peels) passed &= peel.Passed;
+                    if (passed) { Next(now); return; }
+                    LessonDistance = peels[0].transform.position.z - runner.Z;
+                    Show(LessonDistance <= ShowDistance, false, now);
+                    return;
+                }
                 case TutorialPass.Calibrated:
                     session.SpeedScale = 0; Waiting = true; Message = TutorialScript.Instruction(step, Script.Style);
                     if (poseReady == null || poseReady()) Next(now);
@@ -137,12 +196,30 @@ namespace Muhanok.Presentation
                 Message = TutorialScript.Instruction(step, Script.Style);
             }
         }
+        // The pace lessons keep the runner at the end of the pace chunk until they pass (the speed gauge still follows the steps).
+        private void Hold() { session.SpeedScale = session.Runner.Z >= TutorialCourse.PaceHoldZ ? 0 : 1; }
+        private readonly List<FloorItemController> peels = new List<FloorItemController>(2);
+        private void FindBananas()
+        {
+            peels.Clear();
+            if (map == null) return;
+            foreach (var item in map.Active)
+            {
+                if (item.Chunk.Sequence != TutorialCourse.BananaChunk || !item.Chunk.gameObject.activeSelf) continue;
+                foreach (var peel in item.Chunk.DynamicFloorItems) if (peel != null && peel.gameObject.activeSelf && peel.Kind == FloorItemKind.BananaPeel) peels.Add(peel);
+            }
+            peels.Sort((a, b) => a.transform.position.z.CompareTo(b.transform.position.z));
+        }
+        // Big moves made during the step (exercise plan 6): the praise says so, but they are never required.
+        private int BigTotal { get { if (session == null) return 0; int n = 0; foreach (int c in session.BigMoves) n += c; return n; } }
+        private bool bigPraise;
         private void Hide() { LessonDistance = float.PositiveInfinity; Waiting = false; Message = null; cue = null; }
         private void Next(float now)
         {
             var step = Script.Current;
             int chunk = TutorialCourse.ChunkOf(step);
             if (chunk >= 0) forgiveUntilZ = Mathf.Max(forgiveUntilZ, (chunk + 1) * RouteSurface.Length);
+            bigPraise = BigTotal > bigAtStart; bigAtStart = BigTotal; framedFor = pacedFor = 0; policeCame = false;
             Script.Pass(); Waiting = false; LessonDistance = float.PositiveInfinity; session.SpeedScale = 1; cue = null;
             Message = Script.Finished ? TutorialScript.Instruction(TutorialStep.Done, Script.Style) : null;
             if (Script.Finished) doneAt = now;
@@ -198,7 +275,7 @@ namespace Muhanok.Presentation
             GUI.Label(header, step == TutorialStep.Done ? "튜토리얼 완료" : "튜토리얼 " + progress + " · " + TutorialScript.Title(step), skin.Centered(20, FontStyle.Bold));
             // Mistakes and the finish fill the banner; a lesson in view shows its call (when due) with the instruction below.
             bool praise = Time.realtimeSinceStartup < praiseUntil && !Waiting;
-            string big = Retrying || Script.Finished ? Message : Waiting ? cue : praise ? "좋아요!" : null;
+            string big = Retrying || Script.Finished ? Message : Waiting ? cue : praise ? (bigPraise ? "크게! 좋아요!" : "좋아요!") : null;
             if (big != null)
             {
                 var banner = new Rect(240, 196, 800, 110);
@@ -212,7 +289,37 @@ namespace Muhanok.Presentation
                 skin.Card(line, Palette.A(Palette.Ground, .82f));
                 GUI.color = Palette.Cream; GUI.Label(line, Message, skin.Centered(22, FontStyle.Bold));
             }
+            DrawPace(step);
+            DrawDemo();
             GUI.color = Color.white; GUI.matrix = old;
+        }
+        // The pace lesson gauge: the speed share from the cadence (70 % walking to 130 % sprinting) and the steps a minute.
+        private void DrawPace(TutorialStep step)
+        {
+            if (step != TutorialStep.Cadence || Retrying) return;
+            var box = new Rect(440, 372, 400, 64);
+            skin.Card(box, Palette.A(Palette.Ground, .85f));
+            float scale = PaceScale?.Invoke() ?? 1, spm = StepsPerMinute?.Invoke() ?? 0;
+            var track = new Rect(box.x + 16, box.y + 38, box.width - 32, 12);
+            GUI.color = new Color(1, 1, 1, .2f); GUI.DrawTexture(track, Texture2D.whiteTexture);
+            GUI.color = spm >= RunCadence ? new Color(.45f, 1f, .6f) : Palette.Gold;
+            GUI.DrawTexture(new Rect(track.x, track.y, track.width * Mathf.InverseLerp(.7f, 1.3f, scale), track.height), Texture2D.whiteTexture);
+            GUI.color = Palette.Cream;
+            GUI.Label(new Rect(box.x, box.y + 4, box.width, 30), "분당 " + Mathf.RoundToInt(spm) + "걸음 · 속도 " + Mathf.RoundToInt(scale * 100) + "%", skin.Centered(19, FontStyle.Bold));
+        }
+        // The demo window: the character clip in the bottom-left; after three misses of one step it grows into the follow-along view.
+        private void DrawDemo()
+        {
+            var texture = Demo?.Texture;
+            if (texture == null) return;
+            bool follow = Script.FollowAlong;
+            var frame = follow ? new Rect(24, 330, 330, 360) : new Rect(24, 474, 210, 230);
+            skin.Card(frame, Palette.A(Palette.Ground, .9f));
+            GUI.color = follow ? Palette.Gold : Palette.Cream;
+            GUI.Label(new Rect(frame.x, frame.y + 2, frame.width, 26), follow ? "따라 하기" : "이렇게 하세요", skin.Centered(follow ? 22 : 17, FontStyle.Bold));
+            GUI.color = Color.white;
+            float side = frame.width - 12;
+            GUI.DrawTexture(new Rect(frame.x + 6, frame.y + 30, side, Mathf.Min(side, frame.height - 36)), texture, ScaleMode.ScaleAndCrop);
         }
         private void OnDestroy() { skin?.Dispose(); }
     }

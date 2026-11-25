@@ -173,6 +173,16 @@ namespace Muhanok.Presentation.Map
         }
 
         // Tutorial: one pooled lane block at a fixed spot of a chunk that was already decorated.
+        // A pooled banana peel at route z in a lane (the tutorial's banana lesson).
+        public FloorItemController PlaceBanana(MuhanokMapChunk chunk, int lane, float z)
+        {
+            if (!placed.TryGetValue(chunk, out var list)) return null;
+            var peel = bananas.Count > 0 ? bananas.Pop() : BuildBanana();
+            peel.transform.position = LanePoint(lane, z, .045f); peel.transform.rotation = Quaternion.identity;
+            peel.transform.SetParent(chunk.transform, true); peel.ResetItem(); peel.gameObject.SetActive(true);
+            chunk.DynamicFloorItems.Add(peel); list.Add(peel);
+            return peel;
+        }
         public ObstacleController PlaceLaneBlock(MuhanokMapChunk chunk, int lane, float z)
         {
             if (!placed.TryGetValue(chunk, out var list)) return null;
