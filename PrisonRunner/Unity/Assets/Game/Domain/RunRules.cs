@@ -269,7 +269,22 @@ namespace Muhanok.Domain
         public bool SlipPursuit=>bananaCatchLeft>0;
         public float TargetSpeed => Config.IntervalMode ? IntervalSpeed() : Difficulty.Speed(Score.Distance, Config, Runner.Riding);
         public float CurrentSpeed => Flow.State == GameFlowState.Running && !Paused ? MoveSpeed * Runner.SpeedMultiplier * SpeedScale : 0f;
-        private float MoveSpeed => Config.IntervalMode ? smoothSpeed : TargetSpeed;
+        // On foot the cadence sets the pace (CadencePace: 0.7 walking to 1.3 sprinting); the cart keeps its own speed.
+        private float MoveSpeed => (Config.IntervalMode ? smoothSpeed : TargetSpeed) * (Runner.Riding ? 1f : CadenceScale);
+        // Set each frame from CadencePace (1 for the keyboard, the option off, or the tutorial).
+        public float CadenceScale { get; set; } = 1f;
+        // How close the police come because the player is below the target cadence (0..CadencePace.MaxPressure).
+        // Separate from Chase: it moves the police and reddens the screen edges but never makes a capture.
+        public float PacePressure { get; set; }
+        public float PolicePressure => Math.Max(Chase.Pressure, PacePressure);
+        // On-foot speed expected at a route distance with the current cadence (a little faster, so hazards planned now still
+        // keep their time gap if the player speeds up before reaching them).
+        public float PlannedSpeed(float distance)
+        {
+            float speed = Config.IntervalMode && Config.ExtendedRoutes ? Difficulty.Ramp(Config.SprintSpeed, Config.MaxSprintSpeed, distance, Config)
+                : Config.IntervalMode ? Math.Min(Config.MaxSprintSpeed, Config.SprintSpeed + Config.SprintSpeedStep * IntervalCycle) : Difficulty.Speed(distance, Config);
+            return speed * Math.Min(CadencePace.Sprint, CadenceScale + .3f);
+        }
         // Interval rhythm comes from the route: walking chunks sprint, the cart ride rests.
         public bool Resting => Config.IntervalMode && Runner.Riding;
         public int IntervalCycle => RouteSurface.CycleAt(RouteSurface.SequenceAt(Runner.Z));
@@ -364,6 +379,6 @@ namespace Muhanok.Domain
             }
             return true;
         }
-        public void Reset() { Runner.Reset(); Stair.Reset(); Chase.Reset(); Score.Reset(); Workout.Reset(); Items.Reset(); Paused=false; SpeedScale=1f; clock = 0f; lastHit = -100f;SlipStrikes=0;lastStrike=0f;ShieldSaves=0;DodgeStreak=BestDodgeStreak=0;bananaCatchLeft=0;Reason=CaptureReason.Collision; smoothSpeed = TargetSpeed; }
+        public void Reset() { Runner.Reset(); Stair.Reset(); Chase.Reset(); Score.Reset(); Workout.Reset(); Items.Reset(); Paused=false; SpeedScale=1f; CadenceScale=1f; PacePressure=0f; clock = 0f; lastHit = -100f;SlipStrikes=0;lastStrike=0f;ShieldSaves=0;DodgeStreak=BestDodgeStreak=0;bananaCatchLeft=0;Reason=CaptureReason.Collision; smoothSpeed = TargetSpeed; }
     }
 }

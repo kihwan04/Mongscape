@@ -186,14 +186,16 @@ class App:
             return dict(ok=True,runs=[dict(zip(('distance','score','kcal','goal','created_at'),row)) for row in rows])
         raise ApiError('경로 없음',404)
     def leaderboard(self,data,token):
-        mode=data.get('mode'); today=data.get('today',False)
+        mode=data.get('mode'); today=data.get('today',False); week=data.get('week',False)
         if type(mode) is not int or mode not in MODES: raise ApiError('잘못된 모드')
         if type(today) is not bool: raise ApiError('잘못된 값: today')
+        if type(week) is not bool: raise ApiError('잘못된 값: week')
+        since=kst_midnight(time.time()) if today else kst_week_start(time.time()) if week else 0 # week: the running ranking strip
         # Best record per member (score, then the earlier record); only the current score formula ranks.
         rows=self.store.db.execute('SELECT p.name,r.score,r.distance,r.created_at,r.profile_id FROM ('
             'SELECT profile_id,score,distance,created_at,ROW_NUMBER() OVER (PARTITION BY profile_id ORDER BY score DESC,created_at,id) AS n '
             'FROM runs WHERE mode=? AND score_version=? AND created_at>=?) r JOIN profiles p ON p.id=r.profile_id '
-            'WHERE r.n=1 ORDER BY r.score DESC,r.created_at,r.profile_id',(mode,SCORE_VERSION,kst_midnight(time.time()) if today else 0)).fetchall()
+            'WHERE r.n=1 ORDER BY r.score DESC,r.created_at,r.profile_id',(mode,SCORE_VERSION,since)).fetchall()
         result=dict(ok=True,entries=[dict(rank=i+1,name=r[0],score=r[1],distance=r[2],created_at=r[3]) for i,r in enumerate(rows[:LEADERBOARD_SIZE])])
         try: pid=self.store.authorize(token) if token else None
         except ApiError: pid=None # the board is public; an expired token only hides "me"
