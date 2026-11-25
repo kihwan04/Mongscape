@@ -254,16 +254,6 @@ namespace Muhanok.Bootstrap
             yield return Until(() => t.Waiting, 8);
             yield return Shot("S6_04_Tutorial_Jump_Demo");
             t.Script.Fail(); t.Script.Fail(); t.Script.Fail(); yield return Shot("S6_05_Tutorial_FollowAlong");
-            // Follow-up 3: the joint comparison beside "따라 하기" (a synthetic player whose hips stop short of the jump line).
-            var oldPose = t.MyPose; var oldBase = t.MyBaseline;
-            var mine = new PoseFrame(); var myBase = JointDemo.ReferenceBaseline(PlayStyle.FullBody);
-            t.MyBaseline = () => myBase; t.MyPose = () => { JointDemo.Reference(TutorialStep.Jump, PlayStyle.FullBody, JointDemo.LoopSeconds * .08, mine); return mine; };
-            yield return Shot("F3_01_Tutorial_JointCompare_Jump");
-            while (t.Script.Current != TutorialStep.Crouch) t.Script.Pass();
-            t.Script.Fail(); t.Script.Fail(); t.Script.Fail();
-            t.MyPose = () => { JointDemo.Reference(TutorialStep.Crouch, PlayStyle.FullBody, JointDemo.LoopSeconds * .5, mine); return mine; };
-            yield return Shot("F3_02_Tutorial_JointCompare_Crouch_Crossed");
-            t.MyPose = oldPose; t.MyBaseline = oldBase;
             while (t.Script.Current != TutorialStep.Banana) t.Script.Pass();
             game.Session.Runner.SetStartZ(TutorialCourse.RestartZ(TutorialStep.Banana)); game.Map.Tick(game.Session.Runner.Z);
             yield return Until(() => t.Waiting, 8);

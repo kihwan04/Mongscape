@@ -45,12 +45,6 @@ namespace Muhanok.Presentation
         public float RunCadence = 100f;
         // The demo window (character clip); null keeps it hidden.
         public TutorialDemo Demo;
-        // The player's joints (null without a tracked camera), calibrated pose and thresholds, for the joint comparison that
-        // joins the follow-along view (exercise plan 10-3 B).
-        public Func<PoseFrame> MyPose;
-        public Func<PoseBaseline> MyBaseline;
-        public Func<MotionTuning> Tuning;
-        private readonly PoseFrame reference = new PoseFrame();
         // Seconds the camera lesson waits for a framed body, the pace lesson for a held pace.
         public const float FramedSeconds = 3f, PacedSeconds = 5f, PoliceNear = .3f;
         private float framedFor, pacedFor;
@@ -326,72 +320,6 @@ namespace Muhanok.Presentation
             GUI.color = Color.white;
             float side = frame.width - 12;
             GUI.DrawTexture(new Rect(frame.x + 6, frame.y + 30, side, Mathf.Min(side, frame.height - 36)), texture, ScaleMode.ScaleAndCrop);
-            if (follow) DrawJoints(new Rect(frame.xMax + 12, frame.y, 430, frame.height));
-        }
-        // After three misses: the reference stick figure doing the lesson next to the player's own joints, each with the
-        // line the classifier uses (the player's from their calibration; green once crossed).
-        private void DrawJoints(Rect panel)
-        {
-            var step = Script.Current;
-            if (!JointDemo.Compares(step)) return;
-            var tuning = Tuning?.Invoke() ?? new MotionTuning();
-            skin.Card(panel, Palette.A(Palette.Ground, .9f));
-            GUI.color = Palette.Gold; GUI.Label(new Rect(panel.x, panel.y + 2, panel.width, 26), JointDemo.Title, skin.Centered(20, FontStyle.Bold));
-            float w = (panel.width - 18) * .5f, h = panel.height - 66;
-            var left = new Rect(panel.x + 6, panel.y + 32, w, h); var right = new Rect(left.xMax + 6, left.y, w, h);
-            var refBase = JointDemo.ReferenceBaseline(Script.Style);
-            JointDemo.Reference(step, Script.Style, Time.realtimeSinceStartup, reference);
-            var refLine = JointDemo.Target(step, refBase, tuning);
-            Figure(left, reference, refLine, JointDemo.Crossed(step, refBase, tuning, reference));
-            var mine = MyPose?.Invoke(); var myBase = MyBaseline != null ? MyBaseline() : default;
-            if (mine != null && mine.HasPose) Figure(right, mine, JointDemo.Target(step, myBase, tuning), JointDemo.Crossed(step, myBase, tuning, mine));
-            else { skin.Card(right, new Color(0, 0, 0, .35f)); GUI.color = Palette.Sand; GUI.Label(right, "카메라에 내 몸이\n보이면 여기에 나와요", skin.Centered(16, FontStyle.Normal)); }
-            GUI.color = Palette.Cream;
-            GUI.Label(new Rect(left.x, left.yMax + 2, w, 24), JointDemo.ReferenceLabel, skin.Centered(18, FontStyle.Bold));
-            GUI.Label(new Rect(right.x, right.yMax + 2, w, 24), JointDemo.MineLabel, skin.Centered(18, FontStyle.Bold));
-            GUI.color = Color.white;
-        }
-        private static readonly Color BoneColor = new Color(.3f, 1f, .55f), JointColor = new Color(1f, .85f, .2f), LineColor = new Color(1f, .78f, .2f), CrossedColor = new Color(.35f, 1f, .5f);
-        // One stick figure in a cell, fitted to the frame's aspect, with its target line and the line's label.
-        private void Figure(Rect cell, PoseFrame f, TargetLine line, bool crossed)
-        {
-            skin.Card(cell, new Color(0, 0, 0, .35f));
-            float aspect = f.Aspect > 0 ? f.Aspect : 1;
-            var view = cell.width / cell.height > aspect ? new Rect(cell.center.x - cell.height * aspect * .5f, cell.y, cell.height * aspect, cell.height)
-                : new Rect(cell.x, cell.center.y - cell.width / aspect * .5f, cell.width, cell.width / aspect);
-            if (Event.current.type == EventType.Repaint)
-            {
-                if (line.Shown)
-                {
-                    GUI.color = crossed ? CrossedColor : LineColor;
-                    if (line.Vertical)
-                    {
-                        foreach (float x in new[] { line.At, line.Other }) if (x >= 0 && x <= 1) GUI.DrawTexture(new Rect(view.x + x * view.width - 1.5f, view.y, 3, view.height), Texture2D.whiteTexture);
-                    }
-                    else if (line.At >= 0 && line.At <= 1) GUI.DrawTexture(new Rect(view.x, view.y + line.At * view.height - 1.5f, view.width, 3), Texture2D.whiteTexture);
-                }
-                GUI.color = BoneColor;
-                for (int b = 0; b < PoseJoint.Bones.GetLength(0); b++)
-                {
-                    var p = f.Points[PoseJoint.Bones[b, 0]]; var q = f.Points[PoseJoint.Bones[b, 1]];
-                    if (p.Visibility < .5f || q.Visibility < .5f) continue;
-                    for (int s = 0; s <= 8; s++) { float t = s / 8f; Dot(view, Mathf.Lerp(p.X, q.X, t), Mathf.Lerp(p.Y, q.Y, t), 4); }
-                }
-                GUI.color = JointColor;
-                for (int i = 11; i < 29; i++) if (f.Points[i].Visibility >= .5f) Dot(view, f.Points[i].X, f.Points[i].Y, 7);
-                if (f.Points[0].Visibility >= .5f) Dot(view, f.Points[0].X, f.Points[0].Y, 10);
-            }
-            if (line.Shown)
-            {
-                GUI.color = crossed ? CrossedColor : LineColor;
-                GUI.Label(new Rect(cell.x, cell.y + 4, cell.width, 22), crossed ? "좋아요!" : line.Label, skin.Centered(15, FontStyle.Bold));
-            }
-            GUI.color = Color.white;
-        }
-        private static void Dot(Rect view, float x, float y, float size)
-        {
-            if (x < 0 || x > 1 || y < 0 || y > 1) return;
-            GUI.DrawTexture(new Rect(view.x + x * view.width - size * .5f, view.y + y * view.height - size * .5f, size, size), Texture2D.whiteTexture);
         }
         private void OnDestroy() { skin?.Dispose(); }
     }

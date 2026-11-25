@@ -48,14 +48,6 @@ namespace Muhanok.Domain
         private double calibrationBrokeAt = -10, lastFrameTime;
         public PoseStatus Status { get; private set; } = PoseStatus.Searching;
         public bool Calibrated => calibrated;
-        // The calibrated standing pose in PoseFrame units (X as a share of the picture width at this aspect), for the
-        // tutorial's joint comparison; not valid before calibration.
-        public PoseBaseline Baseline(float aspect)
-        {
-            if (!calibrated || aspect <= 0) return default;
-            float knee = float.IsNaN(bKneeL) ? float.NaN : (bKneeL + bKneeR) * .5f;
-            return new PoseBaseline(style, bCx / aspect, bSy, bHy, bScale, knee, bNose, aspect);
-        }
         // Full body calibration is waiting because a knee is out of view.
         public bool KneesMissing { get; private set; }
         public float CalibrationProgress => calibrated ? 1f : Math.Min(1f, samples / (float)Math.Max(1, tuning.CalibrationFrames));
