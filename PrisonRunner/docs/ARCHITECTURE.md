@@ -51,11 +51,11 @@
 | --- | --- |
 | 얼굴 특징값·회원 계정(설정·코인·해금)·로그인 세션·회원 운동 기록 | 중앙 서버 PostgreSQL의 `postgres-data` volume. |
 | 이 PC 점수 랭킹 | 게임 PC의 `Player` 로컬 JSON. 기존 Exhibition 파일은 처음 한 번 읽어 이전 |
-| 예전 PC 프로필·지갑 | `Player/profile.json`, `wallet.json`. 개발자/전시 모드에서만 읽음 |
+| 예전 PC 프로필·지갑 | `Player/profile.json`, `wallet.json`. 읽지 않음(지우지도 않음) |
 | 누적 최고 기록 | `Player/records.json`. 기존 PlayerPrefs 최고 기록도 읽어 보존 |
 | 화면/입력 설정 | 게임 PC의 PlayerPrefs |
 
-회원 코인·상점 해금·회원 랭킹·운동 통계는 계정 서버에서 공유합니다. 게스트/이 PC 랭킹과 화면 설정은 각 PC에 남고, 예전 PC 지갑은 개발자/전시 모드에서만 사용합니다. 얼굴 DB·토큰·설치별 설정은 Git/공개 ZIP에서 제외합니다.
+회원 코인·상점 해금·회원 랭킹·운동 통계는 계정 서버에서 공유합니다. 게스트/이 PC 랭킹과 화면 설정은 각 PC에 남고, 예전 PC 지갑은 사용하지 않습니다. 얼굴 DB·토큰·설치별 설정은 Git/공개 ZIP에서 제외합니다.
 
 패키지 버전은 [기술 스택](TECH_STACK.md), 포즈 판정은 [몸동작 안내](BODY_TRACKING.md), 실제 확인 범위는 [진행 상태](PROGRESS.md)를 확인하세요.
 

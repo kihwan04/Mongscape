@@ -35,7 +35,7 @@ namespace Muhanok.Presentation
             for (int i = 0; i < 3; i++)
             {
                 var option = (PlayStyle)i;
-                bool allowed = PlayStyleInfo.Allowed(option, bodyOk, false);
+                bool allowed = PlayStyleInfo.Allowed(option, bodyOk);
                 var r = new Rect(340 + i * 204, 336, 192, 78);
                 bool was = GUI.enabled; GUI.enabled = was && allowed;
                 bool picked = skin.Button(r, (i + 1) + ". " + PlayStyleInfo.Label(option), allowed ? (option == current ? Palette.Gold : Palette.A(Palette.Gold, .78f)) : Palette.A(Palette.Ground, .6f),
@@ -51,8 +51,8 @@ namespace Muhanok.Presentation
             if (e.type == EventType.KeyDown)
             {
                 int key = e.keyCode >= KeyCode.Alpha1 && e.keyCode <= KeyCode.Alpha3 ? e.keyCode - KeyCode.Alpha1 : e.keyCode >= KeyCode.Keypad1 && e.keyCode <= KeyCode.Keypad3 ? e.keyCode - KeyCode.Keypad1 : -1;
-                if (key >= 0 && PlayStyleInfo.Allowed((PlayStyle)key, bodyOk, false)) { e.Use(); choice = TutorialChoice.Start; style = (PlayStyle)key; }
-                else if (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) { e.Use(); choice = TutorialChoice.Start; style = PlayStyleInfo.Playable(current, bodyOk, false); }
+                if (key >= 0 && PlayStyleInfo.Allowed((PlayStyle)key, bodyOk)) { e.Use(); choice = TutorialChoice.Start; style = (PlayStyle)key; }
+                else if (e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) { e.Use(); choice = TutorialChoice.Start; style = PlayStyleInfo.Playable(current, bodyOk); }
                 else if (e.keyCode == KeyCode.Alpha4 || e.keyCode == KeyCode.Keypad4 || e.keyCode == KeyCode.Escape) { e.Use(); choice = TutorialChoice.Skip; }
             }
             skin.Text(new Rect(340, 520, 600, 26), GesturePointer.Hint("1~3으로 방식을 고르거나 4(건너뛰기)를 누르세요."), 14, Palette.Muted, TextAnchor.MiddleCenter, false, true);

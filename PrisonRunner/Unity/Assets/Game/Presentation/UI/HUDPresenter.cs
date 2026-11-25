@@ -18,9 +18,8 @@ namespace Muhanok.Presentation
         public IHudData Data;
         public Action<PlayerProfile> BeginRun;
         public Action PauseRun;
-        // Result and pause: back to the main menu; developer mode result: a fresh setup for the next player.
+        // Result and pause: back to the main menu.
         public Action ToMenu;
-        public Action NextPlayer;
         public Action OpenSettings;
         public Action Quit;
         public Func<bool> PoliceAlert;
@@ -192,11 +191,11 @@ namespace Muhanok.Presentation
             else if (state == GameFlowState.Result)
             {
                 OpenResult();
-                bool perRun = Data != null && Data.DeveloperMode, calibrating = calibration.Open;
+                bool calibrating = calibration.Open;
                 // The open calibration panel takes the keys first and leaves the result screen underneath inert.
                 calibration.Keys();
                 GUI.enabled = !calibrating;
-                board.Draw(Data, session, retry, "다시 하기", perRun ? NextPlayer : ToMenu, perRun ? "다음 플레이어" : "메인으로", CalibrationAvailable ? OpenCalibration : (Action)null, "웹캠 보정");
+                board.Draw(Data, session, retry, "다시 하기", ToMenu, "메인으로", CalibrationAvailable ? OpenCalibration : (Action)null, "웹캠 보정");
                 GUI.enabled = true;
                 if (calibrating) calibration.Draw(Data);
             }
@@ -206,7 +205,7 @@ namespace Muhanok.Presentation
                 skin.Card(new Rect(16, 684, 220, 26), new Color(0, 0, 0, .55f));
                 GUI.color = Palette.Gold; GUI.Label(new Rect(16, 684, 220, 26), "무적 모드 켜짐 (F9) · F7 잡히기", skin.Centered(14, FontStyle.Bold)); GUI.color = Color.white;
             }
-            // Developer mode joint recording (F6): a red note at the top of every screen while it runs.
+            // Joint recording (F6, Editor and development builds): a red note at the top of every screen while it runs.
             if (Data != null && Data.PoseRecording && Event.current.type == EventType.Repaint)
             {
                 var note = new Rect(530, 4, 220, 26);

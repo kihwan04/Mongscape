@@ -38,7 +38,6 @@ namespace Muhanok.Bootstrap
         private IEnumerator Run()
         {
             while ((game = FindFirstObjectByType<GameBootstrap>()) == null || game.Session == null || game.Session.Flow.State != GameFlowState.TitleIdle) yield return null;
-            game.SetDeveloperMode(false, false);
             yield return new WaitForSecondsRealtime(2f);
             var gateway = new ReviewGateway();
             game.UseAccountServices(gateway);
@@ -57,7 +56,7 @@ namespace Muhanok.Bootstrap
             UnityEngine.Application.Quit(0);
         }
 
-        // Stage 2: the result report (intensity bars, move counts, week comparison, "새 랭킹 시작") after a synthetic full-body run.
+        // Stage 2: the result report (intensity bars, move counts, week comparison) after a synthetic full-body run.
         private IEnumerator Stage2Result()
         {
             // Nobody steers: the run stays invincible until the review ends it.

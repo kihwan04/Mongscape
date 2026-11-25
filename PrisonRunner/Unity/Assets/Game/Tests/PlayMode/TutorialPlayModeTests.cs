@@ -30,7 +30,6 @@ namespace Muhanok.Tests
             yield return SceneManager.LoadSceneAsync("GameScene");yield return null;
             game=Object.FindFirstObjectByType<GameBootstrap>();hud=game.GetComponent<HUDPresenter>();fake=new FakeAccountGateway();
             game.UseAccountServices(fake,new PlayerProgressStore(root));
-            game.SetDeveloperMode(false,false);
             fake.Profile.coins=40;fake.Profile.unlocked=new[]{(int)ItemKind.Magnet,(int)ItemKind.DoubleScore,(int)ItemKind.Shield};
             game.Account.SignInMember(fake.Profile,"fake-token");Assert.IsTrue(game.SignedIn);Assert.IsFalse(game.Account.TutorialDone);
             ((IHudData)game).PreviewStyle(PlayStyle.Keyboard);
@@ -101,14 +100,13 @@ namespace Muhanok.Tests
             yield return OpenAsMember();
             game.OpenMainMenu();hud.SelectMenu(MenuAction.Tutorial);
             hud.ChooseTutorial(TutorialChoice.Skip);Assert.AreEqual(MenuPage.Main,hud.Page,"돌아가기 from the menu's tutorial choice");
-            game.SetDeveloperMode(true,false);// body styles without a camera
             game.OpenMainMenu();hud.SelectMenu(MenuAction.Tutorial);hud.ChooseTutorial(TutorialChoice.Start,PlayStyle.UpperBody);
             float deadline=Time.realtimeSinceStartup+10;
             while((game.IsLoading||game.Session.Flow.State!=GameFlowState.Running)&&Time.realtimeSinceStartup<deadline)yield return null;
             Assert.AreEqual(PlayStyle.UpperBody,game.Tutorial.Script.Style);
             CollectionAssert.AreEqual(new TutorialScript(PlayStyle.UpperBody).Steps,game.Tutorial.Script.Steps);
             Assert.AreEqual(TutorialStep.Camera,game.Tutorial.Script.Steps[0],"Body styles check the camera first");Assert.AreEqual(TutorialStep.Calibrate,game.Tutorial.Script.Steps[1],"then calibrate before the first lesson");
-            game.ExitToMenu();game.SetDeveloperMode(false,false);game.FaceLogout(false);
+            game.ExitToMenu();game.FaceLogout(false);
         }
 
         [UnityTest]

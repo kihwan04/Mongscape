@@ -26,7 +26,6 @@ namespace Muhanok.Tests
             yield return SceneManager.LoadSceneAsync("GameScene");yield return null;
             game=Object.FindFirstObjectByType<GameBootstrap>();hud=game.GetComponent<HUDPresenter>();fake=new FakeAccountGateway();
             game.UseAccountServices(fake,null,done=>done(new[]{"face-1","face-2","face-3"}));
-            game.SetDeveloperMode(false,false);
         }
 
         [UnityTest]
@@ -141,23 +140,14 @@ namespace Muhanok.Tests
         }
 
         [UnityTest]
-        public IEnumerator DeveloperNextPlayerSignsOutToLoginGate()
+        public IEnumerator SigningOutDoesNotPassTodaysChallengeToTheNextPlayer()
         {
             yield return Open();
-            game.SetDeveloperMode(true,false);
-            try
-            {
-                game.Account.SignInMember(new AccountProfile{id="dev-member",name="전시회원"},"dev-token");Assert.IsTrue(game.SignedIn);
-                ((IHudData)game).SetDailyChallenge(true);
-                game.NextPlayer();
-                Assert.IsFalse(game.SignedIn);Assert.AreEqual(MenuPage.Login,hud.Page);Assert.AreEqual(1,fake.Logouts);
-                Assert.IsFalse(((IHudData)game).DailyChallenge,"The next player does not inherit today's challenge (QA 2026-11-25 M3)");
-                // A guest after a guest has the same empty id; 다음 플레이어 still starts from nothing.
-                ((IHudData)game).SetDailyChallenge(true);
-                game.NextPlayer();
-                Assert.IsFalse(((IHudData)game).DailyChallenge);
-            }
-            finally { game.SetDeveloperMode(false,false); }
+            game.Account.SignInMember(new AccountProfile{id="next-member",name="다음회원"},"next-token");Assert.IsTrue(game.SignedIn);
+            ((IHudData)game).SetDailyChallenge(true);
+            game.FaceLogout(false);
+            Assert.IsFalse(game.SignedIn);Assert.AreEqual(1,fake.Logouts);
+            Assert.IsFalse(((IHudData)game).DailyChallenge,"The next player does not inherit today's challenge (QA 2026-11-25 M3)");
         }
     }
 }

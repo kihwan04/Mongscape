@@ -29,7 +29,6 @@ namespace Muhanok.Tests
             yield return SceneManager.LoadSceneAsync("GameScene");yield return null;
             game=Object.FindFirstObjectByType<GameBootstrap>();fake=new FakeAccountGateway();
             game.UseAccountServices(fake,new PlayerProgressStore(root));
-            game.SetDeveloperMode(false,false);
         }
         private IEnumerator RunKeyboard()
         {
@@ -145,14 +144,11 @@ namespace Muhanok.Tests
         }
 
         [UnityTest]
-        public IEnumerator DeveloperModeOpensEveryItemAndLogoutReturnsToGuest()
+        public IEnumerator MemberWithoutUnlocksGetsNoItemsAndLogoutReturnsToGuest()
         {
             yield return Open();
             game.Account.SignInMember(new AccountProfile{id="member-3",name="상점"},"token-3");
             CollectionAssert.IsEmpty(game.RunItems(),"A member without unlocks gets no items");
-            game.SetDeveloperMode(true,false);
-            Assert.AreEqual(ItemCatalog.All.Length,game.RunItems().Count);
-            game.SetDeveloperMode(false,false);
             game.FaceLogout(false);
             Assert.AreEqual(1,fake.Logouts);Assert.IsFalse(game.SignedIn);
             Assert.AreEqual(AccountSession.GuestName,((IHudData)game).SavedProfile.Name);

@@ -8,7 +8,7 @@ namespace Muhanok.Tests
     // Steps a minute from the knees, the jump's knee symmetry and the per-person bounce line, camera framing.
     public sealed class CadenceAndJumpTests
     {
-        // Same stick body as BodyTrackingAndExhibitionTests, with separate ankles (the standing torso is .27 image units).
+        // Same stick body as BodyTrackingTests, with separate ankles (the standing torso is .27 image units).
         private sealed class Body { public float Dy, KneeL, KneeR, AnkleL, AnkleR, Dx; public bool Head = true, Feet = true; }
         private static PoseFrame Frame(Body b, double time)
         {

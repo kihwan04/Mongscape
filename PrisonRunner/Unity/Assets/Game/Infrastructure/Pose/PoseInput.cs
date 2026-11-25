@@ -37,10 +37,6 @@ namespace Muhanok.Infrastructure
     {
         // Set by Muhanok.PoseInference when the Inference Engine package is installed.
         public static Func<PoseCameraOptions, IPoseEstimator> Factory;
-        // Exhibition player lock (F8, off by default): when the body is lost, the search for it again only looks around where
-        // the player was and ignores much smaller (farther) people, so a bystander behind or beside the player is not taken.
-        // While the player is tracked nothing changes.
-        public static bool PlayerLock;
     }
 
     // Converts classifier readings into the same commands the keyboard produces.
@@ -106,7 +102,7 @@ namespace Muhanok.Infrastructure
         // How the player stands in the picture (head to ankles for the full body); NoBody while nobody is tracked.
         private readonly FramingGuide framing = new FramingGuide();
         public FramingIssue Framing => !UsesCamera ? FramingIssue.Ok : estimator == null || estimator.Status != PoseStatus.Tracking || Status == PoseStatus.Searching ? FramingIssue.NoBody : framing.Issue;
-        // Developer mode joint recording (F6): raw landmark frames only, never images.
+        // Joint recording (F6, Editor and development builds): raw landmark frames only, never images.
         private readonly PoseRecorder recorder = new PoseRecorder();
         public bool Recording => recorder.Recording;
         public int RecordedFrames => recorder.Frames;

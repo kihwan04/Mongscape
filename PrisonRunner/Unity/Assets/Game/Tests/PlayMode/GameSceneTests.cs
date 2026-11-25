@@ -200,7 +200,7 @@ namespace Muhanok.Tests
         [UnityTest] public IEnumerator OnlyUnlockedItemsSpawnAwayFromBananaRows()
         {
             yield return SceneManager.LoadSceneAsync("GameScene"); yield return null;
-            var game=Object.FindFirstObjectByType<GameBootstrap>(); game.SetDeveloperMode(false,false);
+            var game=Object.FindFirstObjectByType<GameBootstrap>();
             try
             {
                 game.StartIntro(); for(int i=0;i<82;i++) game.Intro.Tick(.1f);

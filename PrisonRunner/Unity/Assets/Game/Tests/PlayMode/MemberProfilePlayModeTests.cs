@@ -30,7 +30,6 @@ namespace Muhanok.Tests
             yield return SceneManager.LoadSceneAsync("GameScene");yield return null;
             game=Object.FindFirstObjectByType<GameBootstrap>();hud=game.GetComponent<HUDPresenter>();fake=new FakeAccountGateway();
             game.UseAccountServices(fake,new PlayerProgressStore(root));
-            LogAssert.Expect(LogType.Log,"Developer mode off");game.SetDeveloperMode(false,false);
         }
         private void SignIn(int coins=0) { fake.Profile.coins=coins;game.Account.SignInMember(fake.Profile,"fake-token");Assert.IsTrue(game.SignedIn); }
 
@@ -129,14 +128,6 @@ namespace Muhanok.Tests
             Assert.AreEqual("민지",new PlayerProgressStore(root).Board.All[0].Name,"The new name is saved in records.json");
             Assert.AreEqual(AccountSession.GuestName,game.Account.Nickname,"The next guest run starts as 게스트 again");
             SignIn();game.RecordFinishedRun();Assert.IsFalse(Data.CanNameLastRun,"Members keep their nickname");
-            game.FaceLogout(false);
-            game.SetDeveloperMode(true,false);
-            try
-            {
-                game.RecordFinishedRun();
-                Assert.IsFalse(Data.CanNameLastRun,"Developer mode keeps the 플레이어 N name");StringAssert.StartsWith("플레이어 ",Data.LastEntry.Name);
-            }
-            finally { game.SetDeveloperMode(false,false); }
         }
     }
 }

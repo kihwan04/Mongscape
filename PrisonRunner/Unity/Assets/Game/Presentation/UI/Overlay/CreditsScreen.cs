@@ -7,8 +7,11 @@ namespace Muhanok.Presentation
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         public static string Label => "v" + UnityEngine.Application.version + " (Dev)";
+        // Pose diagnostics, the F3 pose line and F6 joint recording: Editor and development builds only.
+        public const bool DevelopmentTools = true;
 #else
         public static string Label => "v" + UnityEngine.Application.version;
+        public const bool DevelopmentTools = false;
 #endif
     }
 

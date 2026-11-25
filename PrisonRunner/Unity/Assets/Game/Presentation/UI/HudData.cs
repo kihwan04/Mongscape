@@ -10,14 +10,13 @@ namespace Muhanok.Presentation
     // What the screens need from the running game; implemented by the bootstrap.
     public interface IHudData
     {
-        // Who plays the current or next run: the saved profile, or a per-run name in developer mode.
+        // Who plays the current or next run: the saved profile.
         PlayerProfile Player { get; }
         PlayerProfile SavedProfile { get; }
-        bool DeveloperMode { get; }
         Texture CameraTexture { get; }
         // A webcam is plugged in. Without one no screen shows a camera view.
         bool CameraDetected { get; }
-        // Full-body and upper-body play can be chosen: a camera is connected, or developer mode is on.
+        // Full-body and upper-body play can be chosen: a camera is connected (or an automated test/tool run).
         bool BodyStylesAllowed { get; }
         PoseFrame PoseFrame { get; }
         PoseStatus PoseStatus { get; }
@@ -40,7 +39,7 @@ namespace Muhanok.Presentation
         RunCalibrationState RunCalibration { get; }
         // A tutorial run: the calibration screen explains itself once.
         bool TutorialRun { get; }
-        // Developer mode joint recording (F6) is on.
+        // Joint recording (F6, Editor and development builds) is on.
         bool PoseRecording { get; }
         bool BodyActive { get; }
         PlayerWallet Wallet { get; }
@@ -48,7 +47,7 @@ namespace Muhanok.Presentation
         PlayerStats Stats { get; }
         // The run that just finished: its entry, rank among all runs and today, whether it beat the best score for its play style, and that best.
         RankingEntry LastEntry { get; }
-        // A guest's last run (outside developer mode) can still be renamed from "게스트" on this PC's ranking.
+        // A guest's last run can still be renamed from "게스트" on this PC's ranking.
         bool CanNameLastRun { get; }
         bool NameLastRun(string name);
         int LastRank { get; }
@@ -67,7 +66,7 @@ namespace Muhanok.Presentation
         float StartBanner { get; }
         float CaughtFlash { get; }
         void PreviewStyle(PlayStyle style);
-        // done(ok, reason): members buy on the account server; guests and developer mode cannot buy.
+        // done(ok, reason): members buy on the account server; guests cannot buy.
         void Unlock(ItemKind kind, System.Action<bool, string> done);
         void SaveProfile(PlayerProfile profile);
         void Recalibrate();

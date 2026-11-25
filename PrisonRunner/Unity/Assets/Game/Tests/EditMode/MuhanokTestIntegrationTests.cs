@@ -11,7 +11,7 @@ namespace Muhanok.Tests
     public sealed class MuhanokTestIntegrationTests
     {
         [Test]
-        public void LegacyCoinsAndRankingsMigrateOnceWithoutChangingOriginals()
+        public void LegacyRankingsMigrateOnceWithoutChangingOriginals()
         {
             string root=Path.Combine(Path.GetTempPath(),"mongscape-merge-"+Guid.NewGuid().ToString("N"));
             try
@@ -23,13 +23,12 @@ namespace Muhanok.Tests
                 string walletPath=Path.Combine(legacy,"progress.json"),rankPath=Path.Combine(legacy,"ranking-20261026.json");
                 File.WriteAllText(walletPath,wallet);File.WriteAllText(rankPath,ranking);
                 var store=new PlayerProgressStore(root);
-                Assert.AreEqual(90,store.Wallet.Coins);Assert.IsTrue(store.Wallet.IsUnlocked(ItemKind.Magnet));
                 Assert.AreEqual(2,store.Board.All.Count);Assert.AreEqual(340,store.Board.All[0].Distance);
                 Assert.AreEqual(1,store.Board.All[0].ScoreVersion,"Old rankings load as score version 1");Assert.IsEmpty(store.Board.View(false,DateTime.Now,PlayStyle.FullBody));Assert.AreEqual(-1,store.Board.All[0].Mode,"No Style label: no mode tab");
                 Assert.AreEqual(2,store.Stats.Runs);Assert.AreEqual(460,store.Stats.TotalDistance,.001);
                 Assert.AreEqual(0,store.Stats.TotalKcal,"Old rankings did not store calories");
                 var reopened=new PlayerProgressStore(root);
-                Assert.AreEqual(90,reopened.Wallet.Coins);Assert.AreEqual(2,reopened.Stats.Runs);
+                Assert.AreEqual(2,reopened.Stats.Runs);
                 Assert.AreEqual(wallet,File.ReadAllText(walletPath));Assert.AreEqual(ranking,File.ReadAllText(rankPath));
             }
             finally

@@ -41,14 +41,13 @@ namespace Muhanok.Domain
         public void Reset() { Array.Clear(remaining, 0, remaining.Length); Collected = 0; }
     }
 
-    // The player's coins and the items bought with them in the shop. Developer mode unlocks everything.
+    // The player's coins and the items bought with them in the shop.
     public sealed class PlayerWallet
     {
         public int Coins { get; private set; }
-        public bool UnlockAll { get; set; }
         private readonly HashSet<ItemKind> unlocked = new HashSet<ItemKind>();
         public IEnumerable<ItemKind> Unlocked => unlocked;
-        public bool IsUnlocked(ItemKind kind) => UnlockAll || unlocked.Contains(kind);
+        public bool IsUnlocked(ItemKind kind) => unlocked.Contains(kind);
         public void Deposit(int coins) { Coins += Math.Max(0, coins); }
         public bool TryUnlock(ItemKind kind)
         {

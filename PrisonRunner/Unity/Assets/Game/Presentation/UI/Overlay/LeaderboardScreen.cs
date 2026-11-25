@@ -49,7 +49,7 @@ namespace Muhanok.Presentation
 
         static string Dist(float m) { return Mathf.FloorToInt(m).ToString("N0", Num) + " m"; }
 
-        // primary/secondary: result buttons (다시 하기 / 메인으로 or 다음 플레이어); the menu board only shows a close button.
+        // primary/secondary: result buttons (다시 하기 / 메인으로); the menu board only shows a close button.
         // middle: an optional third result button between them (웹캠 보정).
         public void Draw(IHudData data, RunSession session, Action primary, string primaryLabel, Action secondary, string secondaryLabel, Action middle = null, string middleLabel = null)
         {
@@ -64,16 +64,12 @@ namespace Muhanok.Presentation
                 // Title number is the run score; next to it the earlier best and 신기록! when this run beat it.
                 skin.Text(new Rect(x, 30, 260, 52), RunHudModel.Points(session.Score.Score), 44, Palette.Cream, TextAnchor.MiddleLeft);
                 string best = board.BestLine;
-                // The first runs of the new ranking season say why the board starts empty, in place of the best line.
-                string season = board.SeasonLine;
-                if (season.Length > 0) skin.Text(new Rect(x + 262, 30, w - 262 - 170, 52), season, 15, Palette.Sand, TextAnchor.MiddleLeft, false, true);
-                else if (best.Length > 0) skin.Text(new Rect(x + 262, 30, 400, 52), best == RankingBoard.GuestBestNote ? best : "(" + best + ")", 18, Palette.Sand, TextAnchor.MiddleLeft, false, true);
-                // The first run of the new season is always a best; the badge says the season started instead.
-                if (board.NewBest || season.Length > 0)
+                if (best.Length > 0) skin.Text(new Rect(x + 262, 30, 400, 52), best == RankingBoard.GuestBestNote ? best : "(" + best + ")", 18, Palette.Sand, TextAnchor.MiddleLeft, false, true);
+                if (board.NewBest)
                 {
                     var badge = new Rect(x + w - 150, 36, 150, 42);
                     skin.BorderBox(badge, Palette.Gold, Palette.Cream, 2);
-                    skin.Text(badge, season.Length > 0 ? RankingBoard.NewSeasonText : RankingBoard.NewBestText, season.Length > 0 ? 19 : 22, Palette.Outline, TextAnchor.MiddleCenter);
+                    skin.Text(badge, RankingBoard.NewBestText, 22, Palette.Outline, TextAnchor.MiddleCenter);
                 }
                 // Run facts as label/value pairs in fixed columns.
                 for (int i = 0; i < summary.Count; i++)
@@ -312,9 +308,7 @@ namespace Muhanok.Presentation
             var row = new Rect(x, 532, w, 50);
             float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f);
             skin.BorderBox(row, Palette.MeFill, Color.Lerp(Palette.Gold, Palette.Cream, pulse * 0.35f), 2);
-            // Developer mode has a name per run; otherwise the row reads "내 기록".
-            string name = !board.MemberTab && data != null && data.DeveloperMode && board.MineEntry != null ? board.MineEntry.Name : "▶ 내 기록";
-            Columns(row, me.Rank, name, RunHudModel.Points(me.Score), 20, 24, Palette.Gold, Palette.Gold);
+            Columns(row, me.Rank, "▶ 내 기록", RunHudModel.Points(me.Score), 20, 24, Palette.Gold, Palette.Gold);
         }
 
         void Columns(Rect r, int rank, string name, string score, int rankSize, int scoreSize, Color rankColor, Color scoreColor)

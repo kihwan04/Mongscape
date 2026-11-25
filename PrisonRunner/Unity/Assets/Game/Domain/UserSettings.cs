@@ -47,11 +47,10 @@ namespace Muhanok.Domain
         public bool LiteLandmarkModel = false;
         public float LaneSensitivity = 1f; // >1 needs less body movement
         public bool PerformanceOverlay = false;
-        public bool PoseDiagnostics = true;
+        // Pose diagnostics under the webcam preview (Editor and development builds only; off until switched on in the settings).
+        public bool PoseDiagnostics = false;
         // Webcam preview in the bottom-right corner while playing a camera style.
         public bool InGameCamera = true;
-        // Exhibition setup: every item unlocked, a name per run, today's ranking first and operator keys.
-        public bool DeveloperMode = false;
         // "달리기 속도 조절" on the setup screen: camera runs take their pace from the cadence. Remembered on this PC.
         public bool CadenceSpeed = true;
         // Running ranking strip: everyone this week (default) or only this player's own runs on this PC.

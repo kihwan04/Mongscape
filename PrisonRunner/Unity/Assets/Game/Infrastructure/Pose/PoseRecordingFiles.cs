@@ -78,7 +78,7 @@ namespace Muhanok.Infrastructure
         }
     }
 
-    // Development tool (developer mode, F6): writes the raw landmark frames the camera produces to a recording file.
+    // Development tool (Editor and development builds, F6): writes the raw landmark frames the camera produces to a recording file.
     // Only joint coordinates are written, never camera images. The file is plain text while recording and gzipped on Stop,
     // with an empty labels file next to it to fill in by hand.
     public sealed class PoseRecorder : IDisposable
