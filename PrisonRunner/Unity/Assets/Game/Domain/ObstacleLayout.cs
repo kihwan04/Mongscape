@@ -48,6 +48,8 @@ namespace Muhanok.Domain
         public int SafeLane { get; private set; }
         public bool Blocked => Blockers.Count > 0;
         private readonly List<float> rows = new List<float>(4);
+        // The course's move mix (exercise plan 3): scales the lane blockers and how often each full row is switched on.
+        private ActionMix mix = ActionMix.Neutral;
         private IReadOnlyList<ObstacleSlot> slots;
         private IReadOnlyList<LanePlacement> floor;
         // Authored z of the row moved to OpeningZ in the first chunk, NaN otherwise.
@@ -69,8 +71,9 @@ namespace Muhanok.Domain
         private static bool InsideSeams(float z) => z >= SeamClearance - .001f && z <= RouteSurface.Length - SeamClearance + .001f;
 
         public void Plan(Random random, int type, int sequence, IReadOnlyList<ObstacleSlot> authored, IReadOnlyList<LanePlacement> floorItems,
-            HazardOdds odds, bool extended, bool fork, bool boarding = false, HazardPacer pacer = null, float speed = 0)
+            HazardOdds odds, bool extended, bool fork, bool boarding = false, HazardPacer pacer = null, float speed = 0, ActionMix? course = null)
         {
+            mix = course ?? ActionMix.Neutral;
             PlanRows(random, type, sequence, authored, floorItems, odds, extended, fork, boarding);
             if (pacer != null) Pace(pacer, type, sequence, speed);
         }
@@ -93,18 +96,19 @@ namespace Muhanok.Domain
                 return;
             }
             SafeLane = random.Next(3) - 1;
-            if (extended && LaneBlockType(type) && random.NextDouble() < (type == 12 ? odds.Blocker * ZooBlockerScale : odds.Blocker))
+            if (extended && LaneBlockType(type) && random.NextDouble() < (type == 12 ? odds.Blocker * ZooBlockerScale : Math.Min(.95f, odds.Blocker * mix.Factor(HazardAction.Dodge))))
             {
                 bool both = random.NextDouble() < odds.DoubleBlocker; int first = (SafeLane + 2) % 3 - 1;
                 for (int lane = -1; lane <= 1; lane++)
                     if (lane != SafeLane && (both || lane == first)) Blockers.Add(new LanePlacement(lane, CentreZ));
             }
-            else if (type == 12) { if (random.NextDouble() >= ZooDuckChance || !SetActionRow(HazardAction.Crouch)) Animal = true; }
+            // The zoo keeps its tuned blocker share; its mix shows in fewer duck rows (more animals to jump) and more bananas.
+            else if (type == 12) { if (random.NextDouble() >= ZooDuckChance * mix.Factor(HazardAction.Crouch) || !SetActionRow(HazardAction.Crouch)) Animal = true; }
             else
             {
                 Rows(true); int on = 0;
                 for (int i = 0; i < rows.Count; i++)
-                    if (!Conflicts(rows[i], RowAction(rows[i])) && random.NextDouble() < ExerciseChance) { SetRow(rows[i]); on++; }
+                    if (!Conflicts(rows[i], RowAction(rows[i])) && random.NextDouble() < Math.Min(.95f, ExerciseChance * mix.Factor(RowAction(rows[i])))) { SetRow(rows[i]); on++; }
                 if (on == 0 && !HasTerrain())
                 {
                     for (int i = rows.Count - 1; i >= 0; i--) if (Conflicts(rows[i], RowAction(rows[i]))) rows.RemoveAt(i);
@@ -129,7 +133,7 @@ namespace Muhanok.Domain
             foreach (float z in new[] { SeamClearance, RouteSurface.Length - SeamClearance })
             {
                 if (Conflicts(z, HazardAction.Dodge)) continue;
-                for (int lane = -1; lane <= 1; lane++) if (lane != SafeLane && random.NextDouble() < odds.Banana) Bananas.Add(new LanePlacement(lane, z));
+                for (int lane = -1; lane <= 1; lane++) if (lane != SafeLane && random.NextDouble() < Math.Min(.95f, odds.Banana * mix.Factor(HazardAction.Dodge))) Bananas.Add(new LanePlacement(lane, z));
             }
         }
         // Time spacing (HazardPacer): jump rows and animals in route order; one that comes too soon after the previous jump is

@@ -8,6 +8,8 @@ namespace Muhanok.Presentation.Map
         public FloorItemKind Kind;
         public bool Passed {get;private set;}
         public void ResetItem(){Passed=false;}
+        // Banana peels get the danger marker (red ring, floor disc, "!"); puddles only slow and stay as they are.
+        private void Start(){if(Kind==FloorItemKind.BananaPeel)HazardMarker.Attach(gameObject);}
         public void Evaluate(RunSession session,float previousZ)
         {
             if(Passed||!gameObject.activeInHierarchy||session.Flow.State!=GameFlowState.Running||session.Paused)return;

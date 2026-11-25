@@ -46,6 +46,13 @@ namespace Muhanok.Presentation
         public int ForkLane {get;private set;}
         public float ForkProgress {get;private set;}
         public string ForkCaption {get;private set;}
+        // Fork preview (exercise plan 3): about PreviewSeconds before the choice, three cards at the top say where each
+        // branch leads; the card the player leans toward lights up. After the choice the course banner shows for a second.
+        public const float PreviewSeconds = 4f, BannerSeconds = 1.2f;
+        public bool ShowForkPreview {get;private set;}
+        public readonly int[] PreviewDestinations = new int[3];
+        public string CourseBanner {get;private set;}
+        private float bannerUntil;
         private int forkDestination=99;
         private static readonly string[] ChoiceCaptions={"왼쪽 선택","가운데 선택","오른쪽 선택"};
         private readonly int[] itemSeconds = new int[ItemCatalog.All.Length];
@@ -83,12 +90,17 @@ namespace Muhanok.Presentation
             ForkCommitted=ShowFork && plan.ForkLocked(session.Runner.Z);
             ForkLane=ForkCommitted?plan.ChoiceAt(RouteSurface.SequenceAt(session.Runner.Z)):session.Runner.Lane;
             ForkProgress=Mathf.InverseLerp(CartFork.Start,CartFork.Decision,lap);
+            int sequenceHere=RouteSurface.SequenceAt(session.Runner.Z);
+            float previewFrom=CartFork.Decision-PreviewSeconds*Mathf.Max(1f,session.CurrentSpeed);
+            ShowForkPreview=running && (plan?.HasFork(sequenceHere)??false) && !plan.ForkLocked(session.Runner.Z) && lap>=previewFrom && lap<CartFork.Decision;
+            if(ShowForkPreview)for(int lane=-1;lane<=1;lane++)PreviewDestinations[lane+1]=plan.DestinationFor(sequenceHere,lane);
             if(ForkCommitted)
             {
-                int destination=plan.DestinationAt(RouteSurface.SequenceAt(session.Runner.Z));
-                if(destination!=forkDestination){forkDestination=destination;ForkCaption=RoutePlan.DestinationName(destination)+" 진입";}
+                int destination=plan.DestinationAt(sequenceHere);
+                if(destination!=forkDestination){forkDestination=destination;ForkCaption=MapCourse.Course(destination);bannerUntil=now+BannerSeconds;}
             }
             else {forkDestination=99;ForkCaption=ChoiceCaptions[Mathf.Clamp(ForkLane+1,0,2)];}
+            CourseBanner=running&&now<bannerUntil?ForkCaption:null;
             if (now < lastTime || session.Runner.Z < lastZ - .01f)
             {
                 nextScan = comboUntil = policeUntil = sectionUntil = strikeClearedUntil = 0; previousStrikes = 0;

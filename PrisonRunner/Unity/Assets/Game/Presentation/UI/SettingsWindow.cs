@@ -92,6 +92,8 @@ namespace Muhanok.Presentation
             ToggleBind("performance-overlay", () => s.PerformanceOverlay, v => s.PerformanceOverlay = v);
             ToggleBind("pose-diagnostics", () => s.PoseDiagnostics, v => s.PoseDiagnostics = v);
             ToggleBind("ingame-camera", () => s.InGameCamera, v => s.InGameCamera = v);
+            ToggleBind("colorblind-mode", () => s.ColorBlind, v => s.ColorBlind = v);
+            ToggleBind("rank-strip-mine", () => s.RankStripMine, v => s.RankStripMine = v);
             var camera = Find<DropdownField>("camera-device");
             if(camera!=null)gestureActions[camera]=()=>camera.index=(camera.index+1)%camera.choices.Count;
             if (camera != null) camera.RegisterValueChangedCallback(e => { if (syncing) return; s.CameraDevice = camera.index <= 0 ? "" : e.newValue; host.ApplySettings(false); });
