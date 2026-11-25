@@ -52,7 +52,7 @@ stairs,40,50
 | `side_left` / `side_right` | 플레이어 기준 왼쪽 / 오른쪽 사이드 스텝 한 번 | 레인 변경 인식 |
 | `stairs` / `cart` | 상황 표시. 게임이 계단 / 수레 구간일 때와 같게 판정 | 채점 안 함 |
 
-무릎 인식은 계단에서만 쓰이므로 `stairs`나 `knee` 구간 밖의 무릎 인식은 세지 않습니다. 제자리 달리기(`walk`/`run`/`sprint`) 구간 안의 점프는 "제자리 달리기 중 잘못된 점프"로 따로 셉니다. 합격 기준 출발점: 전력 1분에 잘못된 점프 0회, 진짜 점프 인식률 95% 이상.
+무릎 인식은 계단에서만 쓰이므로 `stairs`나 `knee` 구간 밖의 무릎 인식은 세지 않습니다. 발구름(`walk`/`run`/`sprint`) 구간 안의 점프는 "발구름 중 잘못된 점프"로 따로 셉니다. 합격 기준 출발점: 전력 1분에 잘못된 점프 0회, 진짜 점프 인식률 95% 이상.
 
 ## 녹화 파일 형식
 
@@ -93,7 +93,7 @@ t,has,aspect,scale,x0,y0,z0,v0,...,x32,y32,z32,v32
 
 | 폴더 | 내용 |
 | --- | --- |
-| `Tools/QA/PoseRecordings/synthetic/` | 합성 녹화 5개 (`source=synthetic`). 스크립트로 만든 막대 몸에 관절 흔들림, 달리기 들썩임, 한쪽 무릎 들기를 넣은 것. 점수표가 돌아가는지와 스크립트한 경우(무거운 전력 제자리 달리기에서 점프가 안 잡히는지 등)를 확인하는 용도. `SyntheticPoseRecordings.cs`로 만들고, `MONGSCAPE_WRITE_POSE_SEEDS=1`로 `SyntheticSeedRecordingsCanBeRegenerated` 테스트를 돌리면 다시 씁니다 |
+| `Tools/QA/PoseRecordings/synthetic/` | 합성 녹화 5개 (`source=synthetic`). 스크립트로 만든 막대 몸에 관절 흔들림, 달리기 들썩임, 한쪽 무릎 들기를 넣은 것. 점수표가 돌아가는지와 스크립트한 경우(무거운 전력 발구름에서 점프가 안 잡히는지 등)를 확인하는 용도. `SyntheticPoseRecordings.cs`로 만들고, `MONGSCAPE_WRITE_POSE_SEEDS=1`로 `SyntheticSeedRecordingsCanBeRegenerated` 테스트를 돌리면 다시 씁니다 |
 | `Tools/QA/PoseRecordings/team/` | 팀원 실제 녹화를 넣는 자리 |
 
 녹화 하나(30초)는 gzip으로 약 0.3~0.5MB입니다.

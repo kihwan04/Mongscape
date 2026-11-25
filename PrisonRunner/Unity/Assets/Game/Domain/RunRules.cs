@@ -154,9 +154,6 @@ namespace Muhanok.Domain
         public float Y { get; private set; }
         public float Z { get; private set; }
         public bool Crouching => crouchLeft > 0f;
-        // The slide was lengthened by a deep crouch (the far half of the under-bar coin line needs it).
-        public bool DeepSliding => Crouching && deepSlide;
-        private bool deepSlide;
         public float SinceKneeStep => clock - lastKneeStep;
         // Counts every accepted KneeStep (feedback such as footsteps and camera bob listens for changes).
         public int KneeSteps { get; private set; }
@@ -205,7 +202,7 @@ namespace Muhanok.Domain
             verticalSpeed = Math.Max(verticalSpeed, (float)Math.Sqrt(2f * config.Gravity * (apex - Y))); return true;
         }
         // A deep crouch keeps the slide going longer.
-        public bool DeepSlide() { if (!Crouching) return false; crouchLeft = Math.Max(crouchLeft, config.CrouchSeconds * config.DeepSlideFactor); deepSlide = true; return true; }
+        public bool DeepSlide() { if (!Crouching) return false; crouchLeft = Math.Max(crouchLeft, config.CrouchSeconds * config.DeepSlideFactor); return true; }
         // A wide side step finishes the lane change sooner.
         public void HurryLane() { laneTime = Math.Max(laneTime, config.LaneSeconds * (1 - config.BigLaneTime)); }
         public float JumpApex => config.JumpHeight;
@@ -238,17 +235,16 @@ namespace Muhanok.Domain
             if(wasRiding!=Riding){laneFrom=X;Lane=0;laneTime=0;}
             if(wasRiding&&!Riding&&(RouteSurface.ActivePlan?.Extended??false)){X=laneFrom=0;laneTime=1;}
             crouchLeft = Math.Max(0f, crouchLeft - dt);
-            if (crouchLeft <= 0f) deepSlide = false;
             clock += dt;
             stumbleLeft = Math.Max(0f, stumbleLeft - dt);
             slowLeft = Math.Max(0f, slowLeft - dt);
         }
         private void StartJump()
         {
-            crouchLeft = 0f; deepSlide = false;
+            crouchLeft = 0f;
             verticalSpeed = (float)Math.Sqrt(2f * config.Gravity * config.JumpHeight);
         }
-        public void Reset() { deepSlide = false; Lane = 0; X = Y = 0f; Z = 2f; laneFrom = verticalSpeed = crouchLeft = stumbleLeft = slowLeft = jumpBuffer = crouchBuffer = 0f; laneTime = 1f; clock = 0f; lastKneeStep = NoKneeStep; KneeSteps = 0; }
+        public void Reset() { Lane = 0; X = Y = 0f; Z = 2f; laneFrom = verticalSpeed = crouchLeft = stumbleLeft = slowLeft = jumpBuffer = crouchBuffer = 0f; laneTime = 1f; clock = 0f; lastKneeStep = NoKneeStep; KneeSteps = 0; }
     }
 
     public sealed class RunSession
@@ -402,13 +398,12 @@ namespace Muhanok.Domain
             return true;
         }
         public enum BigMove { Jump, Crouch, Knee, Lane }
-        // Big movements seen this run, by kind, and the bonus coins taken (the coin line under the bars, the coins in the air;
-        // BonusCoins places them on the course).
+        // Big movements seen this run, by kind, and the coins they earned (one each when the matching hazard was close).
         public readonly int[] BigMoves = new int[4];
         public int BigCoins { get; private set; }
-        public void CollectBonusCoin() { CollectCoin(); BigCoins++; }
-        // Applies a big movement's in-game effect. Returns whether the effect applied.
-        public bool Big(BigMove move)
+        // Applies a big movement's in-game effect; hazardNear: a hazard of the matching action is just ahead, which earns a coin
+        // (the coin line under the bars, the coins in the air). Returns whether the effect applied.
+        public bool Big(BigMove move, bool hazardNear)
         {
             if (Flow.State != GameFlowState.Running || Paused) return false;
             bool applied = move == BigMove.Jump ? Runner.BoostJump() : move == BigMove.Crouch ? Runner.DeepSlide() : true;
@@ -416,6 +411,7 @@ namespace Muhanok.Domain
             if (move == BigMove.Knee) { Chase.Recover(Config.BigKneeRelief); PacePressure = Math.Max(0, PacePressure - Config.BigKneeRelief); }
             if (move == BigMove.Lane) Runner.HurryLane();
             BigMoves[(int)move]++;
+            if (hazardNear && move != BigMove.Knee) { CollectCoin(); BigCoins++; }
             return true;
         }
         public void Reset() { Array.Clear(BigMoves, 0, BigMoves.Length); BigCoins = 0; Runner.Reset(); Stair.Reset(); Chase.Reset(); Score.Reset(); Workout.Reset(); Items.Reset(); Paused=false; SpeedScale=1f; CadenceScale=1f; PacePressure=0f; clock = 0f; lastHit = -100f;SlipStrikes=0;lastStrike=0f;ShieldSaves=0;DodgeStreak=BestDodgeStreak=0;bananaCatchLeft=0;Reason=CaptureReason.Collision; smoothSpeed = TargetSpeed; }

@@ -23,7 +23,7 @@ namespace Muhanok.Domain
         public static ExerciseKind KindOf(int destination) => destination == 0 ? ExerciseKind.Strength : destination < 0 ? ExerciseKind.Cardio : ExerciseKind.Balance;
         public static string Name(int destination) => RoutePlan.DestinationName(destination);
         public static string Label(ExerciseKind kind) => kind == ExerciseKind.Strength ? "근력" : kind == ExerciseKind.Cardio ? "유산소" : kind == ExerciseKind.Balance ? "균형" : "준비운동";
-        public static string Moves(ExerciseKind kind) => kind == ExerciseKind.Strength ? "숙이기 · 무릎" : kind == ExerciseKind.Cardio ? "점프 · 옆걸음" : kind == ExerciseKind.Balance ? "골고루" : "천천히 제자리 달리기";
+        public static string Moves(ExerciseKind kind) => kind == ExerciseKind.Strength ? "숙이기 · 무릎" : kind == ExerciseKind.Cardio ? "점프 · 옆걸음" : kind == ExerciseKind.Balance ? "골고루" : "천천히 발구르기";
         // Intensity dots out of three.
         public static int Dots(ExerciseKind kind) => kind == ExerciseKind.Strength || kind == ExerciseKind.Cardio ? 3 : kind == ExerciseKind.Balance ? 2 : 1;
         public static string DotText(ExerciseKind kind) { int n = Dots(kind); return new string('●', n) + new string('○', 3 - n); }

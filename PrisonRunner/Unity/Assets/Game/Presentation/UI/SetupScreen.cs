@@ -97,7 +97,7 @@ namespace Muhanok.Presentation
             }
         }
         public static string ChallengeLabel(bool on) => on ? "오늘의 도전 ✓" : "오늘의 도전";
-        public static string CadenceLabel(bool on) => "달리기 속도 조절 " + (on ? "켜짐" : "꺼짐");
+        public static string CadenceLabel(bool on) => "발구름 속도 조절 " + (on ? "켜짐" : "꺼짐");
         public const string CadenceOffHint = "꺼짐: 걸음은 칼로리에서 빠져요";
         public const string NoCameraGuide = "카메라가 연결되어 있지 않아 키보드로만 플레이할 수 있어요. 카메라를 연결하면 전신·상체를 고를 수 있어요.";
         private bool Choice(Rect rect, string text, bool selected, bool enabled = true)

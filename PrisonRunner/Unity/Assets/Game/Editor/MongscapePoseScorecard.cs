@@ -39,7 +39,7 @@ namespace Muhanok.Editor
         public static void Sweep()
         {
             var entries = PoseRecordingFiles.LoadFolder(Folder);
-            var text = new StringBuilder("# 점프 기준값 비교\n\n합성 녹화는 [합성]으로 따로 셉니다.\n\n| 무릎 대칭 | 들썩임 배수 | 실제: 점프 정답률 | 실제: 제자리 달리기 중 잘못된 점프 | [합성] 점프 정답률 | [합성] 제자리 달리기 중 잘못된 점프 |\n| ---: | ---: | ---: | ---: | ---: | ---: |\n");
+            var text = new StringBuilder("# 점프 기준값 비교\n\n합성 녹화는 [합성]으로 따로 셉니다.\n\n| 무릎 대칭 | 들썩임 배수 | 실제: 점프 정답률 | 실제: 발구름 중 잘못된 점프 | [합성] 점프 정답률 | [합성] 발구름 중 잘못된 점프 |\n| ---: | ---: | ---: | ---: | ---: | ---: |\n");
             foreach (float symmetry in new[] { .08f, .12f, .16f, 99f })
                 foreach (float factor in new[] { 0f, 2f, 2.5f, 3f })
                 {

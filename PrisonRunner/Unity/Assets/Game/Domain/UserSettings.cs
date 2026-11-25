@@ -52,7 +52,7 @@ namespace Muhanok.Domain
         public bool InGameCamera = true;
         // Exhibition setup: every item unlocked, a name per run, today's ranking first and operator keys.
         public bool DeveloperMode = false;
-        // "달리기 속도 조절" on the setup screen: camera runs take their pace from the cadence. Remembered on this PC.
+        // "발구름으로 속도 조절" on the setup screen: camera runs take their pace from the cadence. Remembered on this PC.
         public bool CadenceSpeed = true;
         // Running ranking strip: everyone this week (default) or only this player's own runs on this PC.
         public bool RankStripMine = false;

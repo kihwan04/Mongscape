@@ -51,7 +51,6 @@ namespace Muhanok.Bootstrap
             yield return Stage5();
             yield return Stage6();
             yield return FollowupCadenceOff();
-            yield return FollowupCoins();
             if (failure != null) { Fail(failure); yield break; }
             Debug.Log("MONGSCAPE_EXERCISE_REVIEW_PASS: " + destination);
             UnityEngine.Application.Quit(0);
@@ -125,8 +124,8 @@ namespace Muhanok.Bootstrap
             while (game.Session.Flow.State != GameFlowState.Result) { if (Time.realtimeSinceStartup - wait > 30) { Fail("result did not appear"); yield break; } yield return null; }
             game.ExitToMenu(); yield return new WaitForSecondsRealtime(.5f);
             // Runs with the cadence option on and off share one board, without an on/off tag.
-            game.Store.Record(new RankingEntry { Name = "속도조절끄고", Score = 640, Distance = 600, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", Ticks = DateTime.Now.Ticks }, 3);
-            game.Store.Record(new RankingEntry { Name = "속도조절켜고", Score = 720, Distance = 650, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", Ticks = DateTime.Now.Ticks + 1 }, 3);
+            game.Store.Record(new RankingEntry { Name = "발구름끄고", Score = 640, Distance = 600, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", Ticks = DateTime.Now.Ticks }, 3);
+            game.Store.Record(new RankingEntry { Name = "발구름켜고", Score = 720, Distance = 650, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", Ticks = DateTime.Now.Ticks + 1 }, 3);
             for (int i = 0; i < 4; i++) game.Store.Record(new RankingEntry { Name = "게스트" + i, Score = 500 - i * 40, Distance = 400, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", Ticks = DateTime.Now.Ticks + 2 + i }, 2);
             game.Hud.ShowPage(MenuPage.Ranking); game.Hud.Ranking.Select(false, PlayStyle.FullBody, false); yield return new WaitForSecondsRealtime(1f);
             yield return Shot("F1_03_Ranking_Merged");
@@ -172,7 +171,7 @@ namespace Muhanok.Bootstrap
             yield return Shot("S5_06_Profile_WeekGoal");
             game.OpenMainMenu();
         }
-        // Follow-up 1: "달리기 속도 조절" off. Stepping earns nothing; the report shows the motion-moment time. The goal bar
+        // Follow-up 1: "발구름으로 속도 조절" off. Stepping earns nothing; the report shows the motion-moment time. The goal bar
         // shows the server's weekly minutes (every PC of the member).
         private IEnumerator FollowupCadenceOff()
         {
@@ -199,34 +198,6 @@ namespace Muhanok.Bootstrap
             yield return new WaitForSecondsRealtime(1.5f);
             yield return Shot("F1_02_Result_CadenceOff_ServerWeekGoal");
             hud.SetCadenceSpeed(true);
-            game.ExitToMenu(); yield return new WaitForSecondsRealtime(.5f);
-        }
-        // Follow-up 2: the coin line under the bars (far half for a deep slide), the coins over a jump row, and the red
-        // outline on every obstacle (bananas keep their ring; coins stay yellow).
-        private IEnumerator FollowupCoins()
-        {
-            game.Session.Invincible = true;
-            game.StartPlayerRun(new PlayerProfile { Name = "리뷰", Weight = "65", Style = PlayStyle.FullBody, CalorieGoal = 50 });
-            float wait = Time.realtimeSinceStartup;
-            while (game.IsLoading || game.IsRevealing || game.Session.Flow.State != GameFlowState.Running) { if (Time.realtimeSinceStartup - wait > 60) { Fail("run did not start"); yield break; } yield return null; }
-            yield return new WaitForSecondsRealtime(2f);
-            game.enabled = false; game.Race.Clear();
-            foreach (var kind in new[] { BonusCoin.UnderBar, BonusCoin.Air })
-            {
-                float at = -1;
-                for (float z = 30; z < 3000 && at < 0; z += 48)
-                {
-                    Seek(z, 0);
-                    foreach (var item in game.Map.Active) foreach (var coin in item.Chunk.BonusCoinViews)
-                        if (coin.gameObject.activeSelf && coin.Bonus == kind && coin.transform.position.z > z + 10 && (at < 0 || coin.transform.position.z < at)) at = coin.transform.position.z;
-                }
-                if (at < 0) { Debug.LogWarning("EXERCISE_REVIEW: no " + kind + " coins found"); continue; }
-                Seek(at - (kind == BonusCoin.Air ? 7 : 6), 0); yield return new WaitForSecondsRealtime(.6f);
-                yield return Shot(kind == BonusCoin.Air ? "F2_02_Jump_AirCoins_RedOutline" : "F2_01_Bars_CoinLine_RedOutline");
-            }
-            game.enabled = true; game.Session.Invincible = false; game.Session.ForceCatch();
-            wait = Time.realtimeSinceStartup;
-            while (game.Session.Flow.State != GameFlowState.Result) { if (Time.realtimeSinceStartup - wait > 30) { Fail("result did not appear"); yield break; } yield return null; }
             game.ExitToMenu(); yield return new WaitForSecondsRealtime(.5f);
         }
         // Stage 6: the new tutorial (camera check, pace gauge with the demo window, police, a lesson with the demo, the

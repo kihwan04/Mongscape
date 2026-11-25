@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Muhanok.Domain
 {
-    // Exercise plan 10-3: 카메라 확인 → 보정 → 제자리 달리기 → 경찰 → 사이드 스텝 → 점프 → 숙이기 → 계단 → 바나나 → 수레·갈림길.
+    // Exercise plan 10-3: 카메라 확인 → 보정 → 발구름 → 경찰 → 사이드 스텝 → 점프 → 숙이기 → 계단 → 바나나 → 수레·갈림길.
     public enum TutorialStep { Camera, Calibrate, Cadence, Police, Lane, Jump, Crouch, HighKnee, Banana, Rail, Fork, Done }
     // What a step waits for: a framed body, a calibrated body, a held pace, the police shaken off, a lesson obstacle
     // (or broken rail, or both bananas) passed cleanly, or a lean at the cart fork.
@@ -12,7 +12,7 @@ namespace Muhanok.Domain
     public enum TutorialHazard { None, LaneBlock, JumpRow, CrouchRow, StairChunk, Bananas, RailGap }
 
     // Lessons for one play style (about 15 s each, under 3 minutes). Steps the style, route or options lack are left out:
-    // keyboard play needs no camera check, calibration, cadence or police; with "달리기 속도 조절" off the police step goes
+    // keyboard play needs no camera check, calibration, cadence or police; with "발구름 속도 조절" off the police step goes
     // (the cadence step then only shows that stepping turns into calories); a route without forks has no lean.
     // Members who finished the earlier tutorial get the short version once: only what this update changed (0~3, 8, 9).
     public sealed class TutorialScript
@@ -82,7 +82,7 @@ namespace Muhanok.Domain
             }
         }
         public static string Title(TutorialStep step) => step == TutorialStep.Camera ? "카메라 확인" : step == TutorialStep.Calibrate ? "보정"
-            : step == TutorialStep.Cadence ? "제자리 달리기" : step == TutorialStep.Police ? "경찰" : step == TutorialStep.Lane ? "사이드 스텝"
+            : step == TutorialStep.Cadence ? "발구름" : step == TutorialStep.Police ? "경찰" : step == TutorialStep.Lane ? "사이드 스텝"
             : step == TutorialStep.Jump ? "점프" : step == TutorialStep.Crouch ? "숙이기" : step == TutorialStep.HighKnee ? "계단"
             : step == TutorialStep.Banana ? "바나나" : step == TutorialStep.Rail ? "끊긴 레일 피하기" : step == TutorialStep.Fork ? "갈림길 고르기" : "튜토리얼 완료";
         public static string Instruction(TutorialStep step, PlayStyle style, bool cadenceSpeed = true)
@@ -93,8 +93,8 @@ namespace Muhanok.Domain
                 case TutorialStep.Camera: return upper ? "허리 위가 화면에 다 들어오게 앉거나 서 주세요." : "머리부터 발끝까지 화면에 들어오게 서 주세요.";
                 case TutorialStep.Calibrate: return "카메라 앞에 바르게 서 주세요. 자세를 맞추면 출발합니다.";
                 // Cadence off: stepping earns no calories (only jumps, crouches, knee raises and lane changes do).
-                case TutorialStep.Cadence: return !cadenceSpeed ? (upper ? "팔을 흔들어 보세요. 속도 조절 꺼짐: 팔 흔들기는 칼로리 제외" : "제자리 달리기를 해 보세요. 속도 조절 꺼짐: 걸음은 칼로리 제외")
-                    : upper ? "팔을 번갈아 빠르게 흔들어 보세요. 빠를수록 빨리 달려요!" : "제자리 달리기를 해 보세요. 빠를수록 빨리 달려요!";
+                case TutorialStep.Cadence: return !cadenceSpeed ? (upper ? "팔을 흔들어 보세요. 발구름을 끄면 점프·숙이기·옆 이동만 칼로리가 돼요." : "제자리에서 걸어 보세요. 발구름을 끄면 점프·숙이기·무릎·옆걸음만 칼로리가 돼요.")
+                    : upper ? "팔을 번갈아 빠르게 흔들어 보세요. 빠를수록 빨리 달려요!" : "제자리에서 뛰어 보세요. 발구름이 빠를수록 빨리 달려요!";
                 case TutorialStep.Police: return "잠깐 멈춰 보세요. 느려지면 경찰이 다가와요!";
                 case TutorialStep.Lane: return keys ? "A·D(←·→) 키로 옆 줄로 피하세요." : upper ? "상체를 옆으로 기울여 피하세요." : "옆으로 크게 한 걸음! 상체만 기울이면 안 돼요.";
                 case TutorialStep.Jump: return keys ? "스페이스 키로 점프!" : upper ? "두 손을 머리 위로 들어 점프!" : "제자리에서 점프! 높이 뛰면 더 높이 떠요.";

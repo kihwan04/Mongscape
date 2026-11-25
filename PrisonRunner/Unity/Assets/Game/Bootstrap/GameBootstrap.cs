@@ -650,7 +650,7 @@ namespace Muhanok.Bootstrap
         {
             double clock = Time.realtimeSinceStartupAsDouble;
             bool camera = Pose.UsesCamera && Pose.Tracking;
-            var reading = Pose.Reading;
+            var reading = Pose.Reading; float z = Session.Runner.Z, ahead = Mathf.Max(8f, Session.CurrentSpeed * 1.5f);
             bool bigJump = Pose.BigJumps > seenBigJumps, bigKnee = Pose.BigKnees > seenBigKnees, bigLane = Pose.BigLanes > seenBigLanes;
             seenBigJumps = Pose.BigJumps; seenBigKnees = Pose.BigKnees; seenBigLanes = Pose.BigLanes;
             bool kneeStep = Pose.LastKneeStepTime > seenKneeStep; seenKneeStep = Pose.LastKneeStepTime;
@@ -658,11 +658,11 @@ namespace Muhanok.Bootstrap
             bool crouchStart = crouch && !wasCrouch, crouchEnd = !crouch && wasCrouch;
             wasDeep = deep; wasCrouch = crouch;
             if (!camera) return;
-            if (bigJump && Session.Big(RunSession.BigMove.Jump)) bigUntil = clock + 1;
+            if (bigJump && Session.Big(RunSession.BigMove.Jump, Map.ActionAhead(HazardAction.Jump, z - 3, ahead + 3))) bigUntil = clock + 1;
             if (deep) { Session.Runner.DeepSlide(); bigUntil = System.Math.Max(bigUntil, clock + .3); }
-            if (deepStart && Session.Big(RunSession.BigMove.Crouch)) bigUntil = clock + 1;
-            if (bigKnee && Session.Big(RunSession.BigMove.Knee)) bigUntil = clock + 1;
-            if (bigLane && Session.Big(RunSession.BigMove.Lane)) bigUntil = clock + 1;
+            if (deepStart && Session.Big(RunSession.BigMove.Crouch, Map.ActionAhead(HazardAction.Crouch, z - 3, ahead + 3))) bigUntil = clock + 1;
+            if (bigKnee && Session.Big(RunSession.BigMove.Knee, false)) bigUntil = clock + 1;
+            if (bigLane && Session.Big(RunSession.BigMove.Lane, Map.ActionAhead(HazardAction.Dodge, z, ahead))) bigUntil = clock + 1;
             if (Session.IsTutorial) return;
             var line = coach.Tick(Time.realtimeSinceStartup, dt, new Coach.Input
             {
