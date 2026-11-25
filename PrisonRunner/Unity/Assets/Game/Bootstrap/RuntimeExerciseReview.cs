@@ -49,7 +49,6 @@ namespace Muhanok.Bootstrap
             yield return Stage2Profile();
             yield return Stage3();
             yield return Stage5();
-            yield return Stage6();
             if (failure != null) { Fail(failure); yield break; }
             Debug.Log("MONGSCAPE_EXERCISE_REVIEW_PASS: " + destination);
             UnityEngine.Application.Quit(0);
@@ -168,43 +167,6 @@ namespace Muhanok.Bootstrap
             game.Hud.ShowPage(MenuPage.Profile); yield return new WaitForSecondsRealtime(1f);
             yield return Shot("S5_06_Profile_WeekGoal");
             game.OpenMainMenu();
-        }
-        // Stage 6: the new tutorial (camera check, pace gauge with the demo window, police, a lesson with the demo, the
-        // follow-along view after three misses, the banana lesson). The camera inputs are synthetic.
-        private IEnumerator Stage6()
-        {
-            game.ExitToMenu(); yield return new WaitForSecondsRealtime(.5f);
-            var t = game.Tutorial; bool framed = false; float spm = 0, pressure = 0;
-            ((IHudData)game).PreviewStyle(PlayStyle.FullBody);
-            game.StartTutorial();
-            float wait = Time.realtimeSinceStartup;
-            while (game.IsLoading || game.IsRevealing || game.Session.Flow.State != GameFlowState.Running) { if (Time.realtimeSinceStartup - wait > 60) { Fail("tutorial did not start"); yield break; } yield return null; }
-            t.NoCamera = () => false; t.Framed = () => framed; t.StepsPerMinute = () => spm; t.PaceScale = () => Mathf.Lerp(.7f, 1.3f, Mathf.InverseLerp(80, 160, spm)); t.PacePressure = () => pressure;
-            yield return Until(() => t.Script.Current == TutorialStep.Camera, 5);
-            yield return Shot("S6_01_Tutorial_CameraCheck");
-            framed = true; yield return Until(() => t.Script.Current != TutorialStep.Camera, 6);
-            yield return Until(() => t.Script.Current == TutorialStep.Cadence, 10);
-            spm = 118; yield return new WaitForSecondsRealtime(1.5f); yield return Shot("S6_02_Tutorial_Cadence_Gauge_Demo");
-            yield return Until(() => t.Script.Current == TutorialStep.Police, 12);
-            spm = 0; pressure = .5f; yield return new WaitForSecondsRealtime(.8f); yield return Shot("S6_03_Tutorial_Police");
-            pressure = 0; spm = 120; yield return Until(() => t.Script.Current == TutorialStep.Lane, 6);
-            // Jump: skip ahead to its lesson; three misses grow the demo into "따라 하기".
-            while (t.Script.Current != TutorialStep.Jump) t.Script.Pass();
-            game.Session.Runner.SetStartZ(TutorialCourse.RestartZ(TutorialStep.Jump) + 2); game.Map.Tick(game.Session.Runner.Z);
-            yield return Until(() => t.Waiting, 8);
-            yield return Shot("S6_04_Tutorial_Jump_Demo");
-            t.Script.Fail(); t.Script.Fail(); t.Script.Fail(); yield return Shot("S6_05_Tutorial_FollowAlong");
-            while (t.Script.Current != TutorialStep.Banana) t.Script.Pass();
-            game.Session.Runner.SetStartZ(TutorialCourse.RestartZ(TutorialStep.Banana)); game.Map.Tick(game.Session.Runner.Z);
-            yield return Until(() => t.Waiting, 8);
-            yield return Shot("S6_06_Tutorial_Banana");
-            game.ExitToMenu(); yield return new WaitForSecondsRealtime(.5f);
-        }
-        private IEnumerator Until(Func<bool> done, float seconds)
-        {
-            float end = Time.realtimeSinceStartup + seconds;
-            while (!done() && Time.realtimeSinceStartup < end) yield return null;
-            if (!done()) Debug.LogWarning("EXERCISE_REVIEW: wait timed out");
         }
         // Puts the frozen run at route z (the review's own plan), leaning toward a branch.
         private void Seek(float z, int branch)

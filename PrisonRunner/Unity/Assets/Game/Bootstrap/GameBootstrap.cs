@@ -57,10 +57,7 @@ namespace Muhanok.Bootstrap
         // Exercise plan 8: active seconds per course this run (for the weekly balance), the 20-minute rest notice, the first
         // banana warning (once a session), today's challenge and the streak coins of the last run.
         private readonly double[] kindSeconds = new double[4];
-        private float restUntil = -10, bananaUntil = -10, courseUntil = -10;
-        // First time on each course this session: a one-line hint (exercise plan 10-3).
-        private readonly bool[] courseSeen = new bool[4];
-        private ExerciseKind courseShown;
+        private float restUntil = -10, bananaUntil = -10;
         private bool restShown, bananaWarned, dailyChallenge, challengeRun;
         private int lastStreakCoins;
         public const float RestAfterSeconds = 20 * 60, NoticeSeconds = 6;
@@ -170,11 +167,6 @@ namespace Muhanok.Bootstrap
             hud.TextInput=KeyboardGameInput.SetTextInput; hud.Quit=QuitGame;
             hud.StartTutorial=StartTutorial; hud.OfferTutorial=OfferTutorial;
             Tutorial=gameObject.AddComponent<TutorialDirector>();
-            Tutorial.Framed=()=>Pose.Framing==FramingIssue.Ok;
-            Tutorial.NoCamera=()=>Pose.Status==PoseStatus.Off||Pose.Status==PoseStatus.NoCamera||Pose.Status==PoseStatus.NoModel;
-            Tutorial.StepsPerMinute=()=>Pose.StepsPerMinute; Tutorial.PaceScale=()=>pace.Scale; Tutorial.PacePressure=()=>pace.Pressure;
-            Tutorial.RunCadence=Settings!=null?Settings.Motion.RunCadence:100f;
-            Tutorial.Demo=gameObject.AddComponent<TutorialDemo>(); Tutorial.Demo.Configure(MonkeyPrefab);
             Tutorial.Configure(Session,Map,()=>Pose.Status==PoseStatus.Tracking||Pose.Status==PoseStatus.Off||Pose.Status==PoseStatus.NoCamera||Pose.Status==PoseStatus.NoModel,
                 RestartTutorial,FinishTutorial,()=>!hud.Hidden&&!hud.Loading&&!hud.Revealing&&RunCalibration==RunCalibrationState.None);
             audioPlayer = gameObject.AddComponent<GameAudio>();
@@ -303,21 +295,16 @@ namespace Muhanok.Bootstrap
             if(!PlayableStyle(player.Style)) player.Style=PlayStyle.Keyboard;
             Session.Workout.SetWeight(""); Session.Workout.Met=PlayStyleInfo.Met(player.Style);Session.Workout.StyleScale=IntensityMet.Scale(player.Style);
             menuCamera=false; Pose.SetStyle(player.Style);
-            cadenceRun=PlayStyleInfo.UsesCamera(player.Style)&&userSettings.CadenceSpeed; race.Clear(); raceTicket++;
-            Session.IsTutorial=true; Tutorial.Begin(player.Style,Session.Config.ExtendedRoutes,userSettings.CadenceSpeed,tutorialShort); tutorialShort=false;
+            cadenceRun=false; race.Clear(); raceTicket++;
+            Session.IsTutorial=true; Tutorial.Begin(player.Style,Session.Config.ExtendedRoutes);
             StartCoroutine(PrepareRun(TutorialCourse.Seed));
         }
         // Members who have not finished it and every guest are offered it once per session.
         private bool OfferTutorial()
         {
-            if(TutorialScript.ShouldOffer(Account.IsMember,Account.TutorialDone,tutorialOffered)){tutorialOffered=true;tutorialShort=false;return true;}
-            // Members who finished the earlier tutorial: the short version of what this update changed, offered once on this PC.
-            bool seen=Account.IsMember&&userSettings.UpdatedTutorialSeen.Contains(Account.Id);
-            if(!TutorialScript.ShouldOfferUpdate(Account.IsMember,Account.TutorialDone,seen,tutorialOffered)) return false;
-            tutorialOffered=true; tutorialShort=true; userSettings.UpdatedTutorialSeen.Add(Account.Id); UserSettingsStore.Save(userSettings); return true;
+            if(!TutorialScript.ShouldOffer(Account.IsMember,Account.TutorialDone,tutorialOffered)) return false;
+            tutorialOffered=true; return true;
         }
-        // The next tutorial start is the short update version (set by the offer, cleared when the tutorial begins).
-        private bool tutorialShort;
         // After a mistake: a fresh course, started at the given route z in front of the step.
         private void RestartTutorial(float z)
         {
@@ -414,7 +401,7 @@ namespace Muhanok.Bootstrap
                 if (Session.Flow.State != GameFlowState.Running) return;
                 // The cadence sets the pace on foot; below the target for 3 s the police close in (never a capture by itself).
                 var course = MapCourse.KindAt(RouteSurface.ActivePlan, RouteSurface.SequenceAt(Session.Runner.Z));
-                pace.Tick(dt, cadenceRun && !Session.Runner.Riding && Pose.Tracking, Pose.StepsPerMinute,
+                pace.Tick(dt, cadenceRun && !Session.IsTutorial && !Session.Runner.Riding && Pose.Tracking, Pose.StepsPerMinute,
                     Settings != null ? Settings.Motion : null, MapCourse.TargetCadence(course, Settings != null ? Settings.Motion : null));
                 TickNotices();
                 Session.CadenceScale = pace.Scale; Session.PacePressure = pace.Pressure;
@@ -629,11 +616,8 @@ namespace Muhanok.Bootstrap
         {
             float now = Time.realtimeSinceStartup;
             if (!restShown && !Session.IsTutorial && Session.Elapsed >= RestAfterSeconds) { restShown = true; restUntil = now + NoticeSeconds; }
-            var kind = MapCourse.KindAt(RouteSurface.ActivePlan, RouteSurface.SequenceAt(Session.Runner.Z));
-            if (kind != ExerciseKind.Warmup && !Session.IsTutorial && !courseSeen[(int)kind]) { courseSeen[(int)kind] = true; courseShown = kind; courseUntil = now + 2.5f; }
             if (!bananaWarned && !Session.IsTutorial && !Session.Runner.Riding && Map.BananaAhead(Session.Runner.Z, Mathf.Max(12f, Session.CurrentSpeed * 2.5f))) { bananaWarned = true; bananaUntil = now + 3f; }
         }
-        public static string CourseHint(ExerciseKind kind) => kind == ExerciseKind.Strength ? "근력 코스 · 깊게 숙이기, 무릎 높이" : kind == ExerciseKind.Cardio ? "유산소 코스 · 연속 점프, 옆으로 크게" : kind == ExerciseKind.Balance ? "균형 코스 · 골고루" : "";
         private string ExerciseOwner => Account.IsMember ? Account.Id : "";
         private void ResetBigMoves()
         {
@@ -867,7 +851,6 @@ namespace Muhanok.Bootstrap
         bool IHudData.HazardNear => Session.Flow.State == GameFlowState.Running && Map.HazardAhead(Session.Runner.Z, Mathf.Max(8f, Session.CurrentSpeed * 1.2f));
         float IHudData.PacePressure => Session.PacePressure;
         string IHudData.CoachText => Session.Flow.State != GameFlowState.Running ? "" : Time.realtimeSinceStartup < restUntil ? RestText
-            : Time.realtimeSinceStartup < courseUntil ? CourseHint(courseShown)
             : coach.Showing(Time.realtimeSinceStartup) ? Coach.Text(coach.Line, player.Style) : "";
         ExerciseKind IHudData.Recommended => Store.Exercise.Recommend(ExerciseOwner, System.DateTime.UtcNow);
         double IHudData.WeekMinutes => Store.Exercise.WeekModerateMinutes(ExerciseOwner, System.DateTime.UtcNow);
@@ -883,7 +866,7 @@ namespace Muhanok.Bootstrap
         {
             string id = Account.IsMember ? Account.Id : "";
             if (id == shownAccount) return;
-            shownAccount = id; tutorialOffered = false; bananaWarned = false; System.Array.Clear(courseSeen, 0, courseSeen.Length);
+            shownAccount = id; tutorialOffered = false; bananaWarned = false;
             if (!Account.IsMember) ClearPortrait();
             faceAvatar.Apply(portrait);
             // The HUD best and the next result compare with this member's /stats.

@@ -17,8 +17,6 @@ namespace Muhanok.Presentation.Map
             var hazard = TutorialCourse.HazardAt(sequence);
             if (hazard == TutorialHazard.LaneBlock && inner is RuntimeContent content)
                 content.PlaceLaneBlock(chunk, TutorialCourse.BlockedLane, chunk.Entry.position.z + TutorialCourse.LaneBlockZ);
-            else if (hazard == TutorialHazard.Bananas && inner is RuntimeContent bananas)
-                foreach (float z in TutorialCourse.BananaZ) bananas.PlaceBanana(chunk, TutorialCourse.BlockedLane, chunk.Entry.position.z + z);
             else if (hazard == TutorialHazard.JumpRow) Row(chunk.ExerciseObstacles, 0);
             else if (hazard == TutorialHazard.CrouchRow) Row(chunk.ExerciseObstacles, 1);
             // StairChunk: the stair chunk itself is the lesson (the stair judge); it has no hazard to switch on.

@@ -58,8 +58,6 @@ namespace Muhanok.Domain
         public bool RankStripMine = false;
         // 색약 모드: danger markers (banana rings) are drawn thicker so they do not rely on red alone.
         public bool ColorBlind = false;
-        // Members (account ids) on this PC who were offered the short tutorial of the exercise update (once each).
-        public System.Collections.Generic.List<string> UpdatedTutorialSeen = new System.Collections.Generic.List<string>();
 
         public static readonly int[] FrameCaps = { 30, 60, 0 };
 
