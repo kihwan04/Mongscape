@@ -187,22 +187,6 @@ namespace Muhanok.Presentation
         }
         public bool NewBest => ResultMode && data != null && data.LastNewBest;
 
-        // Score version 3 started a new ranking: the result says so while the new season is just starting for this player.
-        // A member: a previous-season best exists for this play style and no new-season best before this run.
-        // Otherwise: this PC has older-formula records for the play style and at most three runs of the new season.
-        public const string NewSeasonText = "새 랭킹 시작";
-        public const string NewSeasonMemberLine = "점수 계산이 바뀌어 랭킹을 새로 시작했어요 · 이전 기록은 내 정보에", NewSeasonGuestLine = "점수 계산이 바뀌어 랭킹을 새로 시작했어요 · 이전 기록은 보관돼요";
-        public bool NewSeason
-        {
-            get
-            {
-                if (!ResultMode || data == null) return false;
-                if (MemberResult) return data.LastBestScore <= 0 && data.LastStats != null && data.LastStats.PreviousBest((int)Mode) > 0;
-                return data.Board != null && data.Board.HasOlderSeason(Mode) && data.Board.View(false, DateTime.Now, Mode).Count <= 3;
-            }
-        }
-        public string SeasonLine => !NewSeason ? "" : MemberResult ? NewSeasonMemberLine : NewSeasonGuestLine;
-
         // Calorie panel lines (label, value): this run, then a member's today and lifetime totals once /stats answered.
         public List<KeyValuePair<string, string>> KcalLines(RunSession session)
         {
