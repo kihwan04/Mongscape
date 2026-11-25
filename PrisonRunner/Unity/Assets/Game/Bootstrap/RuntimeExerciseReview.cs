@@ -47,6 +47,7 @@ namespace Muhanok.Bootstrap
             game.Account.SignInMember(gateway.Profile, "synthetic-review");
             yield return Stage2Result();
             yield return Stage2Profile();
+            yield return Stage3();
             if (failure != null) { Fail(failure); yield break; }
             Debug.Log("MONGSCAPE_EXERCISE_REVIEW_PASS: " + destination);
             UnityEngine.Application.Quit(0);
@@ -55,6 +56,8 @@ namespace Muhanok.Bootstrap
         // Stage 2: the result report (intensity bars, move counts, week comparison, "새 랭킹 시작") after a synthetic full-body run.
         private IEnumerator Stage2Result()
         {
+            // Nobody steers: the run stays invincible until the review ends it.
+            game.Session.Invincible = true;
             game.StartPlayerRun(new PlayerProfile { Name = "리뷰", Weight = "65", Style = PlayStyle.FullBody, CalorieGoal = 50 });
             float wait = Time.realtimeSinceStartup;
             while (game.IsLoading || game.IsRevealing || game.Session.Flow.State != GameFlowState.Running) { if (Time.realtimeSinceStartup - wait > 60) { Fail("run did not start"); yield break; } yield return null; }
@@ -65,7 +68,7 @@ namespace Muhanok.Bootstrap
             w.TickIntensity(70, true, true, CadenceStage.Sprint, false, true, 1);
             w.CountMove(MoveKind.Step, 812); w.CountMove(MoveKind.Jump, 24); w.CountMove(MoveKind.Crouch, 17); w.CountMove(MoveKind.KneeStep, 36); w.CountMove(MoveKind.SideStep, 41);
             game.Session.Score.Advance(1240);
-            game.Session.ForceCatch();
+            game.Session.Invincible = false; game.Session.ForceCatch();
             wait = Time.realtimeSinceStartup;
             while (game.Session.Flow.State != GameFlowState.Result) { if (Time.realtimeSinceStartup - wait > 30) { Fail("result did not appear"); yield break; } yield return null; }
             yield return new WaitForSecondsRealtime(1.5f);
@@ -79,6 +82,45 @@ namespace Muhanok.Bootstrap
             game.OpenMainMenu();
         }
 
+        // Stage 3: the setup toggle, the running ranking strip (and a break-through mid-effect), red pace edges, ranking tags.
+        private IEnumerator Stage3()
+        {
+            game.OpenStartSetup(); yield return new WaitForSecondsRealtime(.8f);
+            yield return Shot("S3_01_Setup_CadenceToggle");
+            game.Hud.CloseSetup();
+            // Nobody steers: the run stays invincible until the review ends it.
+            game.Session.Invincible = true;
+            game.StartPlayerRun(new PlayerProfile { Name = "리뷰", Weight = "65", Style = PlayStyle.FullBody, CalorieGoal = 50 });
+            float wait = Time.realtimeSinceStartup;
+            while (game.IsLoading || game.IsRevealing || game.Session.Flow.State != GameFlowState.Running) { if (Time.realtimeSinceStartup - wait > 60) { Fail("run did not start"); yield break; } yield return null; }
+            yield return new WaitForSecondsRealtime(3f);
+            // Freeze the simulation (nobody steers) and show synthetic numbers.
+            game.enabled = false;
+            var race = game.Race;
+            race.Load(new[] { new RankRace.Row("김탈옥", 4210), new RankRace.Row("박점프", 3980), new RankRace.Row("이숙임", 3700), new RankRace.Row("최무릎", 2900) });
+            race.Update(3830); while (race.TakeOvertake(out _)) { }
+            yield return Shot("S3_02_Run_RankStrip");
+            race.Update(3950); yield return Shot("S3_03_Run_RankStrip_Close");
+            race.Update(4000);
+            yield return new WaitForSecondsRealtime(.18f);
+            ScreenCapture.CaptureScreenshot(Path.Combine(destination, "S3_04_Run_RankStrip_BreakThrough.png"));
+            yield return new WaitForSecondsRealtime(1f);
+            game.Session.PacePressure = .6f;
+            yield return Shot("S3_05_Run_PacePressureEdges");
+            game.Session.PacePressure = 0;
+            race.Update(5000); yield return new WaitForSecondsRealtime(1.5f); yield return Shot("S3_06_Run_FirstPlace");
+            game.enabled = true;
+            game.Session.Invincible = false; game.Session.ForceCatch();
+            wait = Time.realtimeSinceStartup;
+            while (game.Session.Flow.State != GameFlowState.Result) { if (Time.realtimeSinceStartup - wait > 30) { Fail("result did not appear"); yield break; } yield return null; }
+            game.ExitToMenu(); yield return new WaitForSecondsRealtime(.5f);
+            game.Store.Record(new RankingEntry { Name = "발구름꺼짐", Score = 640, Distance = 600, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", CadenceSpeed = 0, Ticks = DateTime.Now.Ticks }, 3);
+            game.Store.Record(new RankingEntry { Name = "발구름켜짐", Score = 720, Distance = 650, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", CadenceSpeed = 1, Ticks = DateTime.Now.Ticks + 1 }, 3);
+            for (int i = 0; i < 4; i++) game.Store.Record(new RankingEntry { Name = "게스트" + i, Score = 500 - i * 40, Distance = 400, ScoreVersion = RunScore.Version, Mode = 0, Style = "전신", CadenceSpeed = i % 2, Ticks = DateTime.Now.Ticks + 2 + i }, 2);
+            game.Hud.ShowPage(MenuPage.Ranking); game.Hud.Ranking.Select(false, PlayStyle.FullBody, false); yield return new WaitForSecondsRealtime(1f);
+            yield return Shot("S3_07_Ranking_CadenceTags");
+            game.OpenMainMenu();
+        }
         private IEnumerator Shot(string name)
         {
             yield return new WaitForSecondsRealtime(.6f);

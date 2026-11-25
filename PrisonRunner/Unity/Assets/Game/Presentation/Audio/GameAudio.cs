@@ -11,6 +11,7 @@ namespace Muhanok.Presentation
         private const int Rate = 44100;
         private RunSession session;
         private AudioSource music, siren, effects;
+        private AudioClip crack;
         private AudioClip coin, jump, hit, item, shield, beep, go, step;
         private float musicVolume = .35f, effectsVolume = .7f;
         // Read on the audio thread.
@@ -33,6 +34,7 @@ namespace Muhanok.Presentation
             go = Tone(.35f, f => 990, .45f);
             hit = Noise(.4f);
             step = Tone(.09f, f => 150 - f * 80, .6f);
+            crack = Shatter(.16f);
         }
         private AudioSource Source(string id, bool loop)
         {
@@ -43,6 +45,8 @@ namespace Muhanok.Presentation
         public void Countdown(bool final) { if (effects != null) effects.PlayOneShot(final ? go : beep, effectsVolume); }
         // A short thump for a KneeStep on the stairs (the bootstrap calls it with the camera effect), at the effects volume.
         public void Footstep() { if (effects != null && step != null) effects.PlayOneShot(step, effectsVolume * .8f); }
+        // A short glassy break when the ranking strip passes a row.
+        public void Crack() { if (effects != null && crack != null) effects.PlayOneShot(crack, effectsVolume * .55f); }
         public void Bonk(){if(effects!=null)effects.PlayOneShot(beep,effectsVolume*.65f);}
 
         private void Update()
@@ -107,6 +111,12 @@ namespace Muhanok.Presentation
                 samples[i] = (float)Math.Sin(phase) * volume * (1 - f) * Mathf.Clamp01(i / 200f);
             }
             var clip = AudioClip.Create("tone", length, 1, Rate, false); clip.SetData(samples, 0); return clip;
+        }
+        private static AudioClip Shatter(float seconds)
+        {
+            int length = (int)(Rate * seconds); var samples = new float[length]; var random = new System.Random(11);
+            for (int i = 0; i < length; i++) { float f = i / (float)length; float env = Mathf.Exp(-f * 9); samples[i] = ((float)random.NextDouble() * 2 - 1) * env * .45f + (float)Math.Sin(i * 2 * Math.PI * 2400 / Rate) * env * .25f; }
+            var clip = AudioClip.Create("crack", length, 1, Rate, false); clip.SetData(samples, 0); return clip;
         }
         private static AudioClip Noise(float seconds)
         {

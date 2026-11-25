@@ -20,6 +20,8 @@ namespace Muhanok.Application
         void SaveRun(string token, AccountRun run, Action<AccountReply> done);
         void Buy(string token, ItemKind item, Action<AccountReply> done);
         void Leaderboard(string token, PlayStyle mode, bool today, Action<LeaderboardReply> done);
+        // This week's board (from Monday 00:00 KST) for the running ranking strip; gateways without it give the all-time board.
+        void WeekLeaderboard(string token, PlayStyle mode, Action<LeaderboardReply> done) => Leaderboard(token, mode, false, done);
         void Stats(string token, Action<StatsReply> done);
         void Logout(string token, Action<AccountReply> done);
         void Delete(string token, Action<AccountReply> done);
@@ -46,6 +48,7 @@ namespace Muhanok.Application
         public void SaveRun(string token, AccountRun run, Action<AccountReply> done) => inner.SaveRun(token, run, Watch(token, done));
         public void Buy(string token, ItemKind item, Action<AccountReply> done) => inner.Buy(token, item, Watch(token, done));
         public void Leaderboard(string token, PlayStyle mode, bool today, Action<LeaderboardReply> done) => inner.Leaderboard(token, mode, today, Watch(token, done));
+        public void WeekLeaderboard(string token, PlayStyle mode, Action<LeaderboardReply> done) => inner.WeekLeaderboard(token, mode, Watch(token, done));
         public void Stats(string token, Action<StatsReply> done) => inner.Stats(token, Watch(token, done));
         // Signing out needs no notice.
         public void Logout(string token, Action<AccountReply> done) => inner.Logout(token, done);
@@ -118,16 +121,18 @@ namespace Muhanok.Application
         public string id = ""; public float distance; public int score; public double kcal, goal = AccountSettings.DefaultGoal;
         public double[] activities = new double[5];
         public int mode, coins; public double play_seconds; public int score_version = 1;
+        // "발구름으로 속도 조절": 1 on, 0 off, -1 not a camera run. The server does not store it yet (no column).
+        public int cadence_speed = -1;
 
         // Score uses the current formula (RunScore.Version); play seconds are the run clock without pauses.
-        public static AccountRun Create(RunSession run, PlayStyle mode, int coins)
+        public static AccountRun Create(RunSession run, PlayStyle mode, int coins, int cadenceSpeed = -1)
         {
             double playSeconds = run.Elapsed;
             var record = new AccountRun
             {
                 id = Guid.NewGuid().ToString(), distance = Math.Max(0f, run.Score.Distance), score = Math.Max(0, run.Score.Score),
                 kcal = Math.Max(0, run.Workout.EstimatedKcal), goal = run.Workout.GoalKcal, mode = (int)mode,
-                coins = Math.Max(0, Math.Min(MaxCoins, coins)), score_version = RunScore.Version,
+                coins = Math.Max(0, Math.Min(MaxCoins, coins)), score_version = RunScore.Version, cadence_speed = cadenceSpeed,
                 play_seconds = double.IsNaN(playSeconds) || double.IsInfinity(playSeconds) ? 0 : Math.Max(0, Math.Min(86400, playSeconds)),
             };
             for (int i = 0; i < 5; i++) record.activities[i] = Math.Max(0, run.Workout.KcalFor(i));

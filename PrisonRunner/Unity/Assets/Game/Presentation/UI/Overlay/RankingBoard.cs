@@ -12,6 +12,9 @@ namespace Muhanok.Presentation
     public sealed class RankingRow
     {
         public int Rank; public string Name = ""; public int Score; public bool Member;
+        // "발구름으로 속도 조절" of this PC's camera runs (1 on, 0 off); -1 unknown (server rows, keyboard, older records).
+        public int CadenceSpeed = -1;
+        public string CadenceTag => CadenceSpeed == 1 ? "발구름 켜짐" : CadenceSpeed == 0 ? "발구름 꺼짐" : "";
     }
 
     // Ranking tabs [회원 랭킹 | 이 PC] × [전신 | 상체 | 키보드] × [전체 | 오늘], and on the result the best score and calorie lines.
@@ -105,7 +108,7 @@ namespace Muhanok.Presentation
         {
             for (int i = 0; i < list.Count; i++)
             {
-                var row = new RankingRow { Rank = i + 1, Name = list[i].Name ?? "", Score = list[i].Score, Member = list[i].Member };
+                var row = new RankingRow { Rank = i + 1, Name = list[i].Name ?? "", Score = list[i].Score, Member = list[i].Member, CadenceSpeed = list[i].CadenceSpeed };
                 Rows.Add(row);
                 if (MineEntry != null && list[i] == MineEntry) Mine = row;
             }
@@ -138,7 +141,7 @@ namespace Muhanok.Presentation
                 }
             if (pending)
             {
-                mineMember = new RankingRow { Name = mineEntry.Name ?? "", Score = mineEntry.Score, Member = true };
+                mineMember = new RankingRow { Name = mineEntry.Name ?? "", Score = mineEntry.Score, Member = true, CadenceSpeed = mineEntry.CadenceSpeed };
                 int at = 0; while (at < members.Count && members[at].Score >= mineMember.Score) at++;
                 members.Insert(at, mineMember);
             }
@@ -149,7 +152,7 @@ namespace Muhanok.Presentation
                 bool guest = m >= members.Count || g < guests.Count && guests[g].Score >= members[m].Score;
                 if (guest)
                 {
-                    var row = new RankingRow { Name = guests[g].Name ?? "", Score = guests[g].Score, Member = false };
+                    var row = new RankingRow { Name = guests[g].Name ?? "", Score = guests[g].Score, Member = false, CadenceSpeed = guests[g].CadenceSpeed };
                     if (mineEntry != null && guests[g] == mineEntry) mine = row;
                     rows.Add(row); g++;
                 }

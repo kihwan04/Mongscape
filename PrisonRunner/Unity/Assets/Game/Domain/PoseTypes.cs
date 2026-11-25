@@ -89,6 +89,8 @@ namespace Muhanok.Domain
         // While running, the jump line rises to this many times the player's own running bounce (hip rise per step),
         // never below JumpRise. The bounce follows the last steps (BounceFollow per step).
         public float JumpBounceFactor = 2.5f, BounceFollow = .2f;
+        // Right before a duck row the jump line rises this many times, so a running bounce or a dip never reads as a jump there.
+        public float JumpDuckFactor = 1.5f;
         // Steps per minute (both knees, last 3 s): up to RunCadence is walking, from SprintCadence sprinting.
         public float RunCadence = 100f, SprintCadence = 150f;
         public float HighKneeLift = .20f, StepLift = .06f;

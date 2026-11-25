@@ -253,6 +253,7 @@ namespace Muhanok.Presentation
                 skin.Text(nameRect, list[rank].Name, 17, Palette.Cream, TextAnchor.MiddleCenter, false, true);
                 if (Badge(list[rank])) MemberBadge(nameRect, list[rank].Name, 17, TextAnchor.MiddleCenter);
                 skin.Text(new Rect(r.x, cy + 12, r.width, 34), RunHudModel.Points(list[rank].Score), 28, Palette.Cream, TextAnchor.MiddleCenter);
+                if (list[rank].CadenceTag.Length > 0) skin.Text(new Rect(r.x, r.yMax - 24, r.width, 20), list[rank].CadenceTag, 12, Palette.Sand, TextAnchor.MiddleCenter, false, true);
             }
             if (list.Count == 0)
                 skin.Text(new Rect(x, 200, w, 60), board.TodayOnly ? "오늘은 아직 기록이 없어요. 첫 기록을 남겨 보세요!" : "아직 기록이 없어요. 첫 기록을 남겨 보세요!", 18, Palette.Sand, TextAnchor.MiddleCenter, false, true);
@@ -269,6 +270,8 @@ namespace Muhanok.Presentation
                 skin.BorderBox(r, Palette.A(Palette.Panel, 0.92f), Palette.WoodDim, 2);
                 Columns(r, list[rank].Rank, list[rank].Name, RunHudModel.Points(list[rank].Score), 18, 20, Palette.Muted, Palette.Cream);
                 if (Badge(list[rank])) MemberBadge(new Rect(r.x + 84, r.y, r.width - 260, r.height), list[rank].Name, 16, TextAnchor.MiddleLeft);
+                // Distance depends on the cadence option, so this PC's camera runs say whether it was on.
+                if (list[rank].CadenceTag.Length > 0) skin.Text(new Rect(r.xMax - 300, r.y, 110, r.height), list[rank].CadenceTag, 13, Palette.Sand, TextAnchor.MiddleRight, false, true);
             }
         }
 

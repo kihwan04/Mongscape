@@ -69,7 +69,13 @@ namespace Muhanok.Domain
         private static bool InsideSeams(float z) => z >= SeamClearance - .001f && z <= RouteSurface.Length - SeamClearance + .001f;
 
         public void Plan(Random random, int type, int sequence, IReadOnlyList<ObstacleSlot> authored, IReadOnlyList<LanePlacement> floorItems,
-            HazardOdds odds, bool extended, bool fork, bool boarding = false)
+            HazardOdds odds, bool extended, bool fork, bool boarding = false, HazardPacer pacer = null, float speed = 0)
+        {
+            PlanRows(random, type, sequence, authored, floorItems, odds, extended, fork, boarding);
+            if (pacer != null) Pace(pacer, type, sequence, speed);
+        }
+        private void PlanRows(Random random, int type, int sequence, IReadOnlyList<ObstacleSlot> authored, IReadOnlyList<LanePlacement> floorItems,
+            HazardOdds odds, bool extended, bool fork, bool boarding)
         {
             slots = authored; floor = floorItems;
             Slots.Clear(); FloorItems.Clear(); Blockers.Clear(); Bananas.Clear(); Animal = false; Stair = false; SafeLane = 0; openingFrom = float.NaN;
@@ -125,6 +131,49 @@ namespace Muhanok.Domain
                 if (Conflicts(z, HazardAction.Dodge)) continue;
                 for (int lane = -1; lane <= 1; lane++) if (lane != SafeLane && random.NextDouble() < odds.Banana) Bananas.Add(new LanePlacement(lane, z));
             }
+        }
+        // Time spacing (HazardPacer): jump rows and animals in route order; one that comes too soon after the previous jump is
+        // switched off. Ducks, lane hazards, stairs and the cart break a jump streak. The opening row always stays.
+        private readonly List<(float z, int slot, HazardAction action)> paced = new List<(float, int, HazardAction)>(8);
+        private void Pace(HazardPacer pacer, int type, int sequence, float speed)
+        {
+            float start = sequence * RouteSurface.Length;
+            if (Stair || IsCart(type)) { pacer.Other(start + RouteSurface.Length * .5f); return; }
+            paced.Clear();
+            for (int i = 0; i < Slots.Count; i++) if (Slots[i]) paced.Add((ZOf(i), slots[i].Terrain ? -3 : i, slots[i].Action));
+            foreach (var block in Blockers) paced.Add((block.Z, -1, HazardAction.Dodge));
+            foreach (var peel in Bananas) paced.Add((peel.Z, -1, HazardAction.Dodge));
+            if (Animal) paced.Add((CentreZ, -2, HazardAction.Jump));
+            paced.Sort((a, b) => a.z.CompareTo(b.z));
+            float rowZ = float.NaN; bool rowKept = true;
+            foreach (var hazard in paced)
+            {
+                float z = start + hazard.z;
+                if (hazard.action != HazardAction.Jump) { pacer.Other(z); continue; }
+                // The pieces of one full row share its z and its fate.
+                bool sameRow = Same(hazard.z, rowZ); rowZ = hazard.z;
+                if (sameRow) { if (!rowKept) Drop(hazard.slot); continue; }
+                if (sequence == 0 || hazard.slot == -3) { pacer.Jump(z); rowKept = true; continue; }
+                rowKept = pacer.TryJump(z, speed);
+                if (!rowKept) Drop(hazard.slot);
+            }
+        }
+        private void Drop(int slot)
+        {
+            if (slot == -2) Animal = false;
+            else if (slot >= 0) Slots[slot] = false;
+        }
+        // Whether an active hazard of this action lies within local z [from, to] (rows, lane hazards, the animal).
+        public bool HasAction(HazardAction action, float from, float to)
+        {
+            if (slots == null) return false;
+            for (int i = 0; i < Slots.Count; i++) if (Slots[i] && slots[i].Action == action) { float z = ZOf(i); if (z >= from && z <= to) return true; }
+            if (action == HazardAction.Dodge)
+            {
+                foreach (var block in Blockers) if (block.Z >= from && block.Z <= to) return true;
+                foreach (var peel in Bananas) if (peel.Z >= from && peel.Z <= to) return true;
+            }
+            return action == HazardAction.Jump && Animal && CentreZ >= from && CentreZ <= to;
         }
         private void PlanRails(Random random, bool boarding)
         {
