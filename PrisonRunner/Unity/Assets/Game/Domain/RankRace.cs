@@ -37,6 +37,28 @@ namespace Muhanok.Domain
             // A reload mid-run (the server answered late) keeps the live score and passes nobody.
             Rank = RankOf(Score); Loaded = true;
         }
+        // This PC's rows for the strip from ranked entries (best first): runs since `since` that are not a member's (members come
+        // from the server, one row each), one row per name with its best score, so one guest never fills the strip twice.
+        // onlyMine: the member's own runs instead, each labelled "내 기록" (QA 2026-11-25 M4).
+        public const string MineName = "내 기록";
+        public static List<Row> LocalRows(IEnumerable<RankingEntry> entries, DateTime since, bool onlyMine, string memberId)
+        {
+            var rows = new List<Row>();
+            var best = new Dictionary<string, int>();
+            var order = new List<string>();
+            if (entries == null) return rows;
+            foreach (var e in entries)
+            {
+                if (e == null || new DateTime(e.Ticks) < since) continue;
+                if (onlyMine) { if (e.Member && e.AccountId == memberId) rows.Add(new Row(MineName, e.Score)); continue; }
+                if (e.Member) continue;
+                string name = e.Name ?? "";
+                if (!best.TryGetValue(name, out int score)) { order.Add(name); best[name] = e.Score; }
+                else if (e.Score > score) best[name] = e.Score;
+            }
+            foreach (var name in order) rows.Add(new Row(name, best[name]));
+            return rows;
+        }
         public void Clear() { others.Clear(); passed.Clear(); Loaded = false; Score = 0; Rank = 1; Practice = false; }
         // 1-based rank of a score: every other row at or above it stays ahead.
         public int RankOf(int score) { int above = 0; foreach (var r in others) if (r.Score >= score) above++; return above + 1; }

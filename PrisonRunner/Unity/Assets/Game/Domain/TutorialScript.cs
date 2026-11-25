@@ -174,6 +174,9 @@ namespace Muhanok.Domain
             : sequence == JumpChunk && On(TutorialStep.Jump) ? TutorialHazard.JumpRow : sequence == CrouchChunk && On(TutorialStep.Crouch) ? TutorialHazard.CrouchRow
             : sequence == StairChunk ? TutorialHazard.StairChunk : sequence == BananaChunk && On(TutorialStep.Banana) ? TutorialHazard.Bananas
             : sequence == RailChunk && On(TutorialStep.Rail) ? TutorialHazard.RailGap : TutorialHazard.None;
+        // The short update tutorial has no stair lesson but still runs over the stair chunk: a knee miss there is not the
+        // current lesson's mistake (it used to restart the banana step) (QA 2026-11-25 M2).
+        public static bool ForgivesStairMiss(TutorialScript script, int sequence) => sequence == StairChunk && script != null && !script.Has(TutorialStep.HighKnee);
         public static int ChunkOf(TutorialStep step) => step == TutorialStep.Cadence || step == TutorialStep.Police ? PaceChunk : step == TutorialStep.Lane ? LaneChunk
             : step == TutorialStep.Jump ? JumpChunk : step == TutorialStep.Crouch ? CrouchChunk : step == TutorialStep.HighKnee ? StairChunk
             : step == TutorialStep.Banana ? BananaChunk : step == TutorialStep.Rail ? RailChunk : -1;

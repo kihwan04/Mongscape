@@ -201,8 +201,8 @@ namespace Muhanok.Bootstrap
             hud.SetCadenceSpeed(true);
             game.ExitToMenu(); yield return new WaitForSecondsRealtime(.5f);
         }
-        // Follow-up 2: the coin line under the bars (far half for a deep slide), the coins over a jump row, and the red
-        // outline on every obstacle (bananas keep their ring; coins stay yellow).
+        // Follow-up 2: the coin line under the bars (far half for a deep slide) and the coins over a jump row. Obstacles look
+        // as before (no red outline; only bananas wear the red ring, decision 2026-11-25); coins stay yellow.
         private IEnumerator FollowupCoins()
         {
             game.Session.Invincible = true;
@@ -222,7 +222,7 @@ namespace Muhanok.Bootstrap
                 }
                 if (at < 0) { Debug.LogWarning("EXERCISE_REVIEW: no " + kind + " coins found"); continue; }
                 Seek(at - (kind == BonusCoin.Air ? 7 : 6), 0); yield return new WaitForSecondsRealtime(.6f);
-                yield return Shot(kind == BonusCoin.Air ? "F2_02_Jump_AirCoins_RedOutline" : "F2_01_Bars_CoinLine_RedOutline");
+                yield return Shot(kind == BonusCoin.Air ? "F2_02_Jump_AirCoins" : "F2_01_Bars_CoinLine");
             }
             game.enabled = true; game.Session.Invincible = false; game.Session.ForceCatch();
             wait = Time.realtimeSinceStartup;
@@ -239,7 +239,7 @@ namespace Muhanok.Bootstrap
             game.StartTutorial();
             float wait = Time.realtimeSinceStartup;
             while (game.IsLoading || game.IsRevealing || game.Session.Flow.State != GameFlowState.Running) { if (Time.realtimeSinceStartup - wait > 60) { Fail("tutorial did not start"); yield break; } yield return null; }
-            t.NoCamera = () => false; t.Framed = () => framed; t.StepsPerMinute = () => spm; t.PaceScale = () => Mathf.Lerp(.7f, 1.3f, Mathf.InverseLerp(80, 160, spm)); t.PacePressure = () => pressure;
+            t.NoCamera = () => false; t.Framed = () => framed; t.StepsPerMinute = () => spm; t.PaceScale = () => Mathf.Lerp(.7f, 1.3f, Mathf.InverseLerp(80, 160, spm)); t.PacePressure = () => pressure; t.Tracking = () => true;
             yield return Until(() => t.Script.Current == TutorialStep.Camera, 5);
             yield return Shot("S6_01_Tutorial_CameraCheck");
             framed = true; yield return Until(() => t.Script.Current != TutorialStep.Camera, 6);

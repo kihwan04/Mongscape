@@ -92,14 +92,19 @@ namespace Muhanok.Domain
             return n;
         }
         private bool Done(string owner, DateTime date) { var d = Find(owner, DayKey(date)); return d != null && d.Active / 60 >= StreakDayMinutes; }
-        // The course done least this week (strength, cardio, balance), for the fork's "추천" tag.
+        // The course done least this week (strength, cardio, balance), for the fork's "추천" tag. Warmup (no tag) when the
+        // least is shared: early in the week or for a first-time player every course is at 0 (QA 2026-11-25 L8).
         public ExerciseKind Recommend(string owner, DateTime utcNow)
         {
             var today = Kst(utcNow); var sums = new double[4];
             for (var d = WeekStart(today); d <= today; d = d.AddDays(1)) { var day = Find(owner, DayKey(d)); if (day != null) for (int i = 0; i < 4; i++) sums[i] += day.Kinds[i]; }
-            var best = ExerciseKind.Strength;
-            foreach (var kind in new[] { ExerciseKind.Cardio, ExerciseKind.Balance }) if (sums[(int)kind] < sums[(int)best]) best = kind;
-            return best;
+            var best = ExerciseKind.Strength; bool tied = false;
+            foreach (var kind in new[] { ExerciseKind.Cardio, ExerciseKind.Balance })
+            {
+                if (Math.Abs(sums[(int)kind] - sums[(int)best]) < 1) tied = true;
+                else if (sums[(int)kind] < sums[(int)best]) { best = kind; tied = false; }
+            }
+            return tied ? ExerciseKind.Warmup : best;
         }
     }
 }

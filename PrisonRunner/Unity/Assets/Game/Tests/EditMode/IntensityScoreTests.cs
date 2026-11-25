@@ -47,12 +47,16 @@ namespace Muhanok.Tests
             Assert.AreEqual(600, sprint.ModerateSeconds); Assert.AreEqual(0, walk.ModerateSeconds, "Walking is below 5 MET");
         }
 
-        [Test] public void UpperBodyScoresLessForTheSameCadenceButCountsModerateTime()
+        [Test] public void UpperBodyScoresLessForTheSameCadenceAndItsArmsAreNotModerate()
         {
             var full = new WorkoutEstimate(); var upper = new WorkoutEstimate { StyleScale = IntensityMet.Scale(PlayStyle.UpperBody) };
             full.TickIntensity(60, true, true, CadenceStage.Run, false, false, 0); upper.TickIntensity(60, true, true, CadenceStage.Run, false, false, 0);
             Assert.AreEqual(full.EstimatedKcal * .6, upper.EstimatedKcal, 1e-9);
-            Assert.AreEqual(60, upper.ModerateSeconds, "The weekly minutes use the cadence stage, so upper-body players can reach the goal");
+            // QA 2026-11-25 M5: moderate is judged after the play-style scale; arm swings at a run are 3 MET, a sprint 4.2.
+            Assert.AreEqual(0, upper.ModerateSeconds, "Upper-body running is 3 MET");
+            upper.TickIntensity(60, true, true, CadenceStage.Sprint, false, true, 0);
+            Assert.AreEqual(0, upper.ModerateSeconds, "Even a big sprint moment (4.8 MET) is under 5");
+            Assert.AreEqual(60, full.ModerateSeconds);
         }
 
         [Test] public void WeightChangesCaloriesButNotTheScore()
@@ -125,9 +129,15 @@ namespace Muhanok.Tests
             foreach (var m in moves) StringAssert.DoesNotContain("완벽", m.Key);
             var stats = new StatsReply { week_kcal = 120, week_seconds = 1800, last_week_kcal = 100, last_week_seconds = 1500 };
             Assert.AreEqual("120kcal · 30분", WorkoutReport.Week(stats)[0].Value);
-            Assert.AreEqual("지난주보다 20% 더", WorkoutReport.WeekChange(stats));
-            Assert.AreEqual("지난주보다 50% 덜", WorkoutReport.WeekChange(new StatsReply { week_kcal = 50, last_week_kcal = 100 }));
-            Assert.AreEqual("지난주 기록 없음 · 이번 주가 시작이에요", WorkoutReport.WeekChange(new StatsReply { week_kcal = 5 }));
+            // A Sunday (KST) has the whole week: the daily averages compare like the totals.
+            var sunday = new DateTime(2026, 11, 29, 3, 0, 0, DateTimeKind.Utc);
+            Assert.AreEqual("하루 평균 20% 더", WorkoutReport.WeekChange(stats, sunday));
+            Assert.AreEqual("하루 평균 50% 덜", WorkoutReport.WeekChange(new StatsReply { week_kcal = 50, last_week_kcal = 100 }, sunday));
+            Assert.AreEqual("지난주 기록 없음 · 이번 주가 시작이에요", WorkoutReport.WeekChange(new StatsReply { week_kcal = 5 }, sunday));
+            // QA 2026-11-25 L1: on a Monday, 20 kcal against last week's 140 (20 a day) is the same pace, not "86% 덜".
+            var monday = new DateTime(2026, 11, 23, 3, 0, 0, DateTimeKind.Utc);
+            Assert.AreEqual("하루 평균 같아요", WorkoutReport.WeekChange(new StatsReply { week_kcal = 20, last_week_kcal = 140 }, monday));
+            Assert.AreEqual("하루 평균 50% 더", WorkoutReport.WeekChange(new StatsReply { week_kcal = 30, last_week_kcal = 140 }, monday));
             Assert.IsEmpty(WorkoutReport.Week(null));
         }
     }

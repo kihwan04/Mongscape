@@ -91,6 +91,8 @@ namespace Muhanok.Presentation
         bool ChallengeRun { get; }
         bool DailyChallenge { get; }
         void SetDailyChallenge(bool on);
+        // The tutorial's joint comparison panel is open (bottom middle); the HUD notice moves aside then (QA 2026-11-25 M7).
+        bool JointCompareOpen => false;
         // A banana is just ahead and this player has not been warned yet this session.
         bool BananaWarning { get; }
     }

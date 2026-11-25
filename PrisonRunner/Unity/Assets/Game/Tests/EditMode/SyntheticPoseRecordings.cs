@@ -16,6 +16,8 @@ namespace Muhanok.Tests
         private sealed class Body
         {
             public float Dx, Dy, Shoulder, Hip, KneeL, KneeR, AnkleL, AnkleR;
+            // Arms (up is positive, image units): the wrist and the elbow rise from the hanging arm.
+            public float WristL, WristR, ElbowL, ElbowR;
         }
 
         private sealed class Script
@@ -30,7 +32,7 @@ namespace Muhanok.Tests
                 if (label.HasValue) Labels.Add(new PoseLabel { Action = label.Value, Start = End + labelFrom, End = End + (labelTo < 0 ? seconds : labelTo), Count = count });
                 End += seconds; return this;
             }
-            public Script Context(PoseAction action, double from, double to) { Labels.Add(new PoseLabel { Action = action, Start = from, End = to }); return this; }
+            public Script Context(PoseAction action, double from, double to, int count = 1) { Labels.Add(new PoseLabel { Action = action, Start = from, End = to, Count = count }); return this; }
             public Body At(double t)
             {
                 for (int i = Parts.Count - 1; i >= 0; i--) if (t >= Starts[i]) return Parts[i](t - Starts[i]);
@@ -38,12 +40,13 @@ namespace Muhanok.Tests
             }
         }
 
-        public static readonly string[] Names = { "synthetic-paces", "synthetic-heavy-sprint", "synthetic-actions", "synthetic-run-and-jump", "synthetic-stairs" };
+        public static readonly string[] Names = { "synthetic-paces", "synthetic-heavy-sprint", "synthetic-actions", "synthetic-run-and-jump", "synthetic-stairs",
+            "synthetic-cheat-small-steps", "synthetic-upper-arms", "synthetic-upper-stairs" };
 
         public static void Build(string name, out PoseRecording recording, out List<PoseLabel> labels)
         {
             var script = new Script();
-            int seed = 1;
+            int seed = 1; var style = PlayStyle.FullBody;
             switch (name)
             {
                 case "synthetic-paces":
@@ -79,12 +82,37 @@ namespace Muhanok.Tests
                     script.Add(2.5, Stand).Add(10, Pace(110, .1f, .012f), PoseAction.Knee, 19, .3, 10).Add(3, Stand);
                     script.Context(PoseAction.Stairs, 2.5, 12.5);
                     break;
+                case "synthetic-cheat-small-steps":
+                    // Standing and faking the pace (QA 2026-11-25): knees bent in turn at 170 a minute without the body bouncing,
+                    // then heels raised in turn at 160 a minute (a little knee, almost no rise). Neither is running in place.
+                    seed = 61;
+                    script.Add(2.5, Stand).Add(10, Pace(170, .03f, 0f), PoseAction.Stand).Add(2, Stand)
+                        .Add(10, HeelRaise(160), PoseAction.Stand).Add(2, Stand)
+                        // The real thing right after, so the bounce rule still lets a light jog through.
+                        .Add(10, Pace(130, .045f, .012f), PoseAction.Run).Add(3, Stand, PoseAction.Stand);
+                    break;
+                case "synthetic-upper-arms":
+                    // Upper body: real arm swings at 140 a minute, then wrists flicked in turn at 170 a minute (elbows still),
+                    // then small swings well under the swing line. Only the real swings are steps.
+                    seed = 71; style = PlayStyle.UpperBody;
+                    script.Add(2.5, Stand).Add(10, Swing(140, .065f, .03f), PoseAction.Run).Add(2, Stand)
+                        .Add(10, Swing(170, .03f, 0f), PoseAction.Stand).Add(2, Stand)
+                        .Add(10, Swing(170, .025f, .012f), PoseAction.Stand).Add(2, Stand, PoseAction.Stand);
+                    break;
+                case "synthetic-upper-stairs":
+                    // Upper body on a stair chunk: the pull-down (hands over the head, elbows down to the shoulders) every 1.5 s.
+                    // Each way is a knee step and, on the stairs, a step of the cadence (80 a minute, walking).
+                    seed = 79; style = PlayStyle.UpperBody;
+                    script.Add(2.5, Stand).Add(12, PullDown(1.5), PoseAction.Walk).Add(3, Stand);
+                    script.Context(PoseAction.Stairs, 2.5, 14.5);
+                    for (int i = 0; i < 8; i++) script.Context(PoseAction.Knee, 2.5 + i * 1.5, 2.5 + i * 1.5 + .9, 2);
+                    break;
                 default: throw new ArgumentException("Unknown synthetic recording " + name);
             }
             var random = new Random(seed);
             recording = new PoseRecording();
             recording.Meta["source"] = PoseRecording.SourceSynthetic;
-            recording.Meta["style"] = PlayStyle.FullBody.ToString();
+            recording.Meta["style"] = style.ToString();
             recording.Meta["camera"] = "640x480@30";
             recording.Meta["model"] = "synthetic";
             recording.Meta["person"] = "script";
@@ -110,6 +138,34 @@ namespace Muhanok.Tests
             if (step % 2 == 0) { body.KneeL = knee * lift; body.AnkleL = knee * .8f * lift; }
             else { body.KneeR = knee * lift; body.AnkleR = knee * .8f * lift; }
             return body;
+        };
+
+        // Heels raised in turn: the knee of the raised heel comes forward a little and the ankle lifts, the hips barely move.
+        private static Func<double, Body> HeelRaise(double stepsPerMinute) => t =>
+        {
+            double period = 60 / stepsPerMinute, phase = t / period;
+            int step = (int)Math.Floor(phase);
+            float lift = (float)Math.Sin(Math.PI * (phase - step));
+            var body = new Body { Dy = -.002f * lift };
+            if (step % 2 == 0) { body.KneeL = .022f * lift; body.AnkleL = .03f * lift; } else { body.KneeR = .022f * lift; body.AnkleR = .03f * lift; }
+            return body;
+        };
+
+        // Arms swung in turn (upper body running in place): one wrist up by wrist, its elbow by elbow, the other arm down.
+        private static Func<double, Body> Swing(double stepsPerMinute, float wrist, float elbow) => t =>
+        {
+            double period = 60 / stepsPerMinute;
+            float s = (float)Math.Sin(Math.PI * t / period);
+            return new Body { WristL = wrist * s, WristR = -wrist * s, ElbowL = elbow * s, ElbowR = -elbow * s };
+        };
+
+        // The stair pull-down: both hands up over the head, then the elbows pulled down to the shoulders, once per period.
+        private static Func<double, Body> PullDown(double period) => t =>
+        {
+            double phase = t / period % 1;
+            float up = (float)Math.Max(0, Math.Sin(2 * Math.PI * phase));
+            float down = (float)Math.Max(0, -Math.Sin(2 * Math.PI * phase));
+            return new Body { WristL = .5f * up + .12f * down, WristR = .5f * up + .12f * down, ElbowL = .3f * up, ElbowR = .3f * up };
         };
 
         // A dip of 0.2 s, then 0.35 s in the air (hips up about a third of the torso), then landing.
@@ -145,7 +201,7 @@ namespace Muhanok.Tests
             for (int i = 0; i < PoseFrame.Count; i++) Set(i, .5f, .5f, .2f);
             float sy = .35f + b.Dy + b.Shoulder, hy = .62f + b.Dy + b.Hip;
             Set(0, .5f, .25f + b.Dy + b.Shoulder); Set(11, .44f, sy); Set(12, .56f, sy);
-            Set(13, .42f, sy + .13f); Set(14, .58f, sy + .13f); Set(15, .41f, sy + .25f); Set(16, .59f, sy + .25f);
+            Set(13, .42f, sy + .13f - b.ElbowL); Set(14, .58f, sy + .13f - b.ElbowR); Set(15, .41f, sy + .25f - b.WristL); Set(16, .59f, sy + .25f - b.WristR);
             Set(23, .46f, hy); Set(24, .54f, hy);
             Set(25, .46f, .78f + b.Dy + b.Hip * .5f - b.KneeL); Set(26, .54f, .78f + b.Dy + b.Hip * .5f - b.KneeR);
             Set(27, .46f, .93f + b.Dy - b.AnkleL, .9f); Set(28, .54f, .93f + b.Dy - b.AnkleR, .9f);

@@ -13,7 +13,7 @@ namespace Muhanok.Presentation
         private string name = "", weightText = "", validation = "";
         private PlayStyle style = PlayStyle.FullBody;
         private string goalText="50";
-        private GUIStyle guideStyle;
+        private GUIStyle guideStyle, hintStyle, rightStyle;
         // Key and action columns, so the actions line up whatever the key glyphs' widths.
         private static readonly string[] KeyboardKeys = { "A / ←", "D / →", "Space", "S / ↓", "W / ↑" };
         private static readonly string[] KeyboardActions = { "왼쪽", "오른쪽", "점프", "숙이기 (누르고 있기)", "무릎 들기 (계단, 연타)" };
@@ -35,6 +35,12 @@ namespace Muhanok.Presentation
             if (back != null && skin.FlatButton(new Rect(800, 92, 140, 44), "뒤로", false)) back();
             // Today's challenge: the same map for everyone today, with its own ranking (exercise plan 10).
             if (data != null && skin.FlatButton(new Rect(600, 92, 190, 44), ChallengeLabel(data.DailyChallenge), data.DailyChallenge)) data.SetDailyChallenge(!data.DailyChallenge);
+            // On, what it is: in the free space right of the title (QA 2026-11-25 L7).
+            if (data != null && data.DailyChallenge)
+            {
+                hintStyle ??= new GUIStyle(skin.Style(14, FontStyle.Normal)) { wordWrap = true };
+                GUI.color = Palette.Cream; GUI.Label(new Rect(345, 92, 250, 48), ChallengeHint, hintStyle);
+            }
             GUI.color = Color.white;
             if (perRun)
             {
@@ -71,13 +77,19 @@ namespace Muhanok.Presentation
             if (exercise)
             {
                 GUI.Label(new Rect(195,494,400,30),"칼로리 목표",skin.Small);
+                // The same input box as the other fields, so it reads as one (QA 2026-11-25 L17).
+                skin.Panel(new Rect(195,532,300,44),1f);
                 GUI.SetNextControlName("MongscapeCalorieGoal");
                 goalText=GUI.TextField(new Rect(195,532,300,44),goalText,7,skin.Input);
                 GUI.Label(new Rect(510,536,90,36),"kcal",skin.Label);
                 GUI.Label(new Rect(195,588,420,48),"목표를 넘겨도 계속 달릴 수 있어요. 칼로리는 몸동작으로 추정한 값입니다.",guideStyle);
             }
             else GUI.Label(new Rect(195,500,420,30),RunHudModel.KeyboardKcal,skin.Style(17,FontStyle.Normal));
-            GUI.color = Palette.Error; GUI.Label(new Rect(640, 548, 440, 28), validation, skin.Small); GUI.color = Color.white;
+            // Between the camera buttons and 시작하기: a problem with the fields, otherwise the cadence-off note (QA 2026-11-25 M1).
+            bool cadenceOff = data != null && PlayStyleInfo.UsesCamera(style) && !data.CadenceSpeed;
+            if (validation.Length > 0) { GUI.color = Palette.Error; GUI.Label(new Rect(640, 544, 450, 32), validation, skin.Small); }
+            else if (cadenceOff) { GUI.color = Palette.Cream; rightStyle ??= new GUIStyle(skin.Style(16, FontStyle.Normal)) { alignment = TextAnchor.MiddleRight }; GUI.Label(CadenceOffHintRect, CadenceOffHint, rightStyle); }
+            GUI.color = Color.white;
             if (data != null && PlayStyleInfo.UsesCamera(style)) PosePreview.Draw(skin, new Rect(640, 150, 450, 340), data, true);
             else KeyboardGuide(new Rect(640, 150, 450, 340));
             if (skin.PrimaryButton(new Rect(640, 584, 450, 56), "시작하기"))
@@ -93,12 +105,14 @@ namespace Muhanok.Presentation
                 // (only jumps, crouches, knee raises and lane changes). Both share one ranking.
                 bool on = data.CadenceSpeed;
                 if (skin.FlatButton(new Rect(860, 500, 230, 40), CadenceLabel(on), on)) data.SetCadenceSpeed(!on);
-                if (!on) { GUI.color = Palette.Cream; GUI.Label(new Rect(860, 580, 360, 28), CadenceOffHint, skin.Style(16, FontStyle.Normal)); GUI.color = Color.white; }
             }
         }
         public static string ChallengeLabel(bool on) => on ? "오늘의 도전 ✓" : "오늘의 도전";
         public static string CadenceLabel(bool on) => "달리기 속도 조절 " + (on ? "켜짐" : "꺼짐");
         public const string CadenceOffHint = "꺼짐: 걸음은 칼로리에서 빠져요";
+        // Under the cadence button, inside the panel and clear of 시작하기 (584).
+        public static readonly Rect CadenceOffHintRect = new Rect(640, 544, 450, 32);
+        public const string ChallengeHint = "오늘은 모두 같은 맵을 달려요.\n순위는 도전 탭에 따로!";
         public const string NoCameraGuide = "카메라가 연결되어 있지 않아 키보드로만 플레이할 수 있어요. 카메라를 연결하면 전신·상체를 고를 수 있어요.";
         private bool Choice(Rect rect, string text, bool selected, bool enabled = true)
         {

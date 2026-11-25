@@ -9,14 +9,17 @@ namespace Muhanok.Domain
     // MET of the moment from the cadence (steps a minute over the last 3 s), not one figure for the whole run.
     // 2024 Adult Compendium: walking in place about 3.5, a moderate active game 5, running in place about 8 (kept at 7).
     // A big movement (deep squat, high jump, hips-high knee, wide side step) adds 1. The upper body uses 0.6 of each.
+    // A moment counts toward the weekly moderate minutes when its MET after the play-style scale is Moderate or more
+    // (QA 2026-11-25 M5: the upper body's fast arm swings, 7 x 0.6 = 4.2, are not moderate exercise).
     public static class IntensityMet
     {
         public const double Walk = 3.5, Run = 5, Sprint = 7, BigMove = 1, UpperScale = .6;
         // "달리기 속도 조절" off: stepping counts nothing; a jump, crouch, knee raise or lane change moment counts at this MET
-        // (the in-place walking figure, +1 when big).
-        public const double Move = Walk;
-        // Base MET from which a moment counts toward the weekly moderate minutes (before the play-style scale).
+        // (a moderate active game, +1 when big), so a full body run without the cadence still fills the weekly goal (QA H1).
+        public const double Move = 5;
+        // MET (after the play-style scale) from which a moment counts toward the weekly moderate minutes.
         public const double Moderate = 5;
+        public static bool IsModerate(double met) => met >= Moderate - 1e-9;
         public static double Base(CadenceStage stage) => stage == CadenceStage.Sprint ? Sprint : stage == CadenceStage.Run ? Run : stage == CadenceStage.Walk ? Walk : 0;
         // Keyboard play has no measured exercise.
         public static double Scale(PlayStyle style) => style == PlayStyle.FullBody ? 1 : style == PlayStyle.UpperBody ? UpperScale : 0;
@@ -71,7 +74,7 @@ namespace Muhanok.Domain
         public void TickActivity(double seconds,bool playing,bool tracked,bool active,int activity)
         {
             if(!playing||!tracked||!active||!Valid(seconds)) return;
-            Add(seconds,Met,IntensityMet.Run,(int)CadenceStage.Run,false,activity);
+            Add(seconds,Met,true,(int)CadenceStage.Run,false,activity);
         }
         // One camera frame of a run. stage comes from the cadence; moving says another motion (jump, crouch, knee, lane)
         // happened just now, which counts as walking when the feet are still. Standing still or out of view counts nothing
@@ -83,20 +86,23 @@ namespace Muhanok.Domain
             {
                 // Cadence off: no MET for stepping in place, only for the motion moments.
                 if(!moving) return;
-                Add(seconds,(IntensityMet.Move+(big?IntensityMet.BigMove:0))*Math.Max(0,StyleScale),IntensityMet.Move,-1,big,activity);
+                double moveMet=(IntensityMet.Move+(big?IntensityMet.BigMove:0))*Math.Max(0,StyleScale);
+                Add(seconds,moveMet,IntensityMet.IsModerate(moveMet),-1,big,activity);
                 return;
             }
             if(stage==CadenceStage.Standing) { if(!moving) return; stage=CadenceStage.Walk; }
-            Add(seconds,IntensityMet.Of(stage,big,StyleScale),IntensityMet.Base(stage),(int)stage,big,activity);
+            double met=IntensityMet.Of(stage,big,StyleScale);
+            Add(seconds,met,IntensityMet.IsModerate(met),(int)stage,big,activity);
         }
         // stage -1: a motion moment of a run without cadence (MoveSeconds).
-        private void Add(double seconds,double met,double baseMet,int stage,bool big,int activity)
+        // moderate: the moment counts toward the weekly moderate minutes (the flat-MET ticks of tools and tests always do).
+        private void Add(double seconds,double met,bool moderate,int stage,bool big,int activity)
         {
             int a=Math.Max(0,Math.Min(4,activity));
             ActiveSeconds+=seconds; MetSeconds+=met*seconds;
             activitySeconds[a]+=seconds; activityMetSeconds[a]+=met*seconds;
             if(stage>=0) stageSeconds[stage]+=seconds; else MoveSeconds+=seconds;
-            if(baseMet+(big?IntensityMet.BigMove:0)>=IntensityMet.Moderate) ModerateSeconds+=seconds;
+            if(moderate) ModerateSeconds+=seconds;
             if(big) BigSeconds+=seconds;
         }
         private static bool Valid(double seconds)=>!double.IsNaN(seconds)&&!double.IsInfinity(seconds)&&seconds>0;
@@ -110,13 +116,13 @@ namespace Muhanok.Domain
         public void Tick(double seconds,bool playing,bool poseConnected,MotionCommand recognizedMotion)
         {
             if(!playing||!poseConnected||recognizedMotion==MotionCommand.Center||!Valid(seconds)) return;
-            Add(seconds,Met,IntensityMet.Run,(int)CadenceStage.Run,false,0);
+            Add(seconds,Met,true,(int)CadenceStage.Run,false,0);
         }
         // Flat-MET seconds (tools and tests).
         public void Tick(double seconds,bool playing,bool active)
         {
             if(!playing||!active||!Valid(seconds)) return;
-            Add(seconds,Met,IntensityMet.Run,(int)CadenceStage.Run,false,0);
+            Add(seconds,Met,true,(int)CadenceStage.Run,false,0);
         }
         public void Reset()
         {

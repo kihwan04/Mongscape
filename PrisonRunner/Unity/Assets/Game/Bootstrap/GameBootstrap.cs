@@ -53,7 +53,7 @@ namespace Muhanok.Bootstrap
         private readonly Coach coach = new Coach();
         private int seenBigJumps, seenBigKnees, seenBigLanes;
         private bool wasDeep, wasCrouch;
-        private double bigUntil = -10, seenKneeStep = -10;
+        private double bigUntil = -10, seenKneeStep = -10, deepSince = -10;
         // Exercise plan 8: active seconds per course this run (for the weekly balance), the 20-minute rest notice, the first
         // banana warning (once a session), today's challenge and the streak coins of the last run.
         private readonly double[] kindSeconds = new double[4];
@@ -173,7 +173,7 @@ namespace Muhanok.Bootstrap
             Tutorial.Framed=()=>Pose.Framing==FramingIssue.Ok;
             Tutorial.NoCamera=()=>Pose.Status==PoseStatus.Off||Pose.Status==PoseStatus.NoCamera||Pose.Status==PoseStatus.NoModel;
             Tutorial.MyPose=()=>Pose.UsesCamera&&Pose.Tracking?Pose.LastFrame:null; Tutorial.MyBaseline=()=>Pose.Baseline; Tutorial.Tuning=()=>Pose.Tuning;
-            Tutorial.StepsPerMinute=()=>Pose.StepsPerMinute; Tutorial.PaceScale=()=>pace.Scale; Tutorial.PacePressure=()=>pace.Pressure;
+            Tutorial.StepsPerMinute=()=>Pose.StepsPerMinute; Tutorial.PaceScale=()=>pace.Scale; Tutorial.PacePressure=()=>pace.Pressure; Tutorial.Tracking=()=>Pose.Tracking;
             Tutorial.RunCadence=Settings!=null?Settings.Motion.RunCadence:100f;
             Tutorial.Demo=gameObject.AddComponent<TutorialDemo>(); Tutorial.Demo.Configure(MonkeyPrefab);
             Tutorial.Configure(Session,Map,()=>Pose.Status==PoseStatus.Tracking||Pose.Status==PoseStatus.Off||Pose.Status==PoseStatus.NoCamera||Pose.Status==PoseStatus.NoModel,
@@ -292,10 +292,10 @@ namespace Muhanok.Bootstrap
             cadenceRun = PlayStyleInfo.UsesCamera(profile.Style) && userSettings.CadenceSpeed;
             // Cadence off: stepping in place earns no calories, only jumps, crouches, knee raises and lane changes do.
             Session.Workout.CadenceCounts = userSettings.CadenceSpeed;
-            LoadRace(profile.Style);
-            menuCamera=false; Pose.SetStyle(profile.Style);
             // Today's challenge: everyone runs the map of the KST date.
             challengeRun = dailyChallenge;
+            LoadRace(profile.Style, challengeRun);
+            menuCamera=false; Pose.SetStyle(profile.Style);
             StartCoroutine(PrepareRun(challengeRun ? DailyChallenge.Seed(System.DateTime.UtcNow) : Settings != null && Settings.Run.RandomizeLayout ? Random.Range(1, int.MaxValue) : 723));
         }
         // Tutorial (main menu, after sign-up or the "게임 시작" offer): the same scene and map on a fixed lesson course.
@@ -418,8 +418,10 @@ namespace Muhanok.Bootstrap
                 if (Session.Flow.State != GameFlowState.Running) return;
                 // The cadence sets the pace on foot; below the target for 3 s the police close in (never a capture by itself).
                 var course = MapCourse.KindAt(RouteSurface.ActivePlan, RouteSurface.SequenceAt(Session.Runner.Z));
-                pace.Tick(dt, cadenceRun && !Session.Runner.Riding && Pose.Tracking, Pose.StepsPerMinute,
-                    Settings != null ? Settings.Motion : null, MapCourse.TargetCadence(course, Settings != null ? Settings.Motion : null));
+                // Out of view the pace holds (speed, lag and police stay as they were); on the stairs it rests (QA 2026-11-25 M6, H2).
+                pace.Tick(dt, cadenceRun && !Session.Runner.Riding, Pose.StepsPerMinute,
+                    Settings != null ? Settings.Motion : null, MapCourse.TargetCadence(course, Settings != null ? Settings.Motion : null),
+                    Pose.UsesCamera && Pose.Tracking, OnOrBeforeStairs());
                 TickNotices();
                 Session.CadenceScale = pace.Scale; Session.PacePressure = pace.Pressure;
                 TickBigMoves(dt);
@@ -610,7 +612,8 @@ namespace Muhanok.Bootstrap
                 Ticks=now.Ticks,AccountId=Account.IsMember?Account.Id:"",ScoreVersion=RunScore.Version};
             lastStats=null; lastStatsFailed=false;
             // Personal best per play style: a member's from /stats read before this save; an exhibition run's from this PC by its name; none for guests.
-            int previousBest=Account.IsMember?MemberBest(mode):developer?Store.Board.BestScore(lastEntry.Style,name):-1;
+            // A challenge run has its own board (mode 10-12 on the server): no new best against the regular runs (QA 2026-11-25 L6).
+            int previousBest=challengeRun?-1:Account.IsMember?MemberBest(mode):developer?Store.Board.BestScore(lastEntry.Style,name):-1;
             lastNewBest=previousBest>=0&&lastEntry.Score>previousBest; lastBestScore=previousBest>0?previousBest:-1;
             lastRank=Store.Record(lastEntry,Session.Workout.EstimatedKcal);
             // Weekly goal and streak: camera runs only. The streak is this PC's; a member's weekly minutes also go to the
@@ -643,7 +646,7 @@ namespace Muhanok.Bootstrap
         private void ResetBigMoves()
         {
             coach.Reset(); seenBigJumps = Pose.BigJumps; seenBigKnees = Pose.BigKnees; seenBigLanes = Pose.BigLanes;
-            wasDeep = wasCrouch = false; bigUntil = -10; seenKneeStep = Pose.LastKneeStepTime;
+            wasDeep = wasCrouch = false; bigUntil = -10; deepSince = -10; seenKneeStep = Pose.LastKneeStepTime;
         }
         // Each new big movement gets its in-game effect once (a coin when the matching hazard is close) and counts +1 MET for a
         // second; the coach reacts to the depth and the pace. Keyboard play never has big movements.
@@ -660,7 +663,9 @@ namespace Muhanok.Bootstrap
             wasDeep = deep; wasCrouch = crouch;
             if (!camera) return;
             if (bigJump && Session.Big(RunSession.BigMove.Jump)) bigUntil = clock + 1;
-            if (deep) { Session.Runner.DeepSlide(); bigUntil = System.Math.Max(bigUntil, clock + .3); }
+            // Held deep is resting after a moment: no longer sliding on, no +1 MET (QA 2026-11-25).
+            if (deepStart) deepSince = clock;
+            if (deep && MoveTally.Fresh(deepSince, clock)) { Session.Runner.DeepSlide(); bigUntil = System.Math.Max(bigUntil, clock + .3); }
             if (deepStart && Session.Big(RunSession.BigMove.Crouch)) bigUntil = clock + 1;
             if (bigKnee && Session.Big(RunSession.BigMove.Knee)) bigUntil = clock + 1;
             if (bigLane && Session.Big(RunSession.BigMove.Lane)) bigUntil = clock + 1;
@@ -673,29 +678,30 @@ namespace Muhanok.Bootstrap
             if (line != CoachLine.None) audioPlayer.Bonk();
         }
         // The ranking strip's rows: this week's member board (best per member, without the player's own row) and this PC's guest
-        // runs of the week, or with "내 기록만" only the player's own runs on this PC. The live score is the HUD's.
-        private void LoadRace(PlayStyle mode)
+        // runs of the week, one row per name (its best), or with "내 기록만" only the member's own runs on this PC. Guests have no
+        // "내 기록만" (every guest on a PC shares one empty id). A challenge run races today's challenge board of the same map.
+        // The live score is the HUD's (QA 2026-11-25 M4, L5).
+        private void LoadRace(PlayStyle mode, bool challenge)
         {
             race.Clear(); int mine = ++raceTicket;
             var now = System.DateTime.Now; var weekStart = now.Date.AddDays(-(((int)now.DayOfWeek + 6) % 7));
-            var rows = new System.Collections.Generic.List<RankRace.Row>();
             string me = Account.IsMember ? Account.Id : "";
-            foreach (var e in Store.Board.View(false, now, mode))
-            {
-                if (new System.DateTime(e.Ticks) < weekStart) continue;
-                bool own = Account.IsMember ? e.AccountId == me : !e.Member;
-                if (userSettings.RankStripMine ? own : !e.Member) rows.Add(new RankRace.Row(userSettings.RankStripMine ? "내 기록" : e.Name, e.Score));
-            }
-            if (userSettings.RankStripMine || gateway == null) { race.Load(rows); return; }
+            bool onlyMine = userSettings.RankStripMine && Account.IsMember;
+            var local = challenge ? Store.Board.ChallengeView(DailyChallenge.Day(System.DateTime.UtcNow), mode) : Store.Board.View(false, now, mode);
+            var rows = RankRace.LocalRows(local, challenge ? System.DateTime.MinValue : weekStart, onlyMine, me);
             race.Load(rows);
-            gateway.WeekLeaderboard(Account.IsMember ? Account.Token : "", mode, reply =>
+            if (onlyMine || gateway == null) return;
+            System.Action<LeaderboardReply> loaded = reply =>
             {
                 if (mine != raceTicket || reply == null || !reply.ok || reply.entries == null) return;
                 int own = reply.me != null ? reply.me.rank : 0;
                 foreach (var e in reply.entries) if (e != null && e.rank != own) rows.Add(new RankRace.Row(e.name, e.score));
                 // Loaded again before the run starts moving; the strip only shows once the run is under way.
                 race.Load(rows);
-            });
+            };
+            string token = Account.IsMember ? Account.Token : "";
+            if (challenge) gateway.Leaderboard(token, (PlayStyle)DailyChallenge.Mode(mode), true, loaded);
+            else gateway.WeekLeaderboard(token, mode, loaded);
         }
         // The member's best score for one play style from the last /stats; -1 when it is not known.
         private int MemberBest(PlayStyle mode)
@@ -744,7 +750,7 @@ namespace Muhanok.Bootstrap
         {
             var style = player.Style;
             Retry();
-            SignOutMember(); tutorialOffered=false;
+            SignOutMember(); tutorialOffered=false; ResetPlayerSession();
             player = new PlayerProfile { Style = style == PlayStyle.Keyboard ? PlayStyle.FullBody : style };
             playerRun = false; OpenLogin();
         }
@@ -879,21 +885,30 @@ namespace Muhanok.Bootstrap
         string IHudData.CoachText => Session.Flow.State != GameFlowState.Running ? "" : Time.realtimeSinceStartup < restUntil ? RestText
             : Time.realtimeSinceStartup < courseUntil ? CourseHint(courseShown)
             : coach.Showing(Time.realtimeSinceStartup) ? Coach.Text(coach.Line, player.Style) : "";
-        ExerciseKind IHudData.Recommended => Store.Exercise.Recommend(ExerciseOwner, System.DateTime.UtcNow);
-        double IHudData.WeekMinutes => Store.Exercise.WeekModerateMinutes(ExerciseOwner, System.DateTime.UtcNow);
-        int IHudData.Streak => Store.Exercise.Streak(ExerciseOwner, System.DateTime.UtcNow);
+        // Guests on one PC share an empty owner id, so a guest sees no course tip, no streak, and the minutes of this run only
+        // instead of the PC's week (QA 2026-11-25 L3).
+        ExerciseKind IHudData.Recommended => Account.IsMember ? Store.Exercise.Recommend(ExerciseOwner, System.DateTime.UtcNow) : ExerciseKind.Warmup;
+        double IHudData.WeekMinutes => Account.IsMember ? Store.Exercise.WeekModerateMinutes(ExerciseOwner, System.DateTime.UtcNow) : Session.Workout.ModerateSeconds / 60;
+        int IHudData.Streak => Account.IsMember ? Store.Exercise.Streak(ExerciseOwner, System.DateTime.UtcNow) : 0;
         int IHudData.LastStreakCoins => lastStreakCoins;
         bool IHudData.ChallengeRun => challengeRun;
         bool IHudData.DailyChallenge => dailyChallenge;
         void IHudData.SetDailyChallenge(bool on) => dailyChallenge = on;
+        bool IHudData.JointCompareOpen => Tutorial != null && Tutorial.ComparingJoints;
         bool IHudData.BananaWarning => Session.Flow.State == GameFlowState.Running && Time.realtimeSinceStartup < bananaUntil;
 
+        // What one person chose or saw this session: today's challenge, the first banana warning and the course hints. A new
+        // account and "다음 플레이어" start from nothing (a guest after a guest has the same empty id) (QA 2026-11-25 M3).
+        private void ResetPlayerSession()
+        {
+            dailyChallenge = false; bananaWarned = false; System.Array.Clear(courseSeen, 0, courseSeen.Length);
+        }
         // A new member (or back to a guest) replaces the player and the face badge; coin or setting updates do not.
         private void AccountChanged()
         {
             string id = Account.IsMember ? Account.Id : "";
             if (id == shownAccount) return;
-            shownAccount = id; tutorialOffered = false; bananaWarned = false; System.Array.Clear(courseSeen, 0, courseSeen.Length);
+            shownAccount = id; tutorialOffered = false; ResetPlayerSession();
             if (!Account.IsMember) ClearPortrait();
             faceAvatar.Apply(portrait);
             // The HUD best and the next result compare with this member's /stats.
@@ -1045,5 +1060,6 @@ namespace Muhanok.Bootstrap
         System.Collections.Generic.IReadOnlyList<string> ISettingsHost.CameraDevices => PoseTracker.CameraDevices();
         IHudData ISettingsHost.Hud => this;
         void ISettingsHost.RefreshCamera() => Pose.RefreshCamera();
+        bool ISettingsHost.MemberSignedIn => Account.IsMember;
     }
 }

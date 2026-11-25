@@ -94,6 +94,9 @@ namespace Muhanok.Domain
         // Steps per minute (both knees, last 3 s): up to RunCadence is walking, from SprintCadence sprinting.
         public float RunCadence = 100f, SprintCadence = 150f;
         public float HighKneeLift = .20f, StepLift = .06f;
+        // A full body step also needs the hips and the shoulders to rise and fall this much (body units) between knee swaps;
+        // knees bent in turn or raised heels while standing still are not running in place (stairs excepted).
+        public float StepBob = .012f;
         public float UpperLaneEnter = .75f, UpperLaneExit = .42f, UpperCrouchDrop = .35f, UpperCrouchConfirmSeconds = .12f, UpperHandsAboveNose = .2f;
         // The upper body also leans by tilting the shoulder line (degrees from the calibrated tilt); the exit follows UpperLaneExit/Enter.
         public float UpperLeanEnterDegrees = 12f;
@@ -106,7 +109,9 @@ namespace Muhanok.Domain
         // a lean of BigLeanDegrees. The stair exercise is a pull-down: hands over the head, then down below the nose (a step each
         // way); down below the shoulders is big.
         public float UpperStraightArm = .9f, UpperBigLeanDegrees = 20f;
-        public float ArmPumpAmplitude = .6f, ArmSwingAmplitude = .3f;
+        // Upper body steps: the wrists swing apart by ArmSwingAmplitude shoulder widths and the elbows go along by ArmSwingElbow
+        // (a flick of the wrists is not a swing). Raised from .3 after QA 2026-11-25.
+        public float ArmPumpAmplitude = .6f, ArmSwingAmplitude = .5f, ArmSwingElbow = .15f;
         public float LostSeconds = 2.5f, BaselineDrift = .01f;
     }
 

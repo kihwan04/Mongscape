@@ -47,17 +47,36 @@ namespace Muhanok.Presentation
             rows.Add(new KeyValuePair<string, string>("지난주", Kcal(stats.last_week_kcal) + " · " + Minutes(stats.last_week_seconds)));
             return rows;
         }
-        // "지난주보다 12% 더", "지난주보다 5% 덜", "지난주 기록 없음" (by calories).
-        public static string WeekChange(StatsReply stats)
+        // "하루 평균 12% 더", "하루 평균 5% 덜", "지난주 기록 없음" (by calories; short enough for the 162 px column). This week is only part done, so it is
+        // compared as a daily average over its days so far (Monday counts 1 day) with last week's over 7 (QA 2026-11-25 L1).
+        public static string WeekChange(StatsReply stats) => WeekChange(stats, DateTime.UtcNow);
+        public static string WeekChange(StatsReply stats, DateTime utcNow)
         {
             if (stats == null) return "";
             if (stats.last_week_kcal <= 0) return stats.week_kcal > 0 ? "지난주 기록 없음 · 이번 주가 시작이에요" : "";
-            double change = (stats.week_kcal - stats.last_week_kcal) / stats.last_week_kcal * 100;
+            var today = ExerciseLog.Kst(utcNow);
+            int days = (today - ExerciseLog.WeekStart(today)).Days + 1;
+            double now = stats.week_kcal / days, before = stats.last_week_kcal / 7;
+            double change = (now - before) / before * 100;
             int pct = (int)Math.Round(Math.Abs(change));
-            return pct == 0 ? "지난주와 같아요" : "지난주보다 " + pct.ToString(Num) + "% " + (change > 0 ? "더" : "덜");
+            return pct == 0 ? "하루 평균 같아요" : "하루 평균 " + pct.ToString(Num) + "% " + (change > 0 ? "더" : "덜");
         }
-        // "주간 목표 37 / 150분" (moderate minutes this week, this PC) and "연속 3일" (days with 10 active minutes).
-        public static string WeekGoal(double minutes) => "주간 목표 " + ((int)Math.Floor(Math.Max(0, minutes))).ToString(Num) + " / " + ExerciseLog.WeeklyGoalMinutes.ToString("0", Num) + "분";
+        // The weekly goal counts moderate exercise only (5 MET or more: running in place, or the moments of a jump, crouch,
+        // knee raise or side step); walking in place and the upper body's arm swings are lighter (QA 2026-11-25 L2).
+        public const string WeekGoalTitle = "이번 주 중강도 운동", WeekGoalNote = "달리기·동작한 시간만 · 걷기와 상체는 빠져요";
+        // "주간 중강도 37 / 150분" (moderate minutes this week) and "연속 3일" (days with 10 active minutes).
+        public static string WeekGoal(double minutes) => "주간 중강도 " + WeekGoalValue(minutes);
+        // A guest's result: this run's moderate minutes; a keyboard run's: why there is no bar.
+        public static string RunModerate(double minutes) => "이번 판 중강도 " + ((int)Math.Floor(Math.Max(0, minutes))).ToString(Num) + "분";
+        public const string KeyboardWeekNote = "주간 목표는 카메라 판만 세요";
+        // The result summary's big movements (deep crouch, high jump, high knee, wide side step) in place of a combo.
+        public const string BigMovesLabel = "크게 한 동작";
+        public static string BigMoves(RunSession session)
+        {
+            int n = 0; if (session != null) foreach (int c in session.BigMoves) n += c;
+            return n.ToString("N0", Num) + "회";
+        }
+        public static string WeekGoalValue(double minutes) => ((int)Math.Floor(Math.Max(0, minutes))).ToString(Num) + " / " + ExerciseLog.WeeklyGoalMinutes.ToString("0", Num) + "분";
         public static string StreakLine(int days, int coins) => days <= 0 ? "" : "연속 " + days.ToString(Num) + "일" + (coins > 0 ? " · 코인 +" + coins.ToString(Num) : "");
         static string Kcal(double v) => Math.Max(0, v).ToString(v >= 100 ? "N0" : "F1", Num) + "kcal";
         static string Minutes(double seconds) => ((int)Math.Round(Math.Max(0, seconds) / 60)).ToString("N0", Num) + "분";

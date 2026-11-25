@@ -11,6 +11,8 @@ namespace Muhanok.Presentation
         private readonly ProgressHud progress;
         public readonly RunHudModel Model = new RunHudModel();
         private static readonly Rect NoticeArea = new Rect(400, 588, 480, 48);
+        // Right of the tutorial's joint comparison (366-796 wide, 330-690 high), so a tracking notice never covers the legs.
+        public static readonly Rect NoticeBesideJoints = new Rect(808, 588, 452, 48);
         // Bottom-right webcam: small while tracking, larger with status once recognition is lost. Both stay right of the notice and below the counters.
         private static readonly Rect CameraArea = new Rect(1056, 514, 200, 150), RecoveryCameraArea = new Rect(1020, 490, 236, 174);
         public readonly RankStripView Strip;
@@ -59,7 +61,7 @@ namespace Muhanok.Presentation
                 if (Model.ShowCamera && data != null && data.CameraDetected && (Model.ShowPoseRecovery || PosePreview.Live(data)))
                     PosePreview.Draw(skin, Model.ShowPoseRecovery ? RecoveryCameraArea : CameraArea, data, Model.ShowPoseRecovery);
                 if (Model.ShowFork && Model.NoticeKind!=HudNoticeKind.Tracking && Model.NoticeKind!=HudNoticeKind.Obstacle) DrawFork();
-                else if (data == null || data.StartBanner <= 0) DrawNotice();
+                else if (data == null || data.StartBanner <= 0) DrawNotice(data != null && data.JointCompareOpen ? NoticeBesideJoints : NoticeArea);
             }
             if (data != null) DrawBanners(data, session.Flow.State);
             if (session.Flow.State == GameFlowState.Caught)
@@ -90,7 +92,8 @@ namespace Muhanok.Presentation
                 int destination = Model.PreviewDestinations[lane + 1]; var kind = MapCourse.KindOf(destination);
                 bool lit = lane == Model.ForkLane;
                 var r = new Rect(298 + (lane + 1) * 232, 232, 220, 118);
-                skin.Card(r, lit ? Palette.A(Palette.Gold, .95f) : Palette.A(Palette.Ground, .8f));
+                // Solid cards: the world signs behind must not show through the text (QA 2026-11-25 L12).
+                skin.Card(r, lit ? Palette.Gold : Palette.A(Palette.Ground, .98f));
                 GUI.color = lit ? Palette.Outline : Palette.Sand;
                 GUI.Label(new Rect(r.x, r.y + 4, r.width, 20), sides[lane + 1], skin.Centered(14, FontStyle.Normal));
                 GUI.color = lit ? Palette.Outline : Palette.Cream;
@@ -209,12 +212,12 @@ namespace Muhanok.Presentation
             skin.Card(new Rect(540,640,204,30),Palette.A(Palette.Ground,.9f));
             GUI.Label(new Rect(540,640,204,30),Model.ForkCaption,skin.Centered(17,FontStyle.Bold));
         }
-        private void DrawNotice()
+        private void DrawNotice(Rect area)
         {
             if (Model.Notice == null) return;
-            skin.Card(NoticeArea, Palette.A(Palette.Ground, .9f));
+            skin.Card(area, Palette.A(Palette.Ground, .9f));
             GUI.color = Model.NoticeKind == HudNoticeKind.Tracking || Model.NoticeKind == HudNoticeKind.Police ? Palette.Warn : Palette.Cream;
-            GUI.Label(NoticeArea, Model.Notice, skin.Centered(23, FontStyle.Bold));
+            GUI.Label(area, Model.Notice, skin.Centered(23, FontStyle.Bold));
             GUI.color = Color.white;
         }
         private void DrawBanners(IHudData data, GameFlowState state)
