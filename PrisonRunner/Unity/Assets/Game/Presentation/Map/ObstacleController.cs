@@ -10,8 +10,6 @@ namespace Muhanok.Presentation.Map
         public bool FullExerciseRow {get;set;}
         public bool Passed { get; private set; }
         public void ResetPass() { Passed = false; }
-        // Red glow = avoid (exercise plan 10-1): the same pulsing outline as the banana's ring.
-        private void Start() { HazardOutline.Attach(gameObject); }
         public void Evaluate(RunSession session, float previousZ)
         {
             if (Passed || !gameObject.activeSelf || session.Flow.State!=GameFlowState.Running || session.Paused) return;
