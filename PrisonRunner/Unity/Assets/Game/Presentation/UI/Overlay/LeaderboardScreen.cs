@@ -62,16 +62,12 @@ namespace Muhanok.Presentation
                 // Title number is the run score; next to it the earlier best and 신기록! when this run beat it.
                 skin.Text(new Rect(x, 30, 260, 52), RunHudModel.Points(session.Score.Score), 44, Palette.Cream, TextAnchor.MiddleLeft);
                 string best = board.BestLine;
-                // The first runs of the new ranking season say why the board starts empty, in place of the best line.
-                string season = board.SeasonLine;
-                if (season.Length > 0) skin.Text(new Rect(x + 262, 30, w - 262 - 170, 52), season, 15, Palette.Sand, TextAnchor.MiddleLeft, false, true);
-                else if (best.Length > 0) skin.Text(new Rect(x + 262, 30, 400, 52), best == RankingBoard.GuestBestNote ? best : "(" + best + ")", 18, Palette.Sand, TextAnchor.MiddleLeft, false, true);
-                // The first run of the new season is always a best; the badge says the season started instead.
-                if (board.NewBest || season.Length > 0)
+                if (best.Length > 0) skin.Text(new Rect(x + 262, 30, 400, 52), best == RankingBoard.GuestBestNote ? best : "(" + best + ")", 18, Palette.Sand, TextAnchor.MiddleLeft, false, true);
+                if (board.NewBest)
                 {
                     var badge = new Rect(x + w - 150, 36, 150, 42);
                     skin.BorderBox(badge, Palette.Gold, Palette.Cream, 2);
-                    skin.Text(badge, season.Length > 0 ? RankingBoard.NewSeasonText : RankingBoard.NewBestText, season.Length > 0 ? 19 : 22, Palette.Outline, TextAnchor.MiddleCenter);
+                    skin.Text(badge, RankingBoard.NewBestText, 22, Palette.Outline, TextAnchor.MiddleCenter);
                 }
                 // Run facts as label/value pairs in fixed columns.
                 for (int i = 0; i < summary.Count; i++)
@@ -98,7 +94,7 @@ namespace Muhanok.Presentation
                 DrawRows(x, w);
             }
             DrawMine(data, x, w);
-            if (board.ResultMode) { DrawWorkout(session, data); DrawKcal(session); DrawWeek(data); }
+            if (board.ResultMode) { DrawWorkout(session, data); DrawKcal(session); }
             if (board.ResultMode) guestName.Draw(data, new Rect(x + 110, 300, w - 220, 180));
 
             if (secondary == null)
@@ -112,68 +108,25 @@ namespace Muhanok.Presentation
             if (skin.Button(new Rect(right, 606, 200, 56), secondaryLabel, Palette.A(Palette.Ground, 0.9f), Palette.Wood, Palette.Cream, 22)) secondary.Invoke();
         }
 
-        // Left panel: the workout report. Time by intensity as bars, moves by kind, then the goal and the foods.
         void DrawWorkout(RunSession session, IHudData data)
         {
-            skin.BorderBox(new Rect(24,140,190,450),Palette.A(Palette.Panel,.95f),Palette.Wood,2);
-            skin.Text(new Rect(38,150,164,30),"운동 기록",22,Palette.Gold,TextAnchor.MiddleLeft);
+            skin.BorderBox(new Rect(24,140,190,380),Palette.A(Palette.Panel,.95f),Palette.Wood,2);
+            skin.Text(new Rect(38,152,164,30),"운동 기록",22,Palette.Gold,TextAnchor.MiddleLeft);
+            skin.Text(new Rect(38,190,164,26),"최고 콤보 "+session.BestDodgeStreak,16,Palette.Cream,TextAnchor.MiddleLeft,false,true);
             if (!PlayStyleInfo.UsesCamera(data?.Player?.Style ?? PlayStyle.Keyboard))
             {
-                skin.Text(new Rect(38,190,164,26),"최고 콤보 "+session.BestDodgeStreak,16,Palette.Cream,TextAnchor.MiddleLeft,false,true);
-                skin.Text(new Rect(38,225,164,30),RunHudModel.KeyboardKcal,15,Palette.Sand,TextAnchor.MiddleLeft,false,true);
+                skin.Text(new Rect(38,235,164,30),RunHudModel.KeyboardKcal,15,Palette.Sand,TextAnchor.MiddleLeft,false,true);
                 return;
             }
-            var workout = session.Workout;
-            skin.Text(new Rect(38,182,164,20),"강도별 시간",13,Palette.Sand,TextAnchor.MiddleLeft,false,true);
-            var bars = WorkoutReport.Intensity(workout);
-            Color[] tint = { Palette.Sand, Palette.Gold, new Color(1f,.55f,.25f) };
-            for (int i = 0; i < bars.Count; i++)
+            skin.Text(new Rect(38,220,164,26),"목표 "+session.Workout.GoalKcal.ToString("F0",Num)+" kcal",15,Palette.Sand,TextAnchor.MiddleLeft,false,true);
+            // This run's kcal as familiar foods instead of the per-motion breakdown.
+            var foods=FoodEquivalent.For(session.Workout.EstimatedKcal);
+            if(foods.Count==0){skin.Text(new Rect(38,258,164,22),NoFoodText,14,Palette.Sand,TextAnchor.MiddleLeft,false);return;}
+            for(int i=0;i<foods.Count;i++)
             {
-                float y = 204 + i * 28;
-                skin.Text(new Rect(38,y,52,22),bars[i].label,14,Palette.Cream,TextAnchor.MiddleLeft,false,true);
-                var track = new Rect(92,y+7,62,9);
-                skin.Box(track,Palette.A(Palette.Ground,.9f));
-                if (bars[i].share > 0) skin.Box(new Rect(track.x,track.y,Mathf.Max(3,track.width*bars[i].share),track.height),tint[i]);
-                skin.Text(new Rect(156,y,48,22),WorkoutReport.Clock(bars[i].seconds),14,Palette.Cream,TextAnchor.MiddleRight,false,true);
+                skin.Text(new Rect(38,258+i*46,164,22),foods[i].Food.Name,14,Palette.Sand,TextAnchor.MiddleLeft,false);
+                skin.Text(new Rect(38,278+i*46,164,22),foods[i].CountText,16,Palette.Cream,TextAnchor.MiddleLeft,false,true);
             }
-            skin.Text(new Rect(38,292,164,20),"동작 횟수",13,Palette.Sand,TextAnchor.MiddleLeft,false,true);
-            var moves = WorkoutReport.Moves(workout);
-            for (int i = 0; i < moves.Count; i++)
-            {
-                float y = 312 + i * 21;
-                skin.Text(new Rect(38,y,90,20),moves[i].Key,14,Palette.Sand,TextAnchor.MiddleLeft,false,true);
-                skin.Text(new Rect(118,y,86,20),moves[i].Value,14,Palette.Cream,TextAnchor.MiddleRight,false,true);
-            }
-            skin.Text(new Rect(38,424,164,22),"목표 "+workout.GoalKcal.ToString("F0",Num)+" kcal",14,Palette.Sand,TextAnchor.MiddleLeft,false,true);
-            // This run's kcal as familiar foods.
-            var foods=FoodEquivalent.For(workout.EstimatedKcal);
-            if(foods.Count==0){skin.Text(new Rect(38,450,164,22),NoFoodText,14,Palette.Sand,TextAnchor.MiddleLeft,false);return;}
-            for(int i=0;i<foods.Count&&i<3;i++)
-            {
-                skin.Text(new Rect(38,450+i*44,164,20),foods[i].Food.Name,13,Palette.Sand,TextAnchor.MiddleLeft,false);
-                skin.Text(new Rect(38,469+i*44,164,22),foods[i].CountText,15,Palette.Cream,TextAnchor.MiddleLeft,false,true);
-            }
-        }
-
-        // Right, below the calories: this week against last week for a member; a guest sees the sign-up note.
-        void DrawWeek(IHudData data)
-        {
-            var panel = new Rect(1066, 392, 190, 198);
-            skin.BorderBox(panel, Palette.A(Palette.Panel, .95f), Palette.Wood, 2);
-            skin.Text(new Rect(panel.x + 14, panel.y + 10, panel.width - 28, 28), "지난주와 비교", 19, Palette.Gold, TextAnchor.MiddleLeft);
-            note ??= new GUIStyle(skin.Style(14, false, TextAnchor.UpperLeft)) { wordWrap = true, clipping = TextClipping.Clip };
-            var old = GUI.color;
-            if (!board.MemberResult) { GUI.color = Palette.Gold; GUI.Label(new Rect(panel.x + 14, panel.y + 48, panel.width - 28, 64), WorkoutReport.GuestWeekNote, note); GUI.color = old; return; }
-            var stats = data?.LastStats;
-            if (stats == null) { GUI.color = Palette.Sand; GUI.Label(new Rect(panel.x + 14, panel.y + 48, panel.width - 28, 64), board.KcalNote, note); GUI.color = old; return; }
-            var lines = WorkoutReport.Week(stats);
-            for (int i = 0; i < lines.Count; i++)
-            {
-                float y = panel.y + 44 + i * 46;
-                skin.Text(new Rect(panel.x + 14, y, panel.width - 28, 18), lines[i].Key, 13, Palette.Sand, TextAnchor.MiddleLeft, false, true);
-                skin.Text(new Rect(panel.x + 14, y + 18, panel.width - 28, 24), lines[i].Value, 15, Palette.Cream, TextAnchor.MiddleLeft, false, true);
-            }
-            GUI.color = Palette.Gold; GUI.Label(new Rect(panel.x + 14, panel.y + 140, panel.width - 28, 52), WorkoutReport.WeekChange(stats), note); GUI.color = old;
         }
 
         // Right panel: this run, and for a member today's and lifetime totals from /stats; a guest sees the sign-up note.

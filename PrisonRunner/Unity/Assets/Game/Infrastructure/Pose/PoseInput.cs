@@ -93,7 +93,6 @@ namespace Muhanok.Infrastructure
         public float CalibrationProgress => classifier.CalibrationProgress;
         public bool KneesMissing => UsesCamera && classifier.KneesMissing && classifier.Status == PoseStatus.Calibrating;
         public float StepsPerMinute => classifier.StepsPerMinute;
-        public int StepCount => classifier.StepCount;
         // Walking / running / sprinting from the steps a minute; read only for now (the runner speed does not follow it yet).
         public CadenceStage CadenceStage => classifier.CadenceStage;
         public float Bounce => classifier.Bounce;

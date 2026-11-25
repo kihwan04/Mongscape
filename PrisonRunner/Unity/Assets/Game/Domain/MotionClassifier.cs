@@ -55,8 +55,6 @@ namespace Muhanok.Domain
         // Steps a minute from the alternating knees (arm swings for the upper body) over the last 3 s; jumps do not count.
         public float StepsPerMinute { get; private set; }
         public CadenceStage CadenceStage => Cadence.Stage(StepsPerMinute, tuning);
-        // Every step counted since the classifier was made (never reset, so a recalibration does not lose the run's tally).
-        public int StepCount { get; private set; }
         // The player's running bounce (hip rise per step, body units) and the jump line in use right now.
         public float Bounce => bounce;
         public float JumpThreshold => JumpLine(lastFrameTime);
@@ -359,7 +357,7 @@ namespace Muhanok.Domain
         }
 
         private const double StopSeconds = 1.2;
-        private void RegisterStep(double now) { lastStep = now; StepCount++; stepTimes[stepIndex] = now; stepIndex = (stepIndex + 1) % stepTimes.Length; }
+        private void RegisterStep(double now) { lastStep = now; stepTimes[stepIndex] = now; stepIndex = (stepIndex + 1) % stepTimes.Length; }
         // Average over the last 3 s: the step intervals inside the window, so a steady pace reads its true rate. After the
         // last step the rate falls off smoothly (the open interval up to now also counts) until the steps leave the window.
         private void UpdateCadence(double now)

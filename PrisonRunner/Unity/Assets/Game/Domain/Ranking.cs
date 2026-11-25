@@ -90,18 +90,6 @@ namespace Muhanok.Domain
             foreach (var e in entries) if (e.Ranked && e.Style == style && (name == null || e.Name == name)) best = Math.Max(best, e.Score);
             return best;
         }
-        // Best score of the previous ranking season (RunScore.PreviousVersion) for one play style: the member's own runs
-        // (by account id) or, without one, the runs under that name. 0 when there is none.
-        public int PreviousSeasonBest(PlayStyle mode, string accountId, string name)
-        {
-            int best = 0;
-            foreach (var e in entries)
-                if (e.ScoreVersion == RunScore.PreviousVersion && e.Mode == (int)mode
-                    && (!string.IsNullOrEmpty(accountId) ? e.AccountId == accountId : e.Name == name)) best = Math.Max(best, e.Score);
-            return best;
-        }
-        // This play style has records from an older score formula on this PC (they stay saved, but no longer rank).
-        public bool HasOlderSeason(PlayStyle mode) => entries.Exists(e => !e.Ranked && e.Mode == (int)mode);
         public void ClearDay(string day) => entries.RemoveAll(e => e.Day == day);
         // A deleted member's runs leave this PC's board too.
         public void RemoveAccount(string id) { if (!string.IsNullOrEmpty(id)) entries.RemoveAll(e => e.AccountId == id); }

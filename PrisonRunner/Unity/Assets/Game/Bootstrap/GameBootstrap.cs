@@ -42,8 +42,6 @@ namespace Muhanok.Bootstrap
         private float caughtTime, runFade, runStartedAt = -10, caughtAt = -10;
         private ParticleSystem dust, hit;
         private bool previousStumble;
-        // Counts steps, jumps, crouches, knee steps and lane changes of the run for the result report.
-        private readonly MoveTally moveTally = new MoveTally();
         // The account (member or guest) is the only source of the current player.
         public AccountSession Account { get; } = new AccountSession();
         // Run settings of the current or next run, taken from the account; developer mode names each run instead.
@@ -96,8 +94,7 @@ namespace Muhanok.Bootstrap
             var flags=System.Environment.GetCommandLineArgs();
             automated=System.Array.IndexOf(flags,"--muhanok-smoke")>=0||System.Array.IndexOf(flags,"--muhanok-uicapture")>=0
                 ||System.Array.IndexOf(flags,"--mongscape-review")>=0||System.Array.IndexOf(flags,"--mongscape-tests")>=0
-                ||System.Array.IndexOf(flags,"--muhanok-capture")>=0||System.Array.IndexOf(flags,"--mongscape-recording")>=0
-                ||System.Array.IndexOf(flags,"--mongscape-exercise-review")>=0;
+                ||System.Array.IndexOf(flags,"--muhanok-capture")>=0||System.Array.IndexOf(flags,"--mongscape-recording")>=0;
             Session = new RunSession(Settings != null ? JsonUtility.FromJson<RunConfig>(JsonUtility.ToJson(Settings.Run)) : new RunConfig());
             if (ChunkPrefabs == null || ChunkPrefabs.Length < 5 || CameraRig == null || OutputCamera == null)
             { Debug.LogError("GameScene requires content references. Run Muhanok/Build GameScene."); enabled = false; return; }
@@ -237,7 +234,7 @@ namespace Muhanok.Bootstrap
         {
             if(Session.Flow.State!=GameFlowState.TitleIdle||hud.Loading||!Session.Workout.SetWeight(weight)) return;
             menuCamera=false;
-            playerRun=false; Session.Workout.Met=PlayStyleInfo.Met(player.Style);Session.Workout.StyleScale=IntensityMet.Scale(player.Style);
+            playerRun=false; Session.Workout.Met=PlayStyleInfo.Met(player.Style);
             StartCoroutine(PrepareRun(723));
         }
         // Start from the setup screen: the run is recorded on the leaderboard. Outside developer mode
@@ -253,7 +250,7 @@ namespace Muhanok.Bootstrap
             player=profile; playerRun=true; KeyboardGameInput.SetTextInput(false);
             // The best to beat is read before the run (and before its save).
             RefreshMemberStats();
-            Session.Workout.Met=PlayStyleInfo.Met(profile.Style);Session.Workout.StyleScale=IntensityMet.Scale(profile.Style);
+            Session.Workout.Met=PlayStyleInfo.Met(profile.Style);
             Session.Workout.SetGoal(profile.CalorieGoal);
             menuCamera=false; Pose.SetStyle(profile.Style);
             StartCoroutine(PrepareRun(Settings != null && Settings.Run.RandomizeLayout ? Random.Range(1, int.MaxValue) : 723));
@@ -265,7 +262,7 @@ namespace Muhanok.Bootstrap
             if(Session.Flow.State!=GameFlowState.TitleIdle||hud.Loading) return;
             tutorialOffered=true; playerRun=false; KeyboardGameInput.SetTextInput(false);
             if(!PlayableStyle(player.Style)) player.Style=PlayStyle.Keyboard;
-            Session.Workout.SetWeight(""); Session.Workout.Met=PlayStyleInfo.Met(player.Style);Session.Workout.StyleScale=IntensityMet.Scale(player.Style);
+            Session.Workout.SetWeight(""); Session.Workout.Met=PlayStyleInfo.Met(player.Style);
             menuCamera=false; Pose.SetStyle(player.Style);
             Session.IsTutorial=true; Tutorial.Begin(player.Style,Session.Config.ExtendedRoutes);
             StartCoroutine(PrepareRun(TutorialCourse.Seed));
@@ -302,7 +299,7 @@ namespace Muhanok.Bootstrap
             Pose.Recalibrate(); runCalibrated = false; calibrationDoneAt = -1;
             yield return new WaitForSecondsRealtime(.25f);
             RouteSurface.UsePlan(Session.IsTutorial?TutorialCourse.Plan(Session.Config):new RoutePlan(Session.Config, seed));
-            Session.Reset(); moveTally.Reset(); keyboard.Clear(); poseInput.Clear(); hud.LoadingProgress=.42f;
+            Session.Reset(); keyboard.Clear(); poseInput.Clear(); hud.LoadingProgress=.42f;
             yield return new WaitForSecondsRealtime(.25f);
             Map.Reset(seed); Map.AnimateGates(Session.Runner.Z); hud.LoadingProgress=.78f;
             yield return new WaitForSecondsRealtime(.25f);
@@ -373,12 +370,9 @@ namespace Muhanok.Bootstrap
                 float previousZ = Session.Runner.Z;
                 Session.Tick(dt); Map.Tick(Session.Runner.Z); Hero.Apply(Session.Runner); Map.Evaluate(previousZ);
                 Map.AnimateGates(Session.Runner.Z);
-                // Intensity MET of this moment from the cadence; no grace period after the last step (standing counts nothing).
-                double clock=Time.realtimeSinceStartupAsDouble;
-                int activity=clock-Pose.LastJumpTime<.65?1:Pose.Reading.Crouch?2:clock-Pose.LastKneeStepTime<.7?3:Pose.Reading.Lane!=0?4:0;
-                bool tracked=Pose.UsesCamera&&Pose.Tracking;
-                if(tracked) moveTally.Observe(clock,Pose.StepCount,Pose.LastJumpTime,Pose.Reading.Crouch,Pose.LastKneeStepTime,Pose.Reading.Lane,Session.Workout);
-                Session.Workout.TickIntensity(dt,Session.Flow.State==GameFlowState.Running,tracked,Pose.CadenceStage,moveTally.Moving(clock),false,activity);
+                bool exercising = Pose.UsesCamera ? Pose.Tracking && Pose.Reading.Active : true;
+                int activity=Time.realtimeSinceStartupAsDouble-Pose.LastJumpTime<.65?1:Pose.Reading.Crouch?2:Time.realtimeSinceStartupAsDouble-Pose.LastKneeStepTime<.7?3:Pose.Reading.Lane!=0?4:0;
+                Session.Workout.TickActivity(dt,Session.Flow.State==GameFlowState.Running,Pose.UsesCamera&&Pose.Tracking,exercising,activity);
                 runFade += dt; hud.Fade = Mathf.Clamp01(runFade * 2f);
                 if (dust != null && !dust.isPlaying) dust.Play();
                 if (Session.Runner.Stumbling && !previousStumble && hit != null) hit.Play();

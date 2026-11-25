@@ -95,11 +95,6 @@ namespace Muhanok.Application
         public double today_kcal, total_kcal;
         // Best score per play style: full body, upper body, keyboard.
         public int[] best_score = new int[3];
-        // Best per play style under the previous score formula (RunScore.PreviousVersion): the profile's previous-season record.
-        public int[] previous_best = new int[3];
-        // This week (from Monday 00:00 KST) and last week: calories and play seconds, for the result report.
-        public double week_kcal, week_seconds, last_week_kcal, last_week_seconds;
-        public int PreviousBest(int mode) => previous_best != null && mode >= 0 && mode < previous_best.Length ? previous_best[mode] : 0;
     }
 
     // Weight is never 0: 65 stands for "not entered".
