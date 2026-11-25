@@ -46,12 +46,6 @@ namespace Muhanok.Presentation
             }
 
             skin.Text(new Rect(860, 670, 340, 30), BuildInfo.Label, 14, Palette.Muted, TextAnchor.MiddleRight, false);
-            if (data != null && data.DeveloperMode)
-            {
-                var badge = new Rect(40, 640, 330, 40);
-                skin.BorderBox(badge, Palette.A(new Color(.45f, .08f, .05f), 0.92f), Palette.Gold, 2);
-                skin.Text(badge, "개발자 모드 (아이템 전체 해금)", 16, Palette.Cream, TextAnchor.MiddleCenter, false, true);
-            }
             return action;
         }
 
@@ -62,7 +56,6 @@ namespace Muhanok.Presentation
             skin.BorderBox(coins, Palette.A(Palette.Ground, 0.9f), Palette.Wood, 2);
             skin.Circle(new Rect(coins.x + 10, coins.y + 9, 26, 26), Palette.Gold);
             skin.Text(new Rect(coins.x + 44, coins.y, coins.width - 54, coins.height), data.Wallet.Coins.ToString("N0", Num), 20, Palette.Cream, TextAnchor.MiddleRight);
-            if (data.DeveloperMode) return;
             var player = new Rect(800, 28, 220, 44);
             skin.BorderBox(player, Palette.A(Palette.Ground, 0.9f), Palette.Wood, 2);
             skin.Text(player, PlayerLabel(data), 18, Palette.Cream, TextAnchor.MiddleCenter, false, true);

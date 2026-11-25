@@ -38,7 +38,7 @@ Unity Hub에서 **Unity 6000.3.10f1**로 `PrisonRunner/Unity`를 엽니다. 패�
 | 서버 배포 | Docker Compose, Caddy 2 | HTTPS 진입점, 컨테이너와 영구 DB volume |
 | 중앙 DB·드라이버 | PostgreSQL 17, Psycopg 3.3.6 | 회원 설정·코인·해금·세션·운동 기록, BYTEA 인식 특징값과 JSONB 활동 기록 |
 | 얼굴 인식 | opencv-python-headless 4.13.0.92, NumPy 2.2.6, YuNet/SFace | 얼굴 검출, 정렬, 특징 벡터 비교 |
-| 로컬 저장 | JSON/PlayerPrefs | 이 PC 점수 랭킹·화면 설정·예전 개발자용 프로필/지갑 |
+| 로컬 저장 | JSON/PlayerPrefs | 이 PC 점수 랭킹·화면 설정 |
 | 리소스 | Blender, Mixamo, Kenney, 자체 생성 재질 | 캐릭터, 애니메이션, 환경 |
 | 도구/검증 | Python, PowerShell, Unity Test Framework/NUnit | 리소스 제작, 패키징, 규칙/플레이/서버 검증 |
 
@@ -61,7 +61,7 @@ Unity Hub에서 **Unity 6000.3.10f1**로 `PrisonRunner/Unity`를 엽니다. 패�
 
 얼굴 서버는 PostgreSQL만 사용하며 Docker 중앙 DB는 PostgreSQL 17의 `postgres-data` volume에 저장합니다. 서버 테스트는 `Services/Identity/run_tests.ps1`이 만드는 임시 PostgreSQL에서 실행합니다. 중앙 서버는 Psycopg로 연결하고 DB 비밀번호는 서버의 Docker secret 파일로 관리합니다. 특징 벡터, 이름, 세션과 운동 기록이 들어가므로 Git/공개 ZIP에서 제외합니다. 얼굴 사진은 DB에 저장하지 않고, 로그인·가입 요청의 첫 장에서 잘라낸 얼굴을 응답으로만 돌려줍니다. 로그인 토큰은 서버에서 해시로 보관합니다. 게임의 얼굴 삭제 기능으로 프로필과 관련 기록을 지울 수 있습니다. 로컬 기본 서버는 loopback에서만 접속하고, Docker 중앙 서버는 Caddy의 HTTPS 진입점을 사용합니다.
 
-이 기능은 전시용 프로필 인식이며 검증된 사진 위조 방지 기능은 없습니다. 몸동작 인식과 얼굴 로그인은 서로 다른 처리 경로입니다.
+이 기능은 간편 프로필 인식이며 검증된 사진 위조 방지 기능은 없습니다. 몸동작 인식과 얼굴 로그인은 서로 다른 처리 경로입니다.
 
 ## 게임 내부 구조
 

@@ -33,7 +33,6 @@ namespace Muhanok.Tests
             yield return SceneManager.LoadSceneAsync("GameScene");yield return null;
             game=Object.FindFirstObjectByType<GameBootstrap>();hud=game.GetComponent<HUDPresenter>();fake=new FakeAccountGateway();
             game.UseAccountServices(fake,new PlayerProgressStore(root));
-            game.SetDeveloperMode(false,false);
         }
         // An upper-body member whose /stats says: today 52.1 kcal, lifetime 310 kcal, upper-body best `best`.
         private void SignIn(int best)

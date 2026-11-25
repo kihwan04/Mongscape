@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Muhanok.Presentation
 {
     // Result screen for a guest: the run is already on this PC's ranking as "게스트"; [저장] renames it, [건너뛰기] keeps it.
-    // Developer mode and members never see it (their runs are named already).
+    // Members never see it (their runs carry their nickname).
     internal sealed class GuestNameRow
     {
         readonly OverlaySkin skin;

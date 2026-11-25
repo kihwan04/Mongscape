@@ -5,7 +5,7 @@ namespace Muhanok.Domain
 {
     public enum PlayStyle { FullBody, UpperBody, Keyboard }
 
-    // The player on this PC. In developer (exhibition) mode each run gets its own name instead.
+    // The player on this PC.
     [Serializable]
     public sealed class PlayerProfile
     {
@@ -24,9 +24,9 @@ namespace Muhanok.Domain
         // 2024 Adult Compendium: 22240 total-body active game 4 MET; upper-body active game about 2.5 MET; seated play 1.3 MET.
         public static double Met(PlayStyle style) => style == PlayStyle.FullBody ? 4 : style == PlayStyle.UpperBody ? 2.5 : 1.3;
         public static bool UsesCamera(PlayStyle style) => style != PlayStyle.Keyboard;
-        // Without a connected camera only the keyboard can be played. Developer mode keeps every style for testing.
-        public static bool Allowed(PlayStyle style, bool cameraConnected, bool developer) => developer || cameraConnected || !UsesCamera(style);
-        public static PlayStyle Playable(PlayStyle style, bool cameraConnected, bool developer) => Allowed(style, cameraConnected, developer) ? style : PlayStyle.Keyboard;
+        // Without a connected camera only the keyboard can be played.
+        public static bool Allowed(PlayStyle style, bool cameraConnected) => cameraConnected || !UsesCamera(style);
+        public static PlayStyle Playable(PlayStyle style, bool cameraConnected) => Allowed(style, cameraConnected) ? style : PlayStyle.Keyboard;
         // PlayStyle value of a saved label; -1 when the label is missing or unknown.
         public static int ModeOf(string label) => label == "전신" ? 0 : label == "상체" ? 1 : label == "키보드" ? 2 : -1;
     }
@@ -108,7 +108,6 @@ namespace Muhanok.Domain
         }
         // This play style has records from an older score formula on this PC (they stay saved, but no longer rank).
         public bool HasOlderSeason(PlayStyle mode) => entries.Exists(e => !e.Ranked && e.Mode == (int)mode);
-        public void ClearDay(string day) => entries.RemoveAll(e => e.Day == day);
         // A deleted member's runs leave this PC's board too.
         public void RemoveAccount(string id) { if (!string.IsNullOrEmpty(id)) entries.RemoveAll(e => e.AccountId == id); }
         // Older records: version 1 without a version, the mode from the Style label ("전신"/"상체"/"키보드") or -1.
@@ -131,7 +130,7 @@ namespace Muhanok.Domain
         }
     }
 
-    // Lifetime totals of this PC, shown only as developer-mode statistics.
+    // Lifetime totals of this PC (kept in records.json, not shown).
     [Serializable]
     public sealed class PlayerStats
     {

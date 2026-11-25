@@ -51,7 +51,7 @@ namespace Muhanok.Bootstrap
             game=FindFirstObjectByType<GameBootstrap>();if(game==null){Fail("Bootstrap missing");yield break;}
             var settings=((ISettingsHost)game).Settings;settings.ApplyPreset(QualityPreset.Balanced);settings.FrameCap=30;settings.Fullscreen=false;
             settings.AutoPerformance=false;settings.HandMenus=false;settings.PerformanceOverlay=false;settings.MusicVolume=.22f;settings.EffectsVolume=.7f;game.ApplySettings(false);
-            game.SetDeveloperMode(false,false);var data=(IHudData)game;
+            var data=(IHudData)game;
             data.SaveProfile(new PlayerProfile{Name="PLAY DEMO",Weight="70",Style=PlayStyle.Keyboard,CalorieGoal=50});data.PreviewStyle(PlayStyle.Keyboard);
             Screen.SetResolution(1280,720,false);yield return new WaitForSecondsRealtime(1);
             try{StartCapture();}catch(Exception e){Fail(e.Message);yield break;}

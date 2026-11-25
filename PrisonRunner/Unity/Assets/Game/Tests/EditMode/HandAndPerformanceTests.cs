@@ -133,20 +133,6 @@ namespace Muhanok.Tests
             // Leaving cancels progress.
             var b=new FaceAutoCapture();b.Tick(true,true,0);b.Tick(true,true,1);b.Tick(false,true,1.1);Assert.AreEqual(0,b.Progress);Assert.IsFalse(b.Tick(true,true,1.2));
         }
-        [Test] public void PlayerLockFollowsThePlayerRejectsFarBodiesAndExpires()
-        {
-            var g=new PlayerLockGate();Assert.IsFalse(g.Active(0));Assert.IsTrue(g.Accepts(10,0),"No reference yet: anyone");
-            g.Track(320,200,0);Assert.IsTrue(g.Active(1));
-            g.Band(640,out float min,out float max);Assert.AreEqual((320-240)/640f,min,1e-4);Assert.AreEqual((320+240)/640f,max,1e-4);
-            Assert.IsFalse(g.Accepts(90,1),"Someone far behind (less than half the size)");Assert.AreEqual(1,g.Rejected);
-            Assert.IsTrue(g.Accepts(150,1),"The player a step farther back");
-            // Walking forward while tracked moves the reference with the player.
-            for(int i=1;i<=20;i++)g.Track(320,260,i*.05);Assert.Greater(g.Size,250);
-            Assert.IsTrue(g.Accepts(160,1.5),"Above 55% of the grown size");
-            Assert.IsFalse(g.Active(1+PlayerLockGate.LockSeconds+.1),"Released a few seconds after the player was last tracked");
-            Assert.IsTrue(g.Accepts(10,5));
-            g.Track(100,120,10);Assert.AreEqual(100,g.X,"After expiry the next tracked body becomes the reference at once");
-        }
         [Test] public void AFlickeringWristHoldsTheCursorBrieflyInsteadOfDroppingIt()
         {
             var p=new HandMenuPointer();p.Feed(Frame(1),true,1);float x=p.X;

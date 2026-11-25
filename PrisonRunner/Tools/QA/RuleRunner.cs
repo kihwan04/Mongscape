@@ -8,7 +8,7 @@ class RuleRunner
  {
   int passed=0,failed=0;
   var assembly=Assembly.LoadFrom("Muhanok.EditModeTests.dll");
-  foreach(string name in args.Length>0?args:new[]{"ExpansionRulesTests","WorkoutEstimateTests","RunRulesTests","BodyTrackingAndExhibitionTests","IdentityServerConfigTests","MuhanokTestIntegrationTests"})
+  foreach(string name in args.Length>0?args:new[]{"ExpansionRulesTests","WorkoutEstimateTests","RunRulesTests","BodyTrackingTests","IdentityServerConfigTests","MuhanokTestIntegrationTests"})
   {
    var type=assembly.GetType("Muhanok.Tests."+name);var instance=Activator.CreateInstance(type);
    foreach(var method in type.GetMethods())

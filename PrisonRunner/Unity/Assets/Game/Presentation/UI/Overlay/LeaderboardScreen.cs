@@ -49,7 +49,7 @@ namespace Muhanok.Presentation
 
         static string Dist(float m) { return Mathf.FloorToInt(m).ToString("N0", Num) + " m"; }
 
-        // primary/secondary: result buttons (다시 하기 / 메인으로 or 다음 플레이어); the menu board only shows a close button.
+        // primary/secondary: result buttons (다시 하기 / 메인으로); the menu board only shows a close button.
         // middle: an optional third result button between them (웹캠 보정).
         public void Draw(IHudData data, RunSession session, Action primary, string primaryLabel, Action secondary, string secondaryLabel, Action middle = null, string middleLabel = null)
         {
@@ -308,9 +308,7 @@ namespace Muhanok.Presentation
             var row = new Rect(x, 532, w, 50);
             float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 4f);
             skin.BorderBox(row, Palette.MeFill, Color.Lerp(Palette.Gold, Palette.Cream, pulse * 0.35f), 2);
-            // Developer mode has a name per run; otherwise the row reads "내 기록".
-            string name = !board.MemberTab && data != null && data.DeveloperMode && board.MineEntry != null ? board.MineEntry.Name : "▶ 내 기록";
-            Columns(row, me.Rank, name, RunHudModel.Points(me.Score), 20, 24, Palette.Gold, Palette.Gold);
+            Columns(row, me.Rank, "▶ 내 기록", RunHudModel.Points(me.Score), 20, 24, Palette.Gold, Palette.Gold);
         }
 
         void Columns(Rect r, int rank, string name, string score, int rankSize, int scoreSize, Color rankColor, Color scoreColor)

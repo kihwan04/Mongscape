@@ -4,8 +4,7 @@ using UnityEngine;
 
 namespace Muhanok.Presentation
 {
-    // Run setup: play style with a live camera check. Developer (exhibition) mode also asks each run's name and weight;
-    // otherwise they come from the saved profile.
+    // Run setup: play style with a live camera check. The name and weight come from the saved profile.
     internal sealed class SetupScreen
     {
         private readonly HudSkin skin;
@@ -27,7 +26,6 @@ namespace Muhanok.Presentation
         }
         public void Draw(IHudData data, Action<PlayerProfile> beginRun, Action back, Action openSettings = null)
         {
-            bool perRun = data != null && data.DeveloperMode;
             skin.Card(new Rect(0, 0, 1280, 720), Palette.A(Palette.Ground, .82f));
             skin.Panel(new Rect(150, 70, 980, 590), .97f);
             GUI.color = Palette.Gold; GUI.Label(new Rect(195, 92, 500, 50), "탈출 준비", skin.Style(36, FontStyle.Bold));
@@ -42,29 +40,18 @@ namespace Muhanok.Presentation
                 GUI.color = Palette.Cream; GUI.Label(new Rect(345, 92, 250, 48), ChallengeHint, hintStyle);
             }
             GUI.color = Color.white;
-            if (perRun)
-            {
-                GUI.Label(new Rect(195, 150, 200, 34), "닉네임 (랭킹 표시)", skin.Label);
-                skin.Panel(new Rect(195, 186, 400, 50), 1f); GUI.SetNextControlName("MuhanokName"); name = GUI.TextField(new Rect(195, 186, 400, 50), name, 10, skin.Input);
-                GUI.Label(new Rect(195, 246, 400, 34), "몸무게 (선택, 미입력 시 65kg)", skin.Label);
-                skin.Panel(new Rect(195, 282, 300, 50), 1f); GUI.SetNextControlName("MuhanokWeight"); weightText = GUI.TextField(new Rect(195, 282, 300, 50), weightText, 7, skin.Input);
-                GUI.Label(new Rect(510, 289, 70, 40), "kg", skin.Label);
-            }
-            else
-            {
-                skin.Panel(new Rect(195, 150, 400, 182), .95f);
-                GUI.Label(new Rect(215, 166, 360, 40), data?.SavedProfile.DisplayName ?? "플레이어", skin.Style(30, FontStyle.Bold));
-                GUI.Label(new Rect(215, 214, 360, 34), string.IsNullOrWhiteSpace(weightText) ? "몸무게 미입력 (65kg으로 계산)" : "몸무게 " + weightText + " kg", skin.Small);
-                GUI.color = new Color(1, 1, 1, .7f); GUI.Label(new Rect(215, 280, 360, 34), data is IIdentityData account && account.SignedIn ? "닉네임과 몸무게는 내 정보에서 바꿀 수 있어요." : "회원가입하면 닉네임과 설정이 계정에 남아요.", skin.Style(15, FontStyle.Normal)); GUI.color = Color.white;
-            }
+            skin.Panel(new Rect(195, 150, 400, 182), .95f);
+            GUI.Label(new Rect(215, 166, 360, 40), data?.SavedProfile.DisplayName ?? "플레이어", skin.Style(30, FontStyle.Bold));
+            GUI.Label(new Rect(215, 214, 360, 34), string.IsNullOrWhiteSpace(weightText) ? "몸무게 미입력 (65kg으로 계산)" : "몸무게 " + weightText + " kg", skin.Small);
+            GUI.color = new Color(1, 1, 1, .7f); GUI.Label(new Rect(215, 280, 360, 34), data is IIdentityData account && account.SignedIn ? "닉네임과 몸무게는 내 정보에서 바꿀 수 있어요." : "회원가입하면 닉네임과 설정이 계정에 남아요.", skin.Style(15, FontStyle.Normal)); GUI.color = Color.white;
             GUI.Label(new Rect(195, 344, 300, 34), "플레이 방식", skin.Label);
             bool bodyOk = data == null || data.BodyStylesAllowed;
-            var playable = PlayStyleInfo.Playable(style, bodyOk, false);
+            var playable = PlayStyleInfo.Playable(style, bodyOk);
             if (playable != style) { style = playable; data?.PreviewStyle(style); }
             for (int i = 0; i < 3; i++)
             {
                 var option = (PlayStyle)i;
-                bool allowed = PlayStyleInfo.Allowed(option, bodyOk, false);
+                bool allowed = PlayStyleInfo.Allowed(option, bodyOk);
                 if (Choice(new Rect(195 + i * 136, 380, 128, 48), PlayStyleInfo.Label(option), option == style, allowed) && option != style)
                 {
                     style = option; data?.PreviewStyle(style);

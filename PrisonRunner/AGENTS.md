@@ -49,4 +49,4 @@
 
 생성·수정 파일, 구현 기능, 수행한 검증과 Compile Error 여부, 남은 문제와 다음 작업을 보고한다. 과거 검사 결과를 새로 수행한 결과처럼 쓰지 않는다.
 
-- 추가 UI 통합 기준은 `lilohdong/muhanok-test` main `b2215ef589e028c2a7efce6af814ac7f02e2ce55`다. 메뉴/상점/거리 랭킹은 `docs/GAME_FLOW_UI.md`를 따른다. 얼굴 서버/PostgreSQL과 기존 확장 경로를 유지한다. 코인·해금은 회원 계정(중앙 DB)에만 쌓이고, 게임 PC에는 PC 랭킹(게스트·회원 판)만 남는다(예전 PC 지갑은 개발자/전시 모드 전용). 둘을 혼동하지 않는다.
+- 추가 UI 통합 기준은 `lilohdong/muhanok-test` main `b2215ef589e028c2a7efce6af814ac7f02e2ce55`다. 메뉴/상점/거리 랭킹은 `docs/GAME_FLOW_UI.md`를 따른다. 얼굴 서버/PostgreSQL과 기존 확장 경로를 유지한다. 코인·해금은 회원 계정(중앙 DB)에만 쌓이고, 게임 PC에는 PC 랭킹(게스트·회원 판)만 남는다(예전 PC 지갑은 읽지 않는다). 둘을 혼동하지 않는다.

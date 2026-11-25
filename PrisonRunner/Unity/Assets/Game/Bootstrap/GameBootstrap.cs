@@ -68,7 +68,7 @@ namespace Muhanok.Bootstrap
         private int raceTicket;
         // The account (member or guest) is the only source of the current player.
         public AccountSession Account { get; } = new AccountSession();
-        // Run settings of the current or next run, taken from the account; developer mode names each run instead.
+        // Run settings of the current or next run, taken from the account.
         // Runs started from the setup screen are recorded on the leaderboard.
         private PlayerProfile player = new PlayerProfile();
         private IAccountGateway gateway;
@@ -166,7 +166,7 @@ namespace Muhanok.Bootstrap
             hud.Map=Map; hud.Data=this; hud.PoliceAlert=()=>PursuitCue.Visible;
             hud.Configure(Session, RetrySamePlayer);
             hud.TitleLogo = TitleLogo;
-            hud.LoadingImage=LoadingImage; hud.BeginRun=StartPlayerRun; hud.PauseRun=TogglePause; hud.NextPlayer=NextPlayer; hud.ToMenu=ExitToMenu;
+            hud.LoadingImage=LoadingImage; hud.BeginRun=StartPlayerRun; hud.PauseRun=TogglePause; hud.ToMenu=ExitToMenu;
             hud.TextInput=KeyboardGameInput.SetTextInput; hud.Quit=QuitGame;
             hud.StartTutorial=StartTutorial; hud.OfferTutorial=OfferTutorial;
             Tutorial=gameObject.AddComponent<TutorialDirector>();
@@ -182,7 +182,6 @@ namespace Muhanok.Bootstrap
             audioPlayer.Configure(Session, Settings != null ? Settings.MusicVolume : .35f, Settings != null ? Settings.EffectsVolume : .7f);
             hud.RankCracked = audioPlayer.Crack;
             SetupSettings();
-            if (userSettings.DeveloperMode) player = new PlayerProfile { Style = Account.Settings.Style };
             if(automated)player.Style=PlayStyle.Keyboard;
             Session.Flow.Changed += StateChanged;
             Session.Flow.Transition(GameFlowState.TitleIdle);
@@ -198,9 +197,9 @@ namespace Muhanok.Bootstrap
             userSettings = UserSettingsStore.Load(settingsDefaults);
             graphics = new GraphicsSettingsApplier();
             overlay = gameObject.AddComponent<PerformanceOverlay>();
-            // Pose diagnostics are a developer-mode tool; regular play never shows them.
-            // Developer mode also shows the cadence and the jump line in use (body units), for checking the step and jump tuning live.
-            overlay.PoseLine = () => Pose.UsesCamera && userSettings.DeveloperMode ? Pose.Diagnostics + " · 분당 " + Mathf.RoundToInt(Pose.StepsPerMinute) + "걸음 " + Cadence.Korean(Pose.CadenceStage)
+            // Pose diagnostics are a development tool (Editor and development builds); release builds never show them.
+            // They also show the cadence and the jump line in use (body units), for checking the step and jump tuning live.
+            overlay.PoseLine = () => Pose.UsesCamera && BuildInfo.DevelopmentTools ? Pose.Diagnostics + " · 분당 " + Mathf.RoundToInt(Pose.StepsPerMinute) + "걸음 " + Cadence.Korean(Pose.CadenceStage)
                 + " · 들썩임 " + Pose.Bounce.ToString("0.00") + " 점프선 " + Pose.JumpThreshold.ToString("0.00") : "";
             overlay.QualityLine = () => "화질 " + userSettings.Preset + " · 렌더 " + Mathf.RoundToInt((effectiveGraphics?.RenderScale ?? userSettings.RenderScale) * 100) + "% · 그림자 " + (effectiveGraphics?.Shadows ?? userSettings.Shadows) + (userSettings.AutoPerformance ? " · 자동 " + adaptive.Level : "") + (userSettings.FrameCap > 0 ? " · 상한 " + userSettings.FrameCap : "");
             var window = new GameObject("SettingsWindow"); window.transform.SetParent(transform, false);
@@ -259,7 +258,7 @@ namespace Muhanok.Bootstrap
             if(Session.Flow.State!=GameFlowState.TitleIdle||hud.Loading) return;
             loginNotice=""; hud.OpenLogin();
         }
-        // Straight to the run setup (tests, "다음 플레이어").
+        // Straight to the run setup (tests).
         public void OpenStartSetup()
         {
             if(Session.Flow.State!=GameFlowState.TitleIdle||hud.Loading) return;
@@ -274,8 +273,8 @@ namespace Muhanok.Bootstrap
             Session.Workout.CadenceCounts=true;
             StartCoroutine(PrepareRun(723));
         }
-        // Start from the setup screen: the run is recorded on the leaderboard. Outside developer mode
-        // the chosen play style becomes the account's default.
+        // Start from the setup screen: the run is recorded on the leaderboard, and the chosen play style
+        // becomes the account's default.
         public void StartPlayerRun(PlayerProfile profile)
         {
             if(profile==null||Session.Flow.State!=GameFlowState.TitleIdle||hud.Loading) return;
@@ -283,7 +282,7 @@ namespace Muhanok.Bootstrap
             if(!Session.Workout.SetWeight(profile.Weight)) Session.Workout.SetWeight("");
             // No camera: a body style falls back to the keyboard for this run, and the saved default is left alone.
             if(!PlayableStyle(profile.Style)){profile.Style=PlayStyle.Keyboard;}
-            else if(!userSettings.DeveloperMode&&profile.Style!=Account.Settings.Style){var saved=Account.Settings;saved.Style=profile.Style;SaveSettings(saved);}
+            else if(profile.Style!=Account.Settings.Style){var saved=Account.Settings;saved.Style=profile.Style;SaveSettings(saved);}
             player=profile; playerRun=true; KeyboardGameInput.SetTextInput(false);
             // The best to beat is read before the run (and before its save).
             RefreshMemberStats();
@@ -499,13 +498,9 @@ namespace Muhanok.Bootstrap
             if (KeyboardGameInput.OverlayPressed) { userSettings.PerformanceOverlay = !userSettings.PerformanceOverlay; ApplySettings(true); }
             if (settingsWindow != null && settingsWindow.IsOpen) return;
             if (KeyboardGameInput.RecalibratePressed && !hud.MenuOpen) Pose.Recalibrate();
-            if (KeyboardGameInput.DeveloperTogglePressed && Session.Flow.State == GameFlowState.TitleIdle) SetDeveloperMode(!userSettings.DeveloperMode);
-            if (KeyboardGameInput.ClearRankingPressed && userSettings.DeveloperMode) { Store.ClearToday(); Debug.Log("Today's ranking cleared."); }
-            // F6 (developer mode): record the camera's joint coordinates for the recognition scorecard (never images).
-            if (KeyboardGameInput.PoseRecordPressed) TogglePoseRecording();
-            // Player lock for crowded booths; the F3 overlay's pose line shows its state.
-            if (KeyboardGameInput.PlayerLockPressed) { PoseEstimatorRegistry.PlayerLock = !PoseEstimatorRegistry.PlayerLock; Debug.Log("Player lock " + (PoseEstimatorRegistry.PlayerLock ? "on" : "off")); }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // F6: record the camera's joint coordinates for the recognition scorecard (never images).
+            if (KeyboardGameInput.PoseRecordPressed) TogglePoseRecording();
             // Demo invincibility: the HUD shows a small "무적 모드 켜짐" note in the bottom-left corner while it is on; the log records each switch.
             if (KeyboardGameInput.InvinciblePressed) { Session.Invincible = !Session.Invincible; Debug.Log("Invincible " + (Session.Invincible ? "on" : "off")); }
             // F7: the operator ends the run as a capture now (invincible or not), so a demo run can be closed into the results.
@@ -520,7 +515,7 @@ namespace Muhanok.Bootstrap
         private void TogglePoseRecording()
         {
             if (Pose.Recording) { string path = Pose.StopRecording(); Debug.Log("Pose recording saved: " + path + " (" + Pose.RecordedFrames + " frames)"); return; }
-            if (userSettings == null || !userSettings.DeveloperMode || !Pose.UsesCamera) return;
+            if (!BuildInfo.DevelopmentTools || !Pose.UsesCamera) return;
             string name = Pose.StartRecording(PoseRecordingFolder);
             if (name != null) Debug.Log("Pose recording started: " + name);
         }
@@ -539,16 +534,6 @@ namespace Muhanok.Bootstrap
             if (at >= 0 && at + 1 < args.Length) return args[at + 1];
 #endif
             return null;
-        }
-        // Developer (exhibition) mode: per-run names and every item unlocked. Switching it starts from a clean player.
-        public void SetDeveloperMode(bool on, bool save = true)
-        {
-            userSettings.DeveloperMode = on;
-            if (save) UserSettingsStore.Save(userSettings);
-            player = on ? new PlayerProfile { Style = Account.Settings.Style } : Account.Profile.Clone();
-            if(on&&Account.IsMember)player.Name=Account.Nickname;
-            if (hud.MenuOpen && !hud.AccountPageOpen) hud.OpenMainMenu();
-            Debug.Log("Developer mode " + (on ? "on" : "off"));
         }
         public void TickInput()
         {
@@ -597,34 +582,32 @@ namespace Muhanok.Bootstrap
             }
         }
         // The run that just ended goes on this PC's ranking; a member's run is also saved on the account server,
-        // which credits the coins (none in developer mode). Guests collect no coins.
+        // which credits the coins. Guests collect no coins.
         public void RecordFinishedRun()
         {
             if(Session.IsTutorial) return;
-            bool developer=userSettings.DeveloperMode;
             var now=System.DateTime.Now;
-            string name=Account.IsMember||!developer?Account.Nickname
-                :player.HasName?player.Name.Trim():"플레이어 "+(Store.Board.Day(Leaderboard.DayKey(now)).Count+1);
+            string name=Account.Nickname;
             var mode=player.Style;
             lastEntry=new RankingEntry{Name=name,Score=Session.Score.Score,Distance=Session.Score.Distance,Coins=Session.Score.Coins,
                 Style=PlayStyleInfo.Label(mode),Mode=(int)mode,Kcal=PlayStyleInfo.UsesCamera(mode)?Session.Workout.EstimatedKcal:0,
                 Challenge=challengeRun?DailyChallenge.Day(System.DateTime.UtcNow):"",
                 Ticks=now.Ticks,AccountId=Account.IsMember?Account.Id:"",ScoreVersion=RunScore.Version};
             lastStats=null; lastStatsFailed=false;
-            // Personal best per play style: a member's from /stats read before this save; an exhibition run's from this PC by its name; none for guests.
+            // Personal best per play style: a member's from /stats read before this save; none for guests.
             // A challenge run has its own board (mode 10-12 on the server): no new best against the regular runs (QA 2026-11-25 L6).
-            int previousBest=challengeRun?-1:Account.IsMember?MemberBest(mode):developer?Store.Board.BestScore(lastEntry.Style,name):-1;
+            int previousBest=challengeRun||!Account.IsMember?-1:MemberBest(mode);
             lastNewBest=previousBest>=0&&lastEntry.Score>previousBest; lastBestScore=previousBest>0?previousBest:-1;
             lastRank=Store.Record(lastEntry,Session.Workout.EstimatedKcal);
             // Weekly goal and streak: camera runs only. The streak is this PC's; a member's weekly minutes also go to the
             // server with the run (moderate_seconds). Members get the streak coins with this run.
             lastStreakCoins=PlayStyleInfo.UsesCamera(mode)?Store.RecordExercise(ExerciseOwner,System.DateTime.UtcNow,Session.Workout.ActiveSeconds,Session.Workout.ModerateSeconds,kindSeconds):0;
-            if(!Account.IsMember||developer)lastStreakCoins=0;
+            if(!Account.IsMember)lastStreakCoins=0;
             lastTodayRank=Store.Board.RankOf(lastEntry,true,mode);
             if(!Account.IsMember) return;
             // The result screen shows the member's totals once the server has this run.
             string id=Account.Id;
-            var record=AccountRun.Create(Session,mode,developer?0:Session.Score.Coins+lastStreakCoins);
+            var record=AccountRun.Create(Session,mode,Session.Score.Coins+lastStreakCoins);
             if(challengeRun)record.mode=DailyChallenge.Mode(mode);
             runs.Save(record,saved=>
             {
@@ -745,22 +728,13 @@ namespace Muhanok.Bootstrap
             // An expired member goes to the login gate (next frame) instead of another run.
             if (again && !ExpiryPending) StartPlayerRun(profile);
         }
-        // "다음 플레이어" (developer mode): the member is signed out and the next person starts at the login gate.
-        public void NextPlayer()
-        {
-            var style = player.Style;
-            Retry();
-            SignOutMember(); tutorialOffered=false; ResetPlayerSession();
-            player = new PlayerProfile { Style = style == PlayStyle.Keyboard ? PlayStyle.FullBody : style };
-            playerRun = false; OpenLogin();
-        }
         // "메인으로" from the result or pause screen; a paused run ends without a record.
         public void ExitToMenu()
         {
             if (Session.Paused) { Session.Paused = false; Time.timeScale = 1; }
             playerRun = false;
             Retry();
-            if (!userSettings.DeveloperMode) player = Account.Profile.Clone();
+            player = Account.Profile.Clone();
             OpenMainMenu();
         }
         private void QuitGame()
@@ -782,16 +756,10 @@ namespace Muhanok.Bootstrap
             if (store != null) Store = store;
             if (faces != null) captureFaces = faces;
         }
-        // Items placed on the map: every item in developer mode, otherwise what the member unlocked (none for guests).
+        // Items placed on the map: what the member unlocked (none for guests).
         public System.Collections.Generic.List<ItemKind> RunItems()
         {
             if (Session != null && Session.IsTutorial) return new System.Collections.Generic.List<ItemKind>();
-            if (userSettings != null && userSettings.DeveloperMode)
-            {
-                var all = new System.Collections.Generic.List<ItemKind>();
-                foreach (var item in ItemCatalog.All) all.Add(item.Kind);
-                return all;
-            }
             return Account.RunItems();
         }
         // Guests keep settings in session memory; a member's settings also go to the server.
@@ -806,12 +774,11 @@ namespace Muhanok.Bootstrap
         // IHudData
         PlayerProfile IHudData.Player => player;
         PlayerProfile IHudData.SavedProfile => Account.Profile;
-        bool IHudData.DeveloperMode => userSettings != null && userSettings.DeveloperMode;
         Texture IHudData.CameraTexture => Pose.CameraTexture;
         // Listed, or already delivering frames (a camera the driver listed late still counts).
         bool IHudData.CameraDetected => cameraDetected || Pose.CameraTexture != null && Pose.CameraTexture.width > 16;
-        bool IHudData.BodyStylesAllowed => automated || userSettings == null || userSettings.DeveloperMode || ((IHudData)this).CameraDetected;
-        // Body styles need a connected camera, except in developer mode and automated test/tool runs.
+        bool IHudData.BodyStylesAllowed => automated || userSettings == null || ((IHudData)this).CameraDetected;
+        // Body styles need a connected camera, except in automated test/tool runs.
         private bool PlayableStyle(PlayStyle style)
         {
             if(!PlayStyleInfo.UsesCamera(style)) return true;
@@ -821,7 +788,7 @@ namespace Muhanok.Bootstrap
         PoseFrame IHudData.PoseFrame => Pose.LastFrame;
         PoseStatus IHudData.PoseStatus => Pose.Status;
         string IHudData.PoseMessage => Pose.Message;
-        string IHudData.PoseDiagnostics => userSettings != null && userSettings.DeveloperMode && userSettings.PoseDiagnostics ? Pose.Diagnostics : "";
+        string IHudData.PoseDiagnostics => BuildInfo.DevelopmentTools && userSettings != null && userSettings.PoseDiagnostics ? Pose.Diagnostics : "";
         MotionReading IHudData.Motion => Pose.Reading;
         float IHudData.SecondsSinceJump => (float)(Time.realtimeSinceStartupAsDouble - Pose.LastJumpTime);
         float IHudData.SecondsSinceKneeStep => (float)(Time.realtimeSinceStartupAsDouble - Pose.LastKneeStepTime);
@@ -835,13 +802,12 @@ namespace Muhanok.Bootstrap
         bool IHudData.TutorialRun => Session.IsTutorial;
         bool IHudData.PoseRecording => Pose.Recording;
         bool IHudData.BodyActive => Pose.Tracking && Pose.Reading.Active;
-        // Developer mode keeps this PC's exhibition wallet with every item open; players see their account.
-        PlayerWallet IHudData.Wallet { get { if (userSettings == null || !userSettings.DeveloperMode) return Account.Wallet; Store.Wallet.UnlockAll = true; return Store.Wallet; } }
+        PlayerWallet IHudData.Wallet => Account.Wallet;
         Leaderboard IHudData.Board => Store.Board;
         PlayerStats IHudData.Stats => Store.Stats;
         RankingEntry IHudData.LastEntry => lastEntry;
-        // A guest's run (not in developer mode) was recorded as "게스트" and can still be named on the result screen.
-        bool IHudData.CanNameLastRun => lastEntry != null && !Account.IsMember && string.IsNullOrEmpty(lastEntry.AccountId) && userSettings != null && !userSettings.DeveloperMode;
+        // A guest's run was recorded as "게스트" and can still be named on the result screen.
+        bool IHudData.CanNameLastRun => lastEntry != null && !Account.IsMember && string.IsNullOrEmpty(lastEntry.AccountId);
         bool IHudData.NameLastRun(string name) => ((IHudData)this).CanNameLastRun && AccountSession.NicknameProblem(name) == null && Store.Rename(lastEntry, name);
         int IHudData.LastRank => lastRank;
         int IHudData.LastTodayRank => lastTodayRank;
@@ -854,10 +820,10 @@ namespace Muhanok.Bootstrap
         public float StartBanner => Session.Flow.State == GameFlowState.Running ? Mathf.Max(0, 2.2f - (Time.realtimeSinceStartup - runStartedAt)) : 0;
         float IHudData.CaughtFlash => Session.Flow.State == GameFlowState.Caught ? Mathf.Clamp01(1 - (Time.realtimeSinceStartup - caughtAt) / .6f) : 0;
         void IHudData.PreviewStyle(PlayStyle style) { menuCamera=false; player.Style = style; Pose.SetStyle(style); }
-        // Members buy on the server and take its balance and unlocked items; guests have no coins and developer mode has everything.
+        // Members buy on the server and take its balance and unlocked items; guests have no coins.
         void IHudData.Unlock(ItemKind kind, System.Action<bool, string> done)
         {
-            if (!Account.IsMember || userSettings.DeveloperMode) { done?.Invoke(false, "회원가입하면 코인을 모아 아이템을 해금할 수 있어요"); return; }
+            if (!Account.IsMember) { done?.Invoke(false, "회원가입하면 코인을 모아 아이템을 해금할 수 있어요"); return; }
             string id = Account.Id;
             gateway.Buy(Account.Token, kind, reply =>
             {
@@ -874,7 +840,7 @@ namespace Muhanok.Bootstrap
             if (profile == null) return;
             if (!Account.IsMember) Account.SetNickname(profile.Name);
             SaveSettings(AccountSession.SettingsOf(profile));
-            if(!userSettings.DeveloperMode)player=Account.Profile.Clone();
+            player=Account.Profile.Clone();
         }
         void IHudData.Recalibrate() => Pose.Recalibrate();
         bool IHudData.CadenceSpeed => userSettings == null || userSettings.CadenceSpeed;
@@ -898,7 +864,7 @@ namespace Muhanok.Bootstrap
         bool IHudData.BananaWarning => Session.Flow.State == GameFlowState.Running && Time.realtimeSinceStartup < bananaUntil;
 
         // What one person chose or saw this session: today's challenge, the first banana warning and the course hints. A new
-        // account and "다음 플레이어" start from nothing (a guest after a guest has the same empty id) (QA 2026-11-25 M3).
+        // account starts from nothing (a guest after a guest has the same empty id) (QA 2026-11-25 M3).
         private void ResetPlayerSession()
         {
             dailyChallenge = false; bananaWarned = false; System.Array.Clear(courseSeen, 0, courseSeen.Length);
@@ -914,9 +880,7 @@ namespace Muhanok.Bootstrap
             // The HUD best and the next result compare with this member's /stats.
             memberStats = null; memberStatsId = "";
             if (Account.IsMember && gateway != null) RefreshMemberStats();
-            if (userSettings == null) return;
-            if (!userSettings.DeveloperMode) player = Account.Profile.Clone();
-            else if (Account.IsMember) player.Name = Account.Nickname;
+            player = Account.Profile.Clone();
         }
         private void SignedInReply(AccountReply reply)
         {
@@ -1021,7 +985,7 @@ namespace Muhanok.Bootstrap
             {
                 if (reply != null && reply.HasProfile && reply.profile.id == id && Account.Apply(reply.profile))
                 {
-                    if (!userSettings.DeveloperMode) player = Account.Profile.Clone(); else player.Name = Account.Nickname;
+                    player = Account.Profile.Clone();
                     done?.Invoke(true, ""); return;
                 }
                 NoteServer(reply);

@@ -61,7 +61,7 @@ namespace Muhanok.Presentation
             }
             if(view.width>0)DrawFaceGuide(view,identity.IdentityBusy,(float)auto.Progress);
             GUI.Label(new Rect(680,140,510,160),guide,paragraph);
-            GUI.color=Palette.Sand;GUI.Label(new Rect(680,305,510,90),"전시용 얼굴 로그인입니다.\n사진·영상 위조를 차단하는 보안 인증 기능은 포함하지 않습니다.",notice);GUI.color=Color.white;
+            GUI.color=Palette.Sand;GUI.Label(new Rect(680,305,510,90),"간편 얼굴 로그인입니다.\n사진·영상 위조를 차단하는 보안 인증 기능은 포함하지 않습니다.",notice);GUI.color=Color.white;
             // Without a webcam there is nothing to capture.
             GUI.enabled=ready;
             if(skin.PrimaryButton(new Rect(680,420,500,64),action)||Enter())capture?.Invoke();

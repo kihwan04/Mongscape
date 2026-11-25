@@ -46,8 +46,7 @@ namespace Muhanok.Presentation
         {
             data = hud; identity = account; ResultMode = MemberResult = false; MineEntry = null; Challenge = false;
             MemberTab = SignedIn; Mode = hud?.SavedProfile?.Style ?? PlayStyle.FullBody;
-            // Developer (exhibition) mode starts on today's tab.
-            TodayOnly = hud != null && hud.DeveloperMode;
+            TodayOnly = false;
             Reload();
         }
         // After a run: a member starts on 회원 랭킹, a guest on 이 PC; the mode just played and today.
@@ -175,14 +174,14 @@ namespace Muhanok.Presentation
 
         public string StatusText =>Status == RankingStatus.Loading ? LoadingText : Status == RankingStatus.Failed ? OfflineText : "";
 
-        // Result title: "내 최고 N점" for a member (or an exhibition run), the sign-up note for a guest.
+        // Result title: "내 최고 N점" for a member, the sign-up note for a guest.
         public string BestLine
         {
             get
             {
                 if (!ResultMode || data == null) return "";
                 if (data.LastBestScore > 0) return "내 최고 " + RunHudModel.Points(data.LastBestScore);
-                return !MemberResult && !data.DeveloperMode ? GuestBestNote : "";
+                return !MemberResult ? GuestBestNote : "";
             }
         }
         public bool NewBest => ResultMode && data != null && data.LastNewBest;

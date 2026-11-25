@@ -38,7 +38,6 @@ namespace Muhanok.Bootstrap
         private IEnumerator Run()
         {
             while ((game = FindFirstObjectByType<GameBootstrap>()) == null || game.Session == null || game.Session.Flow.State != GameFlowState.TitleIdle) yield return null;
-            game.SetDeveloperMode(false, false);
             yield return new WaitForSecondsRealtime(2f);
             var gateway = new ReviewGateway();
             game.UseAccountServices(gateway);

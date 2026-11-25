@@ -29,16 +29,13 @@ namespace Muhanok.Presentation
             float x = 230, w = 820;
             skin.Text(new Rect(x, 36, 300, 48), "상점", 44, Palette.Cream, TextAnchor.MiddleLeft);
             var wallet = data?.Wallet;
-            bool developer = data != null && data.DeveloperMode;
-            bool guest = !developer && !(data is IIdentityData identity && identity.SignedIn);
+            bool guest = !(data is IIdentityData identity && identity.SignedIn);
             var coins = new Rect(x + w - 190, 38, 190, 44);
             skin.BorderBox(coins, Palette.A(Palette.Ground, 0.9f), Palette.Wood, 2);
             skin.Circle(new Rect(coins.x + 10, coins.y + 9, 26, 26), Palette.Gold);
             skin.Text(new Rect(coins.x + 44, coins.y, coins.width - 58, coins.height), (wallet != null ? wallet.Coins : 0).ToString("N0", Num), 20, Palette.Cream, TextAnchor.MiddleRight);
 
-            skin.Text(new Rect(x, 100, w, 26), wallet != null && wallet.UnlockAll
-                ? "개발자 모드에서는 모든 아이템이 해금되어 있습니다."
-                : guest ? GuestNote : "달리면서 모은 코인으로 아이템을 해금하면 맵에 등장합니다.", 16, guest ? Palette.Gold : Palette.Sand, TextAnchor.MiddleLeft, false, true);
+            skin.Text(new Rect(x, 100, w, 26), guest ? GuestNote : "달리면서 모은 코인으로 아이템을 해금하면 맵에 등장합니다.", 16, guest ? Palette.Gold : Palette.Sand, TextAnchor.MiddleLeft, false, true);
 
             float cardW = (w - 32) / 3f;
             for (int i = 0; i < ItemCatalog.All.Length; i++)

@@ -8,7 +8,7 @@ using NUnit.Framework;
 
 namespace Muhanok.Tests
 {
-    public sealed class BodyTrackingAndExhibitionTests
+    public sealed class BodyTrackingTests
     {
         // Synthetic standing body in normalised image coordinates; offsets move parts of it.
         // Lean tilts the upper body sideways: shoulders, head and arms move, hips and feet stay.
@@ -426,12 +426,11 @@ namespace Muhanok.Tests
             Assert.IsTrue(run.Fail(CaptureReason.BrokenRail)); Assert.AreEqual(GameFlowState.Caught, run.Flow.State); Assert.AreEqual(CaptureReason.BrokenRail, run.Reason);
             Assert.IsTrue(run.Items.IsActive(ItemKind.Shield), "A broken rail ignores the shield and leaves it unused.");
         }
-        [Test] public void WalletUnlocksItemsAndDeveloperModeOpensEverything()
+        [Test] public void WalletUnlocksItems()
         {
             var wallet = new PlayerWallet(); Assert.IsEmpty(wallet.Available());
             wallet.Deposit(40); Assert.IsTrue(wallet.TryUnlock(ItemKind.Magnet)); Assert.AreEqual(10, wallet.Coins);
             Assert.IsFalse(wallet.TryUnlock(ItemKind.Shield)); CollectionAssert.AreEqual(new[] { ItemKind.Magnet }, wallet.Available());
-            wallet.UnlockAll = true; Assert.AreEqual(ItemCatalog.All.Length, wallet.Available().Count);
         }
         [Test] public void LeaderboardRanksByScoreOverallAndPerDay()
         {
@@ -447,8 +446,6 @@ namespace Muhanok.Tests
             Assert.AreEqual(4, board.RankOf(b, false, full));
             Assert.AreEqual(1, board.RankOf(a, true, full), "Yesterday's run does not count for today");
             CollectionAssert.AreEqual(new[] { "A", "Tie", "B" }, board.View(true, today, full).ConvertAll(e => e.Name));
-            board.ClearDay(Leaderboard.DayKey(today));
-            CollectionAssert.AreEqual(new[] { "Old" }, board.View(false, today, full).ConvertAll(e => e.Name));
         }
         [Test] public void OlderScoreVersionsAreKeptButNotRanked()
         {
@@ -476,25 +473,19 @@ namespace Muhanok.Tests
             Assert.AreEqual(1500, board.BestScore("전신")); Assert.AreEqual(900, board.BestScore("전신", "A"));
             Assert.AreEqual(700, board.BestScore("키보드")); Assert.AreEqual(0, board.BestScore("상체"));
         }
-        [Test] public void PlayerStorePersistsProfileWalletRecordsAndStats()
+        [Test] public void PlayerStorePersistsRecordsAndStats()
         {
             string root = Path.Combine(Path.GetTempPath(), "muhanok-test-" + Guid.NewGuid().ToString("N"));
             try
             {
                 var store = new PlayerProgressStore(root);
-                Assert.IsFalse(store.Profile.HasName);
-                store.SaveProfile(new PlayerProfile { Name = "탈옥왕", Weight = "60", Style = PlayStyle.UpperBody });
                 long now = DateTime.Now.Ticks;
                 Assert.AreEqual(1, store.Record(new RankingEntry { Name = "탈옥왕", Distance = 120, Score = 120, ScoreVersion = RunScore.Version, Mode = (int)PlayStyle.UpperBody, Kcal = 12.5, Ticks = now }, 12.5));
                 Assert.AreEqual(1, store.Record(new RankingEntry { Name = "탈옥왕", Distance = 340, Score = 340, ScoreVersion = RunScore.Version, Mode = (int)PlayStyle.UpperBody, Kcal = 30, Ticks = now + 1 }, 30));
-                store.DepositCoins(55); Assert.IsTrue(store.Unlock(ItemKind.Magnet));
                 var reopened = new PlayerProgressStore(root);
-                Assert.AreEqual("탈옥왕", reopened.Profile.Name); Assert.AreEqual(PlayStyle.UpperBody, reopened.Profile.Style);
                 CollectionAssert.AreEqual(new[] { 340f, 120f }, new List<RankingEntry>(reopened.Board.All).ConvertAll(e => e.Distance));
                 Assert.AreEqual(2, reopened.Stats.Runs); Assert.AreEqual(460, reopened.Stats.TotalDistance, .01f);
                 Assert.AreEqual(42.5, reopened.Stats.TotalKcal, .01); Assert.GreaterOrEqual(reopened.Stats.BestDistance, 340);
-                Assert.AreEqual(25, reopened.Wallet.Coins); Assert.IsTrue(reopened.Wallet.IsUnlocked(ItemKind.Magnet));
-                reopened.ClearToday(); Assert.AreEqual(0, new PlayerProgressStore(root).Board.All.Count);
             }
             finally { if (Directory.Exists(root)) Directory.Delete(root, true); }
         }

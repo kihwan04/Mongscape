@@ -40,7 +40,6 @@ namespace Muhanok.Tests
             yield return SceneManager.LoadSceneAsync("GameScene");yield return null;
             var game=Object.FindFirstObjectByType<GameBootstrap>();var hud=game.GetComponent<HUDPresenter>();
             var data=(IHudData)game;var host=(ISettingsHost)game;
-            host.Settings.DeveloperMode=false;game.ApplySettings(false);
             data.SaveProfile(new PlayerProfile{Name="Menu QA",Weight="70",Style=PlayStyle.Keyboard,CalorieGoal=180});
             game.OpenMainMenu();Assert.AreEqual(MenuPage.Main,hud.Page);
             hud.ShowIdentity();Assert.IsTrue(hud.IdentityOpen);
@@ -62,7 +61,6 @@ namespace Muhanok.Tests
         {
             yield return SceneManager.LoadSceneAsync("GameScene");yield return null;
             var game=Object.FindFirstObjectByType<GameBootstrap>();var hud=game.GetComponent<HUDPresenter>();
-            ((ISettingsHost)game).Settings.DeveloperMode=false;game.ApplySettings(false);
             game.OpenMainMenu();hud.ShowIdentity();Assert.IsTrue(hud.IdentityOpen);
             // Let OnGUI lay out and repaint the camera view and face guide a few times.
             for(int i=0;i<3;i++)yield return null;
@@ -75,7 +73,6 @@ namespace Muhanok.Tests
             yield return SceneManager.LoadSceneAsync("GameScene");yield return null;
             var game=Object.FindFirstObjectByType<GameBootstrap>();var data=(IHudData)game;var fake=new FakeAccountGateway();
             game.UseAccountServices(fake);
-            ((ISettingsHost)game).Settings.DeveloperMode=false;game.ApplySettings(false);
             data.SaveProfile(new PlayerProfile{Name="Local QA",Weight="70",Style=PlayStyle.Keyboard});
             Assert.IsFalse(game.SignedIn);Assert.AreEqual("Local QA",data.SavedProfile.Name);CollectionAssert.IsEmpty(fake.Calls,"Guest settings stay in memory");
             game.Account.SignInMember(new AccountProfile{id="synthetic-profile",name="Server QA",style=(int)PlayStyle.Keyboard},"synthetic-test-token");

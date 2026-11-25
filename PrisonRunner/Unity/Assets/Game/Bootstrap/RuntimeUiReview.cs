@@ -37,7 +37,6 @@ namespace Muhanok.Bootstrap
         {
             float started = Time.realtimeSinceStartup;
             while ((game = FindFirstObjectByType<GameBootstrap>()) == null || game.Session == null || game.Session.Flow.State != GameFlowState.TitleIdle) yield return null;
-            game.SetDeveloperMode(false, false);
             yield return new WaitForSecondsRealtime(3f);
             var hud = game.Hud; var data = (IHudData)game;
             // One look at the login gate with the configured face server (connected or not), read-only: nothing is sent but /health.
@@ -106,8 +105,8 @@ namespace Muhanok.Bootstrap
             }
             yield return Shot("11_Result");
 
-            game.SetDeveloperMode(true, false); game.ExitToMenu(); yield return Shot("12_MainMenu_Developer");
-            game.OpenStartSetup(); yield return Shot("13_Setup_Developer");
+            game.ExitToMenu(); yield return Shot("12_MainMenu_AfterRun");
+            game.OpenStartSetup(); yield return Shot("13_Setup");
             // Close the text-entry page while the player window is still alive, then let queued IME events settle.
             // Quitting directly from the setup field can trip the existing native Windows callback shutdown issue.
             game.OpenMainMenu(); yield return new WaitForSecondsRealtime(.8f);

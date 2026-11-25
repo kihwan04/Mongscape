@@ -13,8 +13,6 @@ uint SourceHeight;
 float4 Row0;
 float4 Row1;
 uint ToSrgb;
-// Player lock: z != 0 keeps only source u in [x, y]; the rest reads as black like the letterbox.
-float4 Band;
 
 [numthreads(8, 8, 1)]
 void SampleAffine(uint3 id : SV_DispatchThreadID)
@@ -25,8 +23,6 @@ void SampleAffine(uint3 id : SV_DispatchThreadID)
     float2 source = float2(dot(Row0.xy, p) + Row0.z, dot(Row1.xy, p) + Row1.z);
     float2 uv = source / float2(SourceWidth, SourceHeight);
     bool inside = uv.x >= 0 && uv.x <= 1 && uv.y >= 0 && uv.y <= 1;
-    if (Band.z != 0)
-        inside = inside && uv.x >= Band.x && uv.x <= Band.y;
     float4 c = inside ? Source.SampleLevel(LinearClampSampler, uv, 0) : float4(0, 0, 0, 0);
     if (ToSrgb != 0)
     {
