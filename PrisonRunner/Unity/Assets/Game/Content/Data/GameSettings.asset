@@ -74,7 +74,7 @@ MonoBehaviour:
     ActionVisibility: 0.6
     RefractorySeconds: 0.3
     ReacquireLockSeconds: 0.25
-    CalibrationFrames: 20
+    CalibrationFrames: 45
     CalibrationStillness: 0.12
     LaneEnter: 0.65
     LaneExit: 0.38
