@@ -149,7 +149,7 @@ namespace Muhanok.Domain
             }
             int jumps = 0; double running = 0; foreach (var r in results) { jumps += r.JumpsWhileRunning; running += r.RunningSeconds; }
             text.AppendLine();
-            if (running > 0) text.AppendLine(tag + "발구름 중 잘못된 점프: " + jumps + "회 / " + (running / 60).ToString("0.0", CultureInfo.InvariantCulture) + "분 (합격 기준: 전력 1분에 0회)");
+            if (running > 0) text.AppendLine(tag + "제자리 달리기 중 잘못된 점프: " + jumps + "회 / " + (running / 60).ToString("0.0", CultureInfo.InvariantCulture) + "분 (합격 기준: 전력 1분에 0회)");
             text.AppendLine();
             text.AppendLine("| 녹화 | 길이 | 동작별 정답률 |").AppendLine("| --- | ---: | --- |");
             foreach (var r in results)

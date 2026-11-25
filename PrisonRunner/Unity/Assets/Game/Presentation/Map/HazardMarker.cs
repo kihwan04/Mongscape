@@ -48,18 +48,22 @@ namespace Muhanok.Presentation.Map
         private void LateUpdate()
         {
             Refresh();
-            // One pulse update a frame for every marker (shared material).
-            if (pulsedFrame != Time.frameCount)
-            {
-                pulsedFrame = Time.frameCount;
-                float glow = .55f + .45f * Mathf.Sin(Time.time * Mathf.PI * 2 / PulseSeconds);
-                ringMaterial.color = Color.Lerp(Danger * .6f, Danger, glow);
-                // Kept under the bloom threshold so the ring stays red instead of flaring white.
-                ringMaterial.SetColor("_EmissionColor", Danger * Mathf.Lerp(.45f, .95f, glow));
-            }
+            Pulse();
             if (view == null) view = Camera.main;
             if (view != null) { var to = mark.position - view.transform.position; to.y = 0; if (to.sqrMagnitude > .01f) mark.rotation = Quaternion.LookRotation(to); }
         }
+        // One pulse update a frame for every marker and obstacle outline (shared material).
+        internal static void Pulse()
+        {
+            if (pulsedFrame == Time.frameCount || ringMaterial == null) return;
+            pulsedFrame = Time.frameCount;
+            float glow = .55f + .45f * Mathf.Sin(Time.time * Mathf.PI * 2 / PulseSeconds);
+            ringMaterial.color = Color.Lerp(Danger * .6f, Danger, glow);
+            // Kept under the bloom threshold so the ring stays red instead of flaring white.
+            ringMaterial.SetColor("_EmissionColor", Danger * Mathf.Lerp(.45f, .95f, glow));
+        }
+        // The pulsing red-orange material of the banana ring, shared by the obstacle outlines.
+        internal static Material DangerMaterial { get { Materials(); return ringMaterial; } }
         private static void Materials()
         {
             if (ringMaterial != null) return;

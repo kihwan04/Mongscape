@@ -11,7 +11,7 @@ namespace Muhanok.Presentation
     // One ranking row as drawn: the server board (회원 랭킹) or this PC's board (이 PC, member runs marked).
     public sealed class RankingRow
     {
-        // Runs with and without "발구름으로 속도 조절" share one ranking and are not marked.
+        // Runs with and without "달리기 속도 조절" share one ranking and are not marked.
         public int Rank; public string Name = ""; public int Score; public bool Member;
     }
 

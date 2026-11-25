@@ -128,7 +128,7 @@ namespace Muhanok.Application
         public double moderate_seconds;
 
         // Score uses the current formula (RunScore.Version); play seconds are the run clock without pauses.
-        // Runs with and without "발구름으로 속도 조절" share one ranking, so the option is not sent.
+        // Runs with and without "달리기 속도 조절" share one ranking, so the option is not sent.
         public static AccountRun Create(RunSession run, PlayStyle mode, int coins)
         {
             double playSeconds = run.Elapsed, moderate = run.Workout.ModerateSeconds;

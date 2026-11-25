@@ -129,6 +129,45 @@ namespace Muhanok.Presentation.Map
                 var position=Coins[i].transform.localPosition; position.x=(lane-1)*2.2f+RouteSurface.LocalX(RouteType,position.z); Coins[i].transform.localPosition=position;
             }
         }
+        // Coins a big movement earns (BonusCoins): a low line under each duck row in the middle lane, its far half for a deep
+        // slide, and coins over each jump row above a normal jump's reach. Pooled per chunk, copied from the authored coin.
+        // Read from the exercise rows switched on now, so the tutorial's lesson rows (TutorialLayout) get them too.
+        private readonly System.Collections.Generic.List<CoinController> bonusCoins=new System.Collections.Generic.List<CoinController>();
+        public System.Collections.Generic.IReadOnlyList<CoinController> BonusCoinViews=>bonusCoins;
+        private readonly System.Collections.Generic.List<float> bonusRows=new System.Collections.Generic.List<float>(4);
+        public void PlaceBonusCoins()
+        {
+            int used=0; bonusRows.Clear();
+            bool walk=Coins!=null&&Coins.Length>0&&Coins[0]!=null&&ExerciseObstacles!=null&&Sequence>0&&!Layout.Stair&&RouteType!=1&&RouteType!=2;
+            if(walk)for(int i=0;i<ExerciseObstacles.Length;i++)
+            {
+                var obstacle=ExerciseObstacles[i];
+                if(obstacle==null||!obstacle.gameObject.activeSelf)continue;
+                var action=ObstacleLayout.ActionFor(obstacle.Kind);float row=LocalZ(obstacle.transform);
+                // A full row has one obstacle per lane: one coin line per row.
+                if(bonusRows.Exists(z=>Mathf.Abs(z-row)<1f))continue;
+                bonusRows.Add(row);
+                if(action==HazardAction.Crouch)
+                    for(int c=0;c<BonusCoins.CrouchCount;c++)BonusAt(used++,row+BonusCoins.CrouchZ(c),BonusCoins.CrouchHeight,BonusCoins.CrouchKind(c));
+                else if(action==HazardAction.Jump)
+                    for(int c=0;c<BonusCoins.AirCount;c++)BonusAt(used++,row+BonusCoins.AirZ(c),BonusCoins.AirHeight(RunConfigForCoins),BonusCoin.Air);
+            }
+            for(int i=used;i<bonusCoins.Count;i++)bonusCoins[i].gameObject.SetActive(false);
+        }
+        // Coin heights follow the default run tuning (jump height 1.8 m).
+        private static readonly RunConfig RunConfigForCoins=new RunConfig();
+        private void BonusAt(int index,float z,float height,BonusCoin kind)
+        {
+            if(z<0||z>Length){if(index<bonusCoins.Count)bonusCoins[index].gameObject.SetActive(false);return;}
+            while(bonusCoins.Count<=index)
+            {
+                var copy=Instantiate(Coins[0].gameObject,Coins[0].transform.parent);copy.name="BonusCoin";
+                var view=copy.GetComponent<CoinController>();bonusCoins.Add(view);
+            }
+            var coin=bonusCoins[index];
+            coin.gameObject.SetActive(true);coin.ResetCoin();coin.RequiresKneeStep=false;coin.Bonus=kind;
+            coin.transform.localPosition=new Vector3(RouteSurface.LocalX(RouteType,z),RouteSurface.LocalHeight(RouteType,z)+height,z);
+        }
         // Stair chunk: one knee-high coin line along the climb, in one lane that changes from stair to stair. Collectible only while stepping.
         private void PlaceStairCoins(int sequence)
         {

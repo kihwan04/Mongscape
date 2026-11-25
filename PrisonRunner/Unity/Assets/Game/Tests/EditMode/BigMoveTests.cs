@@ -110,20 +110,22 @@ namespace Muhanok.Tests
             CollectionAssert.DoesNotContain(Play(PlayStyle.UpperBody, t => new Body { ShoulderDrop = In(t, .2, 1) ? .06f : 0 }, 1.3).Events, "deep");
         }
 
-        [Test] public void BigMovesChangeTheRunAndEarnACoinNearTheirHazard()
+        [Test] public void BigMovesChangeTheRunWithoutCoinsOnTheSpot()
         {
             var run = new RunSession(new RunConfig()); run.Flow.Transition(GameFlowState.TitleIdle); run.Flow.Transition(GameFlowState.LoadingIntro); run.Flow.Transition(GameFlowState.Running);
-            Assert.IsFalse(run.Big(RunSession.BigMove.Jump, true), "Not airborne: nothing to boost");
+            Assert.IsFalse(run.Big(RunSession.BigMove.Jump), "Not airborne: nothing to boost");
             run.Runner.Command(MotionCommand.Jump); run.Tick(.05f);
-            Assert.IsTrue(run.Big(RunSession.BigMove.Jump, true));
+            Assert.IsTrue(run.Big(RunSession.BigMove.Jump));
             float apex = 0; for (int i = 0; i < 80; i++) { run.Tick(.02f); apex = Math.Max(apex, run.Runner.Y); }
             Assert.AreEqual(run.Config.JumpHeight * run.Config.BigJumpHeight, apex, .08f, "The big jump reaches 1.35x");
-            Assert.AreEqual(1, run.Score.Coins); Assert.AreEqual(1, run.BigCoins);
-            run.Runner.Command(MotionCommand.Crouch); Assert.IsTrue(run.Big(RunSession.BigMove.Crouch, false));
-            run.Tick(run.Config.CrouchSeconds + .1f); Assert.IsTrue(run.Runner.Crouching, "The deep slide lasts longer");
-            Assert.AreEqual(1, run.Score.Coins, "No duck row near: no coin");
-            run.PacePressure = .5f; run.Big(RunSession.BigMove.Knee, true);
-            Assert.AreEqual(.5f - run.Config.BigKneeRelief, run.PacePressure, 1e-5); Assert.AreEqual(1, run.Score.Coins, "Knee steps never earn a coin");
+            Assert.AreEqual(0, run.Score.Coins, "Coins come from the coins placed in the air, not on the spot"); Assert.AreEqual(0, run.BigCoins);
+            run.Runner.Command(MotionCommand.Crouch); Assert.IsFalse(run.Runner.DeepSliding); Assert.IsTrue(run.Big(RunSession.BigMove.Crouch));
+            Assert.IsTrue(run.Runner.DeepSliding);
+            run.Tick(run.Config.CrouchSeconds + .1f); Assert.IsTrue(run.Runner.Crouching, "The deep slide lasts longer"); Assert.IsTrue(run.Runner.DeepSliding);
+            run.Tick(run.Config.CrouchSeconds); Assert.IsFalse(run.Runner.Crouching); Assert.IsFalse(run.Runner.DeepSliding, "Ends with the slide");
+            run.PacePressure = .5f; run.Big(RunSession.BigMove.Knee);
+            Assert.AreEqual(.5f - run.Config.BigKneeRelief, run.PacePressure, 1e-5); Assert.AreEqual(0, run.Score.Coins);
+            run.CollectBonusCoin(); Assert.AreEqual(1, run.Score.Coins); Assert.AreEqual(1, run.BigCoins);
             CollectionAssert.AreEqual(new[] { 1, 1, 1, 0 }, run.BigMoves);
         }
 

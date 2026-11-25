@@ -71,7 +71,7 @@ namespace Muhanok.Presentation
         void Unlock(ItemKind kind, System.Action<bool, string> done);
         void SaveProfile(PlayerProfile profile);
         void Recalibrate();
-        // "발구름으로 속도 조절" (setup screen): on by default, remembered on this PC.
+        // "달리기 속도 조절" (setup screen): on by default, remembered on this PC.
         bool CadenceSpeed { get; }
         void SetCadenceSpeed(bool on);
         // The running ranking strip (loaded at the start of a run; not in the tutorial), whether a hazard is close

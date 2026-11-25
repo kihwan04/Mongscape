@@ -12,7 +12,7 @@ namespace Muhanok.Domain
     public static class IntensityMet
     {
         public const double Walk = 3.5, Run = 5, Sprint = 7, BigMove = 1, UpperScale = .6;
-        // "발구름으로 속도 조절" off: stepping counts nothing; a jump, crouch, knee raise or lane change moment counts at this MET
+        // "달리기 속도 조절" off: stepping counts nothing; a jump, crouch, knee raise or lane change moment counts at this MET
         // (the in-place walking figure, +1 when big).
         public const double Move = Walk;
         // Base MET from which a moment counts toward the weekly moderate minutes (before the play-style scale).
@@ -49,7 +49,7 @@ namespace Muhanok.Domain
         // Active seconds by cadence stage (index = CadenceStage; Standing stays 0) and those at moderate intensity or more.
         private readonly double[] stageSeconds=new double[4];
         public double ModerateSeconds {get; private set;}
-        // False when "발구름으로 속도 조절" is off: walk, run and sprint MET are 0 and only the moments of a jump, crouch,
+        // False when "달리기 속도 조절" is off: walk, run and sprint MET are 0 and only the moments of a jump, crouch,
         // knee raise or lane change count (MoveSeconds), so the result report shows that time instead of the stages.
         public bool CadenceCounts {get;set;}=true;
         public double MoveSeconds {get; private set;}
