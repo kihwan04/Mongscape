@@ -143,6 +143,8 @@ namespace Muhanok.Presentation.Map
                 foreach(var pickup in active[i].Chunk.Pickups)pickup.Evaluate(session,previousZ);
                 var coins=active[i].Chunk.Coins;
                 if(coins!=null) for(int j=0;j<coins.Length;j++) coins[j].Evaluate(session,previousZ);
+                var bonus=active[i].Chunk.BonusCoinViews;
+                for(int j=0;j<bonus.Count;j++) bonus[j].Evaluate(session,previousZ);
                 var items=active[i].Chunk.FloorItems;
                 if(items!=null)foreach(var item in items)item.Evaluate(session,previousZ);
                 foreach(var item in active[i].Chunk.DynamicFloorItems)item.Evaluate(session,previousZ);

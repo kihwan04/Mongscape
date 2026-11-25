@@ -33,7 +33,7 @@ namespace Muhanok.Domain
             return Sprint;
         }
         public static float Target(MotionTuning tuning) => (tuning ?? new MotionTuning()).RunCadence - TargetBelowRun;
-        // enabled: a camera run with "발구름으로 속도 조절" on, on foot. Off (keyboard, the option off, riding): base speed, no pace pressure.
+        // enabled: a camera run with "달리기 속도 조절" on, on foot. Off (keyboard, the option off, riding): base speed, no pace pressure.
         public void Tick(float dt, bool enabled, float stepsPerMinute, MotionTuning tuning, float target)
         {
             if (dt <= 0 || float.IsNaN(dt)) return;
