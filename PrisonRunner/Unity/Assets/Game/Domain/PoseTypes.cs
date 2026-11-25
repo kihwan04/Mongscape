@@ -97,6 +97,15 @@ namespace Muhanok.Domain
         public float UpperLaneEnter = .75f, UpperLaneExit = .42f, UpperCrouchDrop = .35f, UpperCrouchConfirmSeconds = .12f, UpperHandsAboveNose = .2f;
         // The upper body also leans by tilting the shoulder line (degrees from the calibrated tilt); the exit follows UpperLaneExit/Enter.
         public float UpperLeanEnterDegrees = 12f;
+        // Big movements (exercise plan 6): passing stays as easy as before, these only add the in-game reward and +1 MET.
+        // Full body: a crouch with the knee angle at or under DeepKneeAngle (half squat) or the hips down DeepHipDrop torsos;
+        // a jump whose hips and shoulders both stay over the jump line for BigJumpAirSeconds; a knee lifted to BigKneeHipRatio
+        // of the way to hip height; a side step moving hips and shoulders both BigSideStepWidths shoulder widths.
+        public float DeepKneeAngle = 105f, DeepHipDrop = .35f, BigJumpAirSeconds = .2f, BigKneeHipRatio = .85f, BigSideStepWidths = 1f;
+        // Upper body: arms straight above the head (elbow angle), shoulders down by a head (calibrated nose to shoulder line),
+        // a lean of BigLeanDegrees. The stair exercise is a pull-down: hands over the head, then down below the nose (a step each
+        // way); down below the shoulders is big.
+        public float UpperStraightArm = .9f, UpperBigLeanDegrees = 20f;
         public float ArmPumpAmplitude = .6f, ArmSwingAmplitude = .3f;
         public float LostSeconds = 2.5f, BaselineDrift = .01f;
     }
@@ -118,6 +127,8 @@ namespace Muhanok.Domain
     {
         public int Lane;
         public bool JumpEdge, KneeStep, Crouch, Active;
-        public void Clear() { Lane = 0; JumpEdge = KneeStep = Crouch = Active = false; }
+        // Big movements: one-frame edges for jump, knee step and lane change; CrouchDeep holds while the crouch is deep.
+        public bool BigJump, BigKnee, BigLane, CrouchDeep;
+        public void Clear() { Lane = 0; JumpEdge = KneeStep = Crouch = Active = BigJump = BigKnee = BigLane = CrouchDeep = false; }
     }
 }

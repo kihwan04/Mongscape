@@ -79,6 +79,8 @@ namespace Muhanok.Presentation
         RankRace Race { get; }
         bool HazardNear { get; }
         float PacePressure { get; }
+        // The coach subtitle showing now, or "".
+        string CoachText { get; }
     }
 
     // Draws the mirrored webcam image with the detected skeleton; returns the video rect for overlays.
@@ -190,7 +192,7 @@ namespace Muhanok.Presentation
             var lane = new Rect(area.x + 8, area.y + 8, 120, 34);
             skin.Card(lane, new Color(0, 0, 0, .6f));
             GUI.Label(lane, motion.Lane < 0 ? "◀ 왼쪽" : motion.Lane > 0 ? "오른쪽 ▶" : "가운데", skin.Centered(18, FontStyle.Bold));
-            string action = data.SecondsSinceJump < .6f ? "점프!" : motion.Crouch ? "숙이기" : data.SecondsSinceKneeStep < .7f ? "무릎·팔 번갈아" : null;
+            string action = data.SecondsSinceJump < .6f ? "점프!" : motion.Crouch ? "숙이기" : data.SecondsSinceKneeStep < .7f ? "무릎·팔 당기기" : null;
             if (action == null) return;
             var badge = new Rect(area.xMax - 158, area.y + 8, 150, 34);
             skin.Card(badge, Palette.A(Palette.Gold, .9f));

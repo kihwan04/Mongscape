@@ -77,7 +77,7 @@ namespace Muhanok.Domain
         public void SetDuckAhead(bool on) { duckAhead = on; }
         public void Recalibrate()
         {
-            calibrated = false; samples = 0; smoothed = false; Reading.Clear(); airborne = hopping = handsUp = duckOnLoss = false; dropRatio = 0; actionLockUntil = 0; laneCandidate = 0;
+            calibrated = false; samples = 0; smoothed = false; Reading.Clear(); airborne = hopping = handsUp = duckOnLoss = false; jumpBigDone = kneeBigDone = laneBigDone = pullUp = pullDownBig = false; dropRatio = 0; actionLockUntil = 0; laneCandidate = 0;
             crouchPendingSince = -1; crouchSince = -10; lastTrackTime = -1; laneLastTime = -1; lastKneeStep = -10; kneeSide = 0; kneeUpL = kneeUpR = false; pumpUntil = 0; stepSign = pumpSign = 0; StepsPerMinute = 0;
             Array.Clear(stepTimes, 0, stepTimes.Length); stepIndex = 0; lastStep = -10; bounce = 0; stepPeakValid = jumpedSinceStep = false; calibrationBrokeAt = -10;
             Status = PoseStatus.Calibrating;
@@ -85,7 +85,7 @@ namespace Muhanok.Domain
 
         public MotionReading Update(PoseFrame frame)
         {
-            Reading.JumpEdge = false; Reading.KneeStep = false;
+            Reading.JumpEdge = false; Reading.KneeStep = false; Reading.BigJump = Reading.BigKnee = Reading.BigLane = false;
             double now = frame.Time; lastFrameTime = now;
             if (!frame.HasPose || !Smooth(frame) || !RequiredVisible())
             {
@@ -217,7 +217,7 @@ namespace Muhanok.Domain
             if (locked || lane == Reading.Lane) { laneCandidate = Reading.Lane; return; }
             if (lane != laneCandidate) { laneCandidate = lane; laneCandidateSince = now; return; }
             if (now - laneCandidateSince < tuning.LaneHoldSeconds) return;
-            Reading.Lane = lane; lastLaneChange = now;
+            Reading.Lane = lane; lastLaneChange = now; laneBigDone = false;
         }
 
         private void TrackFull(float aspect, double now)
@@ -264,6 +264,17 @@ namespace Muhanok.Domain
             if (riseSpeed > tuning.JumpAttemptSpeed) hopping = true;
             else if (hopping && hipRise < tuning.JumpRise * .4f) { hopping = false; landingUntil = Math.Max(landingUntil, now + tuning.LandingGraceSeconds); }
             UpdateCrouch(drop > tuning.CrouchDrop && !airborne && now >= landingUntil, drop < tuning.CrouchDrop * .65f, now, tuning.CrouchConfirmSeconds, tuning.CrouchJumpCancelSeconds);
+            // Big: a half squat (knee angle, or the hips well down when the ankles are out of view).
+            Reading.CrouchDeep = Reading.Crouch && (KneeAngle() <= tuning.DeepKneeAngle || (bHy - HipY) / scale <= -tuning.DeepHipDrop);
+            // Big: hips and shoulders both over the jump line for a moment after take-off.
+            if (!airborne) jumpBigDone = false;
+            else if (!jumpBigDone && now - lastJump >= tuning.BigJumpAirSeconds && hipRise > jumpLine && shoulderRise > jumpLine) { jumpBigDone = true; Reading.BigJump = true; }
+            // Big: the hips and the shoulders both moved a shoulder width or more (a side step, not a lean); on foot only.
+            if (!cart && Reading.Lane != 0 && !laneBigDone && now - lastLaneChange < .5)
+            {
+                float width = ShoulderWidth * tuning.BigSideStepWidths;
+                if (Math.Abs(HipX - bCx) >= width && Math.Abs(ShoulderX - bCx - bTilt * scale) >= width) { laneBigDone = true; Reading.BigLane = true; }
+            }
             // High knee: one knee rises toward its hip; squats and tucks move both knees, so require asymmetry.
             if (KneesSeen && ActionSeen(PoseJoint.LeftKnee) && ActionSeen(PoseJoint.RightKnee) && !float.IsNaN(bKneeL))
             {
@@ -273,8 +284,11 @@ namespace Muhanok.Domain
                 // A knee step is the rising edge of a knee crossing the lift line on the other side from the last one.
                 bool upL = !airborne && liftL > tuning.HighKneeLift && diff > tuning.HighKneeLift * .7f;
                 bool upR = !airborne && liftR > tuning.HighKneeLift && -diff > tuning.HighKneeLift * .7f;
-                if (upL && !kneeUpL && kneeSide != -1) { kneeSide = -1; EmitKneeStep(now); }
-                if (upR && !kneeUpR && kneeSide != 1) { kneeSide = 1; EmitKneeStep(now); }
+                if (upL && !kneeUpL && kneeSide != -1) { kneeSide = -1; EmitKneeStep(now); kneeBigDone = false; }
+                if (upR && !kneeUpR && kneeSide != 1) { kneeSide = 1; EmitKneeStep(now); kneeBigDone = false; }
+                // Big: the stepping knee comes up to hip height.
+                float stepping = kneeSide < 0 ? liftL : liftR, thigh = (kneeSide < 0 ? bKneeL : bKneeR) / scale;
+                if (kneeSide != 0 && !kneeBigDone && now - lastKneeStep < KneeStepActiveSeconds && (kneeSide < 0 ? upL : upR) && stepping >= thigh * tuning.BigKneeHipRatio) { kneeBigDone = true; Reading.BigKnee = true; }
                 kneeUpL = upL; kneeUpR = upR;
                 // Alternating small lifts are running in place. Knees moving in the air are not steps.
                 int sign = Math.Abs(diff) > tuning.StepLift ? Math.Sign(diff) : 0;
@@ -284,6 +298,24 @@ namespace Muhanok.Domain
         }
 
         private void EmitKneeStep(double now) { Reading.KneeStep = true; lastKneeStep = now; }
+        private bool jumpBigDone, kneeBigDone, laneBigDone, pullUp, pullDownBig;
+        // Inner knee angle in degrees from hip-knee-ankle (the lower of both legs); 180 when the legs are not all in view.
+        private float KneeAngle()
+        {
+            if (!AnklesSeen || !KneesSeen) return 180f;
+            return Math.Min(Angle(PoseJoint.LeftHip, PoseJoint.LeftKnee, PoseJoint.LeftAnkle), Angle(PoseJoint.RightHip, PoseJoint.RightKnee, PoseJoint.RightAnkle));
+        }
+        private float Angle(int a, int b, int c)
+        {
+            float ax = px[a] - px[b], ay = py[a] - py[b], cx = px[c] - px[b], cy = py[c] - py[b];
+            float la = (float)Math.Sqrt(ax * ax + ay * ay), lc = (float)Math.Sqrt(cx * cx + cy * cy);
+            if (la < 1e-5f || lc < 1e-5f) return 180f;
+            double cos = Math.Max(-1, Math.Min(1, (ax * cx + ay * cy) / (la * lc)));
+            return (float)(Math.Acos(cos) * 180 / Math.PI);
+        }
+        // An arm is straight when shoulder to wrist is nearly the length of upper arm plus forearm; true when the elbow is not seen.
+        private bool Straight(int shoulder, int elbow, int wrist)
+            => !Seen(elbow) || Distance(shoulder, wrist) >= tuning.UpperStraightArm * (Distance(shoulder, elbow) + Distance(elbow, wrist));
         private float KneeLift(int knee, int hip, float baseline, float scale) => (baseline - KneeDrop(knee, hip)) / scale;
         // Running: a step within the last 0.8 s. Standing still the jump line is JumpRise.
         private float JumpLine(double now) => (now - lastStep < .8 ? Math.Max(tuning.JumpRise, bounce * tuning.JumpBounceFactor) : tuning.JumpRise) * (duckAhead ? tuning.JumpDuckFactor : 1f);
@@ -317,21 +349,38 @@ namespace Muhanok.Domain
             float tilt = handRising || bigPump ? 0f : (Roll - bRoll) * tuning.UpperLaneEnter / Math.Max(.1f, tuning.UpperLeanEnterDegrees);
             float lean = Math.Abs(tilt) > Math.Abs(offset) ? tilt : offset;
             UpdateLane(lean, tuning.UpperLaneEnter, tuning.UpperLaneExit, now, Locked(now));
+            // Big lean: the shoulder line tilts 20 degrees or more (or the shoulders shift half again past the lane line).
+            if (Reading.Lane != 0 && !laneBigDone && now - lastLaneChange < .5 && (Math.Abs(Roll - bRoll) >= tuning.UpperBigLeanDegrees || Math.Abs(offset) >= tuning.UpperLaneEnter * 1.5f)) { laneBigDone = true; Reading.BigLane = true; }
             // Hands must rise above the calibrated head height; the live nose drops when ducking and would fake a jump.
             float head = !float.IsNaN(bNose) ? bNose : bSy - bScale;
             bool hands = wristsSeen && py[PoseJoint.LeftWrist] < head - tuning.UpperHandsAboveNose * scale && py[PoseJoint.RightWrist] < head - tuning.UpperHandsAboveNose * scale;
-            if (hands && !handsUp && now - lastJump > .25 && !Locked(now)) { Reading.JumpEdge = true; lastJump = now; crouchPendingSince = -1; }
+            // On the stairs the hands over the head are the pull-down exercise, not a jump.
+            if (hands && !handsUp && now - lastJump > .25 && !Locked(now) && !stairs) { Reading.JumpEdge = true; lastJump = now; crouchPendingSince = -1; }
+            // Big jump: both arms straight up.
+            if (hands && !jumpBigDone && now - lastJump < .6 && Straight(PoseJoint.LeftShoulder, PoseJoint.LeftElbow, PoseJoint.LeftWrist) && Straight(PoseJoint.RightShoulder, PoseJoint.RightElbow, PoseJoint.RightWrist)) { jumpBigDone = true; Reading.BigJump = true; }
             if (hands) handsUp = true;
-            else if (!wristsSeen || py[PoseJoint.LeftWrist] > ShoulderY || py[PoseJoint.RightWrist] > ShoulderY) handsUp = false;
+            else if (!wristsSeen || py[PoseJoint.LeftWrist] > ShoulderY || py[PoseJoint.RightWrist] > ShoulderY) { handsUp = false; jumpBigDone = false; }
+            // Stair exercise (pull-down): hands over the head is one step, pulled down below the nose the next; below the shoulders is big.
+            if (stairs && wristsSeen)
+            {
+                bool belowHead = py[PoseJoint.LeftWrist] > head && py[PoseJoint.RightWrist] > head;
+                if (hands && !pullUp) { pullUp = true; pullDownBig = false; EmitKneeStep(now); }
+                else if (pullUp && belowHead) { pullUp = false; pullDownBig = true; EmitKneeStep(now); }
+                if (pullDownBig && py[PoseJoint.LeftWrist] > ShoulderY && py[PoseJoint.RightWrist] > ShoulderY) { pullDownBig = false; Reading.BigKnee = true; }
+            }
+            else pullUp = pullDownBig = false;
             UpdateCrouch((drop > tuning.UpperCrouchDrop || noseDuck) && !handsUp, drop < tuning.UpperCrouchDrop * .65f && !noseDuck, now, tuning.UpperCrouchConfirmSeconds, 0f);
-            // Arm pumping replaces knee lifts: big alternation is the stair exercise, small alternation counts as running.
+            // Deep lean forward: the shoulders down by a head (calibrated nose to shoulder line).
+            float headSize = !float.IsNaN(bNose) ? bSy - bNose : bScale * .8f;
+            Reading.CrouchDeep = Reading.Crouch && headSize > 0 && ShoulderY - bSy >= headSize;
+            // Alternating arm swings are the steps (running in place); the stair exercise is the pull-down above, so they never overlap.
             if (wristsSeen && !handsUp)
             {
                 float diff = (py[PoseJoint.LeftWrist] - py[PoseJoint.RightWrist]) / scale;
                 int sign = Math.Abs(diff) > tuning.ArmSwingAmplitude ? Math.Sign(diff) : 0;
                 if (sign != 0 && sign != pumpSign)
                 {
-                    if (pumpSign != 0) { RegisterStep(now); pumpUntil = now + .8; if (Math.Abs(diff) > tuning.ArmPumpAmplitude) EmitKneeStep(now); }
+                    if (pumpSign != 0) { RegisterStep(now); pumpUntil = now + .8; }
                     pumpSign = sign;
                 }
             }

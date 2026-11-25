@@ -78,7 +78,7 @@ namespace Muhanok.Domain
                 case TutorialStep.Lane: return keys ? "A·D(←·→) 키로 옆 줄로 피하세요." : "왼쪽이나 오른쪽 구역으로 몸을 옮겨 피하세요.";
                 case TutorialStep.Jump: return keys ? "스페이스 키로 점프!" : upper ? "두 손을 머리 위로 들어 점프!" : "제자리에서 점프!";
                 case TutorialStep.Crouch: return keys ? "S(↓) 키를 누르고 있으면 숙입니다." : upper ? "몸을 낮춰 숙이세요!" : "무릎을 굽혀 숙이세요!";
-                case TutorialStep.HighKnee: return keys ? "W(↑) 키를 번갈아 연타해 계단을 오르세요!" : upper ? "팔을 크게 번갈아 흔들어 계단을 오르세요!" : "뛰지 말고 제자리에서 걷듯이, 무릎을 번갈아 높이 드세요!";
+                case TutorialStep.HighKnee: return keys ? "W(↑) 키를 번갈아 연타해 계단을 오르세요!" : upper ? "두 팔을 머리 위로 뻗었다가 어깨 아래까지 당겨 내려 계단을 오르세요!" : "뛰지 말고 제자리에서 걷듯이, 무릎을 번갈아 높이 드세요!";
                 case TutorialStep.Rail:
                 {
                     bool right = TutorialCourse.RailLean == MotionCommand.Right;
