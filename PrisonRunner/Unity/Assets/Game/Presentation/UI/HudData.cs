@@ -71,14 +71,6 @@ namespace Muhanok.Presentation
         void Unlock(ItemKind kind, System.Action<bool, string> done);
         void SaveProfile(PlayerProfile profile);
         void Recalibrate();
-        // "발구름으로 속도 조절" (setup screen): on by default, remembered on this PC.
-        bool CadenceSpeed { get; }
-        void SetCadenceSpeed(bool on);
-        // The running ranking strip (loaded at the start of a run; not in the tutorial), whether a hazard is close
-        // (the strip stays small and holds its overtake effect), and the cadence pace pressure (red screen edges).
-        RankRace Race { get; }
-        bool HazardNear { get; }
-        float PacePressure { get; }
     }
 
     // Draws the mirrored webcam image with the detected skeleton; returns the video rect for overlays.

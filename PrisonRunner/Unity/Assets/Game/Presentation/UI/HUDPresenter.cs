@@ -166,10 +166,7 @@ namespace Muhanok.Presentation
             if (session == null || runHud == null || Hidden || Loading || Revealing) return;
             if (session.Flow.State == GameFlowState.Running || session.Flow.State == GameFlowState.Caught)
                 runHud.Model.Tick(session, Map, Data?.Player?.Style ?? PlayStyle.Keyboard, Data?.PoseStatus ?? PoseStatus.Off, PoliceAlert?.Invoke() ?? false, Time.unscaledTime);
-            if (session.Flow.State == GameFlowState.Running && !session.Paused && Data != null) runHud.Strip.Tick(Data.Race, Data.HazardNear, Time.unscaledTime);
         }
-        // Played when the ranking strip passes a row.
-        public Action RankCracked { set { if (runHud != null) runHud.Strip.Cracked = value; } }
         private void OnGUI()
         {
             if (session == null || Hidden) return;

@@ -72,9 +72,6 @@ namespace Muhanok.Domain
         // "airborne", which blocked every knee step.
         private bool stairs;
         public void SetStairs(bool on) { stairs = on; if (on) airborne = hopping = false; }
-        // A duck row is just ahead: a jump there would run into it, so the jump line rises (JumpDuckFactor).
-        private bool duckAhead;
-        public void SetDuckAhead(bool on) { duckAhead = on; }
         public void Recalibrate()
         {
             calibrated = false; samples = 0; smoothed = false; Reading.Clear(); airborne = hopping = handsUp = duckOnLoss = false; dropRatio = 0; actionLockUntil = 0; laneCandidate = 0;
@@ -286,7 +283,7 @@ namespace Muhanok.Domain
         private void EmitKneeStep(double now) { Reading.KneeStep = true; lastKneeStep = now; }
         private float KneeLift(int knee, int hip, float baseline, float scale) => (baseline - KneeDrop(knee, hip)) / scale;
         // Running: a step within the last 0.8 s. Standing still the jump line is JumpRise.
-        private float JumpLine(double now) => (now - lastStep < .8 ? Math.Max(tuning.JumpRise, bounce * tuning.JumpBounceFactor) : tuning.JumpRise) * (duckAhead ? tuning.JumpDuckFactor : 1f);
+        private float JumpLine(double now) => now - lastStep < .8 ? Math.Max(tuning.JumpRise, bounce * tuning.JumpBounceFactor) : tuning.JumpRise;
         // Each step closes one bounce: its highest hip rise feeds the running average. A step with a jump in it is not a bounce,
         // and a rise of more than three jump lines is a glitch, not running.
         private void LearnBounce()

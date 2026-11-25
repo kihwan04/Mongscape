@@ -141,8 +141,6 @@ namespace Muhanok.Infrastructure
             commands = new PoseCommandSource(output, lane, riding); this.inCart = inCart; this.onStairs = onStairs;
         }
         private readonly Func<bool> inCart, onStairs;
-        // A duck row is just ahead of the runner (raises the jump line); set by the bootstrap.
-        public Func<bool> DuckAhead;
         public void SetStyle(PlayStyle style)
         {
             if (style == Style && (estimator != null || !UsesCamera)) return;
@@ -206,7 +204,6 @@ namespace Muhanok.Infrastructure
             framing.Update(LastFrame, Style, now);
             classifier.SetCart(inCart != null && inCart());
             classifier.SetStairs(onStairs != null && onStairs());
-            classifier.SetDuckAhead(DuckAhead != null && DuckAhead());
             var reading = classifier.Update(incoming);
             if (classifier.Calibrated && !calibrated) { CalibratedAt = now; LostSinceCalibration = false; }
             else if (!classifier.Calibrated || classifier.Status != PoseStatus.Tracking) LostSinceCalibration |= calibrated;

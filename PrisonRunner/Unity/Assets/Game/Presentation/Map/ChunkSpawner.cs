@@ -70,8 +70,6 @@ namespace Muhanok.Presentation.Map
         public float DetailScale { get; set; } = 1f;
         private Vector3 nextPosition;
         public IChunkDecorator Decorator { get; set; }
-        // Keeps jumps apart in time across chunks (exercise plan 3); reset with the map.
-        public readonly HazardPacer Pacer = new HazardPacer();
         public IReadOnlyList<ActiveChunk> Active => active;
         public int Spawned => sequence;
         public int CreatedCount => pool.CreatedCount;
@@ -87,7 +85,7 @@ namespace Muhanok.Presentation.Map
         public void Reset()
         {
             for (int i = 0; i < active.Count; i++) Recycle(active[i]);
-            active.Clear(); random = new System.Random(seed); Pacer.Reset(); nextPosition = Vector3.zero; sequence = 0; nextBudgetUpdate = 0; Tick(2f);
+            active.Clear(); random = new System.Random(seed); nextPosition = Vector3.zero; sequence = 0; nextBudgetUpdate = 0; Tick(2f);
         }
         private void Recycle(ActiveChunk item)
         {
@@ -119,7 +117,7 @@ namespace Muhanok.Presentation.Map
                 var chunk = pool.Rent(type);
                 chunk.PlaceOnRoute(sequence);
                 // Odds for where this chunk starts, not where the runner is: chunks are spawned up to 96 m ahead.
-                chunk.Prepare(sequence, session.Difficulty.Odds(sequence * RouteSurface.Length, session.Config), random, Pacer, session.PlannedSpeed(sequence * RouteSurface.Length));
+                chunk.Prepare(sequence, session.Difficulty.Odds(sequence * RouteSurface.Length, session.Config), random);
                 chunk.gameObject.SetActive(true); active.Add(new ActiveChunk(type, chunk));
                 Decorator?.Decorate(chunk, sequence, type, random);
                 nextPosition = chunk.Exit.position; sequence++;
@@ -150,20 +148,6 @@ namespace Muhanok.Presentation.Map
                 if(gaps!=null)foreach(var gap in gaps)gap.Evaluate(session,previousZ);
             }
         }
-        // A full row of this action ahead of the runner within the given metres (not yet passed).
-        public bool ActionAhead(HazardAction action, float runnerZ, float metres)
-        {
-            foreach (var item in active)
-            {
-                var layout = item.Chunk.Layout; float start = item.Chunk.Sequence * RouteSurface.Length;
-                if (start > runnerZ + metres || start + RouteSurface.Length < runnerZ) continue;
-                if (layout.HasAction(action, runnerZ - start, runnerZ + metres - start)) return true;
-            }
-            return false;
-        }
-        // Any hazard (row, blocker, banana, animal) within the given metres ahead.
-        public bool HazardAhead(float runnerZ, float metres)
-            => ActionAhead(HazardAction.Jump, runnerZ, metres) || ActionAhead(HazardAction.Crouch, runnerZ, metres) || ActionAhead(HazardAction.Dodge, runnerZ, metres);
         public void AnimateGates(float runnerZ)
         {
             var plan=RouteSurface.ActivePlan;

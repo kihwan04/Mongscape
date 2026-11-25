@@ -13,8 +13,7 @@ namespace Muhanok.Presentation
         private static readonly Rect NoticeArea = new Rect(400, 588, 480, 48);
         // Bottom-right webcam: small while tracking, larger with status once recognition is lost. Both stay right of the notice and below the counters.
         private static readonly Rect CameraArea = new Rect(1056, 514, 200, 150), RecoveryCameraArea = new Rect(1020, 490, 236, 174);
-        public readonly RankStripView Strip;
-        public RunHud(HudSkin hudSkin, ProgressHud progressHud) { skin = hudSkin; progress = progressHud; Strip = new RankStripView(hudSkin); }
+        public RunHud(HudSkin hudSkin, ProgressHud progressHud) { skin = hudSkin; progress = progressHud; }
         public void Draw(RunSession session, float fade, IHudData data, Action pause)
         {
             GUI.color = new Color(1, 1, 1, fade);
@@ -49,7 +48,6 @@ namespace Muhanok.Presentation
                 skin.Card(rect, Palette.A(Palette.Ground, .82f));
                 GUI.Label(rect, Model.ItemLabels[i], skin.Centered(16, FontStyle.Bold));
             }
-            if (session.Flow.State == GameFlowState.Running && data != null) { DrawPaceEdges(data.PacePressure); Strip.Draw(data.Race, data.HazardNear, Time.unscaledTime); }
             if (session.Flow.State == GameFlowState.Running)
             {
                 if (Model.ShowSiren) DrawSiren();
@@ -70,29 +68,6 @@ namespace Muhanok.Presentation
             GUI.color = Color.white;
         }
         private static readonly string[] ForkArrows={"↖","↑","↗"};
-        // Below the target cadence the screen edges redden with the police pressure (pulsing gently); nothing in the middle.
-        private static Texture2D edgeV, edgeH;
-        // A ramp from transparent to solid: vertical (rows) or horizontal (columns).
-        private static Texture2D Ramp(bool vertical)
-        {
-            var t = new Texture2D(vertical ? 1 : 64, vertical ? 64 : 1, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.HideAndDontSave };
-            for (int i = 0; i < 64; i++) { var c = new Color(1, 1, 1, Mathf.Pow(i / 63f, 2.2f)); if (vertical) t.SetPixel(0, i, c); else t.SetPixel(i, 0, c); }
-            t.Apply(); return t;
-        }
-        private static void DrawPaceEdges(float pressure)
-        {
-            if (pressure <= .01f) return;
-            edgeV ??= Ramp(true); edgeH ??= Ramp(false);
-            float a = Mathf.Clamp01(pressure / CadencePace.MaxPressure) * (.55f + .15f * Mathf.Sin(Time.unscaledTime * 5));
-            var old = GUI.color; GUI.color = new Color(.95f, .08f, .06f, a);
-            const float w = 110;
-            // Solid at the screen edge, fading toward the middle (texture v runs bottom to top, u left to right).
-            GUI.DrawTextureWithTexCoords(new Rect(0, 0, 1280, w), edgeV, new Rect(0, 0, 1, 1));
-            GUI.DrawTextureWithTexCoords(new Rect(0, 720 - w, 1280, w), edgeV, new Rect(0, 1, 1, -1));
-            GUI.DrawTextureWithTexCoords(new Rect(0, 0, w, 720), edgeH, new Rect(1, 0, -1, 1));
-            GUI.DrawTextureWithTexCoords(new Rect(1280 - w, 0, w, 720), edgeH, new Rect(0, 0, 1, 1));
-            GUI.color = old;
-        }
         private void DrawSiren()
         {
             bool redOn = Mathf.Repeat(Time.unscaledTime, .56f) < .28f;

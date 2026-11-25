@@ -195,12 +195,6 @@ class IdentityTests(PostgresCase):
   stats=self.app.handle('/stats',{},token)
   self.assertEqual((stats['today_kcal'],stats['best_score'],stats['previous_best']),(6.0,[700,0,40],[1500,800,0]))
   self.assertEqual(self.app.handle('/leaderboard',dict(mode=0),token)['me']['score'],700) # only version 3 ranks
- def test_week_board(self):
-  week=kst_week_start(time.time());a,_=self.member('ThisWeek');b,_=self.member('LastWeek')
-  self.record(a,100,created=week);self.record(b,900,created=week-1)
-  self.assertEqual([e['name'] for e in self.app.handle('/leaderboard',dict(mode=0,week=True))['entries']],['ThisWeek'])
-  self.assertEqual([e['name'] for e in self.app.handle('/leaderboard',dict(mode=0))['entries']],['LastWeek','ThisWeek'])
-  self.assertEqual(self.status('/leaderboard',dict(mode=0,week='yes')),400)
  def test_week_totals(self):
   utc=lambda *parts:int(datetime(*parts,tzinfo=timezone.utc).timestamp())
   self.assertEqual(kst_week_start(utc(2026,11,25,3,0)),utc(2026,11,22,15,0)) # Wednesday noon KST -> Monday 23rd 00:00 KST
