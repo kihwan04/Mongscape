@@ -182,6 +182,8 @@ namespace Muhanok.Presentation
             else if (state == GameFlowState.Running || state == GameFlowState.Caught)
             {
                 if (session.Paused) pause.Draw(session, Data, PauseRun, OpenSettings, ToMenu);
+                // Camera runs hold on the calibration screen until the player is measured, then the countdown starts.
+                else if (Data != null && Data.RunCalibration != RunCalibrationState.None && state == GameFlowState.Running) calibration.DrawRun(Data);
                 else runHud.Draw(session, Fade, Data, PauseRun);
             }
             else if (state == GameFlowState.Result)
@@ -200,6 +202,13 @@ namespace Muhanok.Presentation
             {
                 skin.Card(new Rect(16, 684, 220, 26), new Color(0, 0, 0, .55f));
                 GUI.color = Palette.Gold; GUI.Label(new Rect(16, 684, 220, 26), "무적 모드 켜짐 (F9) · F7 잡히기", skin.Centered(14, FontStyle.Bold)); GUI.color = Color.white;
+            }
+            // Developer mode joint recording (F6): a red note at the top of every screen while it runs.
+            if (Data != null && Data.PoseRecording && Event.current.type == EventType.Repaint)
+            {
+                var note = new Rect(530, 4, 220, 26);
+                skin.Card(note, new Color(0, 0, 0, .65f));
+                GUI.color = new Color(1, .35f, .35f); GUI.Label(note, "● 관절 녹화 중 (F6 끄기)", skin.Centered(14, FontStyle.Bold)); GUI.color = Color.white;
             }
             var cameraSlot = CameraSlot(state);
             if (cameraSlot.width > 0) PosePreview.DrawCorner(skin, cameraSlot, Data);

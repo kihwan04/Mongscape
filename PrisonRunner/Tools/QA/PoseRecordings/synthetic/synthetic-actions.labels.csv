@@ -1,0 +1,16 @@
+# action,start,end[,count]
+jump,2.6,3.3
+jump,5.1,5.8
+jump,7.6,8.3
+jump,10.1,10.8
+jump,12.6,13.3
+crouch,15.1,16.2
+crouch,17.7,18.8
+crouch,20.3,21.4
+crouch,22.9,24
+side_left,25.4,26.2
+side_right,28.2,29
+side_left,31,31.8
+side_right,33.8,34.6
+side_left,36.6,37.4
+side_right,39.4,40.2

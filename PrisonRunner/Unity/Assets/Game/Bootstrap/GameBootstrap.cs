@@ -143,7 +143,7 @@ namespace Muhanok.Bootstrap
             hud.StartTutorial=StartTutorial; hud.OfferTutorial=OfferTutorial;
             Tutorial=gameObject.AddComponent<TutorialDirector>();
             Tutorial.Configure(Session,Map,()=>Pose.Status==PoseStatus.Tracking||Pose.Status==PoseStatus.Off||Pose.Status==PoseStatus.NoCamera||Pose.Status==PoseStatus.NoModel,
-                RestartTutorial,FinishTutorial,()=>!hud.Hidden&&!hud.Loading&&!hud.Revealing);
+                RestartTutorial,FinishTutorial,()=>!hud.Hidden&&!hud.Loading&&!hud.Revealing&&RunCalibration==RunCalibrationState.None);
             audioPlayer = gameObject.AddComponent<GameAudio>();
             audioPlayer.Configure(Session, Settings != null ? Settings.MusicVolume : .35f, Settings != null ? Settings.EffectsVolume : .7f);
             SetupSettings();
@@ -164,7 +164,9 @@ namespace Muhanok.Bootstrap
             graphics = new GraphicsSettingsApplier();
             overlay = gameObject.AddComponent<PerformanceOverlay>();
             // Pose diagnostics are a developer-mode tool; regular play never shows them.
-            overlay.PoseLine = () => Pose.UsesCamera && userSettings.DeveloperMode ? Pose.Diagnostics : "";
+            // Developer mode also shows the cadence and the jump line in use (body units), for checking the step and jump tuning live.
+            overlay.PoseLine = () => Pose.UsesCamera && userSettings.DeveloperMode ? Pose.Diagnostics + " · 분당 " + Mathf.RoundToInt(Pose.StepsPerMinute) + "걸음 " + Cadence.Korean(Pose.CadenceStage)
+                + " · 들썩임 " + Pose.Bounce.ToString("0.00") + " 점프선 " + Pose.JumpThreshold.ToString("0.00") : "";
             overlay.QualityLine = () => "화질 " + userSettings.Preset + " · 렌더 " + Mathf.RoundToInt((effectiveGraphics?.RenderScale ?? userSettings.RenderScale) * 100) + "% · 그림자 " + (effectiveGraphics?.Shadows ?? userSettings.Shadows) + (userSettings.AutoPerformance ? " · 자동 " + adaptive.Level : "") + (userSettings.FrameCap > 0 ? " · 상한 " + userSettings.FrameCap : "");
             var window = new GameObject("SettingsWindow"); window.transform.SetParent(transform, false);
             settingsWindow = window.AddComponent<SettingsWindow>();
@@ -294,7 +296,7 @@ namespace Muhanok.Bootstrap
             Session.Flow.Transition(GameFlowState.LoadingIntro);
             hud.BeginLoading(); hud.LoadingProgress=.12f;
             // Every run calibrates again: the player stands still during loading, and the countdown waits for it (WaitForCalibration).
-            Pose.Recalibrate(); runCalibrated = false;
+            Pose.Recalibrate(); runCalibrated = false; calibrationDoneAt = -1;
             yield return new WaitForSecondsRealtime(.25f);
             RouteSurface.UsePlan(Session.IsTutorial?TutorialCourse.Plan(Session.Config):new RoutePlan(Session.Config, seed));
             Session.Reset(); keyboard.Clear(); poseInput.Clear(); hud.LoadingProgress=.42f;
@@ -398,19 +400,29 @@ namespace Muhanok.Bootstrap
                 }
             }
         }
-        // Camera play never starts a run before its own calibration: the runner stands at the start with "바르게 서 주세요"
-        // while the player is found and measured, then the countdown begins. A missing camera or model does not hold the run.
+        // Camera play never starts a run before its own calibration: the calibration screen (CalibrationPanel.DrawRun) shows the
+        // camera while the player is found and measured, then "보정 완료" for a second, then the countdown begins.
+        // A missing camera or model does not hold the run.
         private bool runCalibrated = true;
+        private float calibrationDoneAt = -1;
+        private const float CalibrationDoneSeconds = 1f;
         private bool WaitForCalibration()
         {
             if (runCalibrated) return false;
             var status = Pose.Status;
             bool measuring = Pose.UsesCamera && (status == PoseStatus.Starting || status == PoseStatus.Searching || status == PoseStatus.Calibrating);
             runStartedAt = Time.realtimeSinceStartup;
-            if (measuring) return true;
-            runCalibrated = true; bannerSounded = goSounded = false; Pose.ResetCommands();
+            if (measuring) { calibrationDoneAt = -1; return true; }
+            if (Pose.UsesCamera && status == PoseStatus.Tracking)
+            {
+                if (calibrationDoneAt < 0) calibrationDoneAt = Time.realtimeSinceStartup;
+                if (Time.realtimeSinceStartup - calibrationDoneAt < CalibrationDoneSeconds) return true;
+            }
+            runCalibrated = true; calibrationDoneAt = -1; bannerSounded = goSounded = false; Pose.ResetCommands();
             return false;
         }
+        private RunCalibrationState RunCalibration => runCalibrated || Session.Flow.State != GameFlowState.Running || hud.Loading ? RunCalibrationState.None
+            : calibrationDoneAt >= 0 ? RunCalibrationState.Done : RunCalibrationState.Measuring;
         private void StartBannerSounds()
         {
             float banner = StartBanner;
@@ -426,6 +438,8 @@ namespace Muhanok.Bootstrap
             if (KeyboardGameInput.RecalibratePressed && !hud.MenuOpen) Pose.Recalibrate();
             if (KeyboardGameInput.DeveloperTogglePressed && Session.Flow.State == GameFlowState.TitleIdle) SetDeveloperMode(!userSettings.DeveloperMode);
             if (KeyboardGameInput.ClearRankingPressed && userSettings.DeveloperMode) { Store.ClearToday(); Debug.Log("Today's ranking cleared."); }
+            // F6 (developer mode): record the camera's joint coordinates for the recognition scorecard (never images).
+            if (KeyboardGameInput.PoseRecordPressed) TogglePoseRecording();
             // Player lock for crowded booths; the F3 overlay's pose line shows its state.
             if (KeyboardGameInput.PlayerLockPressed) { PoseEstimatorRegistry.PlayerLock = !PoseEstimatorRegistry.PlayerLock; Debug.Log("Player lock " + (PoseEstimatorRegistry.PlayerLock ? "on" : "off")); }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -436,6 +450,15 @@ namespace Muhanok.Bootstrap
 #endif
         }
         internal HUDPresenter Hud => hud;
+        // Recordings go to <persistent data>/PoseRecordings; copy them (with filled-in labels) to Tools/QA/PoseRecordings/team.
+        public static string PoseRecordingFolder => System.IO.Path.Combine(UnityEngine.Application.persistentDataPath, "PoseRecordings");
+        private void TogglePoseRecording()
+        {
+            if (Pose.Recording) { string path = Pose.StopRecording(); Debug.Log("Pose recording saved: " + path + " (" + Pose.RecordedFrames + " frames)"); return; }
+            if (userSettings == null || !userSettings.DeveloperMode || !Pose.UsesCamera) return;
+            string name = Pose.StartRecording(PoseRecordingFolder);
+            if (name != null) Debug.Log("Pose recording started: " + name);
+        }
         // Development builds can keep player data in another folder (--muhanok-data <dir>) for captures and tests.
         // On foot on a stair chunk, or within 3 m of one (people start lifting their knees a little early).
         private bool OnOrBeforeStairs()
@@ -656,6 +679,12 @@ namespace Muhanok.Bootstrap
         float IHudData.CalibrationProgress => Pose.CalibrationProgress;
         bool IHudData.PoseKneesMissing => Pose.KneesMissing;
         float IHudData.StepsPerMinute => Pose.StepsPerMinute;
+        CadenceStage IHudData.Cadence => Pose.CadenceStage;
+        bool IHudData.PoseCalibrationMoving => Pose.CalibrationMoving;
+        FramingIssue IHudData.PoseFraming => Pose.Framing;
+        RunCalibrationState IHudData.RunCalibration => RunCalibration;
+        bool IHudData.TutorialRun => Session.IsTutorial;
+        bool IHudData.PoseRecording => Pose.Recording;
         bool IHudData.BodyActive => Pose.Tracking && Pose.Reading.Active;
         // Developer mode keeps this PC's exhibition wallet with every item open; players see their account.
         PlayerWallet IHudData.Wallet { get { if (userSettings == null || !userSettings.DeveloperMode) return Account.Wallet; Store.Wallet.UnlockAll = true; return Store.Wallet; } }
