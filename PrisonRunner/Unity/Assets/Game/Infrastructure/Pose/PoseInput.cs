@@ -93,6 +93,19 @@ namespace Muhanok.Infrastructure
         public float CalibrationProgress => classifier.CalibrationProgress;
         public bool KneesMissing => UsesCamera && classifier.KneesMissing && classifier.Status == PoseStatus.Calibrating;
         public float StepsPerMinute => classifier.StepsPerMinute;
+        // Walking / running / sprinting from the steps a minute; read only for now (the runner speed does not follow it yet).
+        public CadenceStage CadenceStage => classifier.CadenceStage;
+        public float Bounce => classifier.Bounce;
+        public float JumpThreshold => classifier.JumpThreshold;
+        // Calibration restarted just now because the player moved.
+        public bool CalibrationMoving => UsesCamera && classifier.CalibrationMoving && classifier.Status == PoseStatus.Calibrating;
+        // How the player stands in the picture (head to ankles for the full body); NoBody while nobody is tracked.
+        private readonly FramingGuide framing = new FramingGuide();
+        public FramingIssue Framing => !UsesCamera ? FramingIssue.Ok : estimator == null || estimator.Status != PoseStatus.Tracking || Status == PoseStatus.Searching ? FramingIssue.NoBody : framing.Issue;
+        // Developer mode joint recording (F6): raw landmark frames only, never images.
+        private readonly PoseRecorder recorder = new PoseRecorder();
+        public bool Recording => recorder.Recording;
+        public int RecordedFrames => recorder.Frames;
         public double LastJumpTime { get; private set; } = -10;
         public double LastKneeStepTime { get; private set; } = -10;
         // When the last calibration finished (Tick time, -1 none) and whether tracking dropped or restarted since.
@@ -130,6 +143,7 @@ namespace Muhanok.Infrastructure
         public void SetStyle(PlayStyle style)
         {
             if (style == Style && (estimator != null || !UsesCamera)) return;
+            if (style != Style) StopRecording();
             Style = style; classifier.SetStyle(style); commands.Reset(0); ForgetCalibration();
             if (!UsesCamera) { estimator?.Stop(); return; }
             if (estimator == null && !estimatorFailed)
@@ -183,8 +197,10 @@ namespace Muhanok.Infrastructure
         }
         private void Read(double now, bool feedCommands)
         {
+            recorder.Write(incoming);
             smoother.Apply(incoming, tuning);
             LastFrame.CopyFrom(incoming);
+            framing.Update(LastFrame, Style, now);
             classifier.SetCart(inCart != null && inCart());
             classifier.SetStairs(onStairs != null && onStairs());
             var reading = classifier.Update(incoming);
@@ -196,6 +212,33 @@ namespace Muhanok.Infrastructure
             if (feedCommands && classifier.Status == PoseStatus.Tracking) commands.Feed(reading, now);
             else commands.Reset(reading.Lane);
         }
-        public void Dispose() { estimator?.Dispose(); estimator = null; }
+        // Starts a recording file in the folder (the name says when and which play style); returns its base name.
+        public string StartRecording(string folder)
+        {
+            if (!UsesCamera) return null;
+            string name = DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + Style;
+            var texture = CameraTexture;
+            var meta = new List<KeyValuePair<string, string>>
+            {
+                new KeyValuePair<string, string>("source", PoseRecording.SourceWebcam),
+                new KeyValuePair<string, string>("style", Style.ToString()),
+                new KeyValuePair<string, string>("camera", (texture != null ? texture.width + "x" + texture.height : options.Width + "x" + options.Height) + "@" + options.Fps),
+                new KeyValuePair<string, string>("device", options.DeviceName),
+                new KeyValuePair<string, string>("model", options.FullLandmarkModel ? "full" : "lite"),
+                new KeyValuePair<string, string>("inference_fps", options.MaxInferenceRate.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                new KeyValuePair<string, string>("created", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssK")),
+                new KeyValuePair<string, string>("app", UnityEngine.Application.version),
+                new KeyValuePair<string, string>("person", ""),
+                new KeyValuePair<string, string>("note", ""),
+            };
+            recorder.Start(folder, meta, name);
+            return name;
+        }
+        public string StopRecording()
+        {
+            try { return recorder.Stop(); }
+            catch (Exception error) { Debug.LogException(error); return null; }
+        }
+        public void Dispose() { StopRecording(); estimator?.Dispose(); estimator = null; }
     }
 }
