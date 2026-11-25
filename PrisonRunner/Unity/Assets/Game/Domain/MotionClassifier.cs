@@ -21,7 +21,7 @@ namespace Muhanok.Domain
         private float sumCx, sumSy, sumHy, sumScale, sumKneeL, sumKneeR, sumAnkle, sumNose, sumTilt, sumRoll;
         private int ankleSamples, noseSamples, kneeSamples;
         // Tracking state.
-        private double lostSince = -1, crouchPendingSince = -1, crouchSince = -10, landingUntil, lastKneeStep = -10, lastStep, lastJump = -10, lastLaneChange = -10, pumpUntil;
+        private double lostSince = -1, crouchPendingSince = -1, crouchSince = -10, landingUntil, lastKneeStep = -10, lastStep = -10, lastJump = -10, lastLaneChange = -10, pumpUntil;
         private bool airborne, hopping, handsUp, duckOnLoss;
         // Full body: which knee crossed the lift line last (-1 left, 1 right, 0 none) and which knees are above it now.
         private int kneeSide;
@@ -38,15 +38,28 @@ namespace Muhanok.Domain
         private bool ActionSeen(int i) => vis[i] >= tuning.ActionVisibility;
         private void Lock(double now, double seconds) { if (now + seconds > actionLockUntil) actionLockUntil = now + seconds; }
         private int stepSign, pumpSign;
-        private readonly double[] stepTimes = new double[8];
+        // Step times for the cadence: enough slots for 3 s of the fastest sprint (about 240 steps a minute).
+        private readonly double[] stepTimes = new double[16];
         private int stepIndex;
+        // Running bounce: the highest hip rise since the last step, and its running average over the steps (body units).
+        private float stepPeakRise, bounce;
+        private bool stepPeakValid, jumpedSinceStep;
+        // Calibration: when moving last restarted it, and the latest frame time.
+        private double calibrationBrokeAt = -10, lastFrameTime;
         public PoseStatus Status { get; private set; } = PoseStatus.Searching;
         public bool Calibrated => calibrated;
         // Full body calibration is waiting because a knee is out of view.
         public bool KneesMissing { get; private set; }
         public float CalibrationProgress => calibrated ? 1f : Math.Min(1f, samples / (float)Math.Max(1, tuning.CalibrationFrames));
         public readonly MotionReading Reading = new MotionReading();
+        // Steps a minute from the alternating knees (arm swings for the upper body) over the last 3 s; jumps do not count.
         public float StepsPerMinute { get; private set; }
+        public CadenceStage CadenceStage => Cadence.Stage(StepsPerMinute, tuning);
+        // The player's running bounce (hip rise per step, body units) and the jump line in use right now.
+        public float Bounce => bounce;
+        public float JumpThreshold => JumpLine(lastFrameTime);
+        // Calibration just restarted because the player moved (for "움직이지 마세요").
+        public bool CalibrationMoving => !calibrated && lastFrameTime - calibrationBrokeAt < .5;
         public PlayStyle Style => style;
         public MotionClassifier(MotionTuning motionTuning) { tuning = motionTuning ?? new MotionTuning(); }
         public void SetStyle(PlayStyle next) { style = next; Recalibrate(); }
@@ -61,13 +74,14 @@ namespace Muhanok.Domain
         {
             calibrated = false; samples = 0; smoothed = false; Reading.Clear(); airborne = hopping = handsUp = duckOnLoss = false; dropRatio = 0; actionLockUntil = 0; laneCandidate = 0;
             crouchPendingSince = -1; crouchSince = -10; lastTrackTime = -1; laneLastTime = -1; lastKneeStep = -10; kneeSide = 0; kneeUpL = kneeUpR = false; pumpUntil = 0; stepSign = pumpSign = 0; StepsPerMinute = 0;
+            Array.Clear(stepTimes, 0, stepTimes.Length); stepIndex = 0; lastStep = -10; bounce = 0; stepPeakValid = jumpedSinceStep = false; calibrationBrokeAt = -10;
             Status = PoseStatus.Calibrating;
         }
 
         public MotionReading Update(PoseFrame frame)
         {
             Reading.JumpEdge = false; Reading.KneeStep = false;
-            double now = frame.Time;
+            double now = frame.Time; lastFrameTime = now;
             if (!frame.HasPose || !Smooth(frame) || !RequiredVisible())
             {
                 laneLastTime = -1;
@@ -82,7 +96,7 @@ namespace Muhanok.Domain
             // Landmarks right after re-acquiring the body jump around; ignore actions for a moment.
             if (lostSince >= 0 && calibrated) Lock(now, tuning.ReacquireLockSeconds);
             lostSince = -1;
-            if (!calibrated) { Calibrate(frame.Aspect); return Reading; }
+            if (!calibrated) { Calibrate(frame.Aspect, now); return Reading; }
             Status = PoseStatus.Tracking;
             if (style == PlayStyle.UpperBody) TrackUpper(frame.Aspect, now); else TrackFull(frame.Aspect, now);
             UpdateCadence(now);
@@ -138,7 +152,7 @@ namespace Muhanok.Domain
         private float AnkleY => (py[PoseJoint.LeftAnkle] + py[PoseJoint.RightAnkle]) * .5f;
         private float KneeDrop(int knee, int hip) => py[knee] - py[hip];
 
-        private void Calibrate(float aspect)
+        private void Calibrate(float aspect, double now)
         {
             Status = PoseStatus.Calibrating;
             float scale = CurrentScale;
@@ -149,12 +163,14 @@ namespace Muhanok.Domain
             // Restart when the player is still moving: the baseline must be a calm standing pose.
             if (samples > 0)
             {
+                int before = samples;
                 float meanX = sumCx / samples, meanY = sumSy / samples, meanScale = sumScale / samples;
                 if (Math.Abs(CentreX - meanX) > tuning.CalibrationStillness * meanScale || Math.Abs(ShoulderY - meanY) > tuning.CalibrationStillness * meanScale) samples = 0;
                 // The full body's centre is the hips only; a shoulder sway must also restart, or it becomes the cart's "upright" lean.
                 else if (style != PlayStyle.UpperBody && Math.Abs(Tilt / scale - sumTilt / samples) > tuning.CalibrationStillness) samples = 0;
                 // The upper body's lean is also the shoulder tilt: a rocking shoulder line restarts too.
                 else if (style == PlayStyle.UpperBody && Math.Abs(Roll - sumRoll / samples) > tuning.UpperLeanEnterDegrees * .5f) samples = 0;
+                if (samples == 0 && before > 0) calibrationBrokeAt = now;
             }
             if (samples == 0) { sumCx = sumSy = sumHy = sumScale = sumKneeL = sumKneeR = sumAnkle = sumNose = sumTilt = sumRoll = 0; ankleSamples = noseSamples = kneeSamples = 0; }
             samples++;
@@ -220,7 +236,14 @@ namespace Muhanok.Domain
             if (cartChanged) { cartChanged = false; laneLastTime = -1; Reading.Lane = laneCandidate = !laneLocked && Math.Abs(offset) > enter ? Math.Sign(offset) : 0; }
             UpdateLane(offset, enter, exit, now, laneLocked);
             bool feetUp = !AnklesSeen || float.IsNaN(bAnkle) || (bAnkle - AnkleY) / scale > tuning.JumpRise * .5f;
-            bool up = hipRise > tuning.JumpRise && shoulderRise > tuning.JumpRise * .8f && feetUp;
+            // Running in place bounces the hips; while running the jump line sits well above the player's own bounce.
+            float jumpLine = JumpLine(now);
+            // A jump lifts both knees together; a running step has one knee up.
+            bool kneesLevel = !KneesSeen || !ActionSeen(PoseJoint.LeftKnee) || !ActionSeen(PoseJoint.RightKnee) || float.IsNaN(bKneeL)
+                || Math.Abs(KneeLift(PoseJoint.LeftKnee, PoseJoint.LeftHip, bKneeL, scale) - KneeLift(PoseJoint.RightKnee, PoseJoint.RightHip, bKneeR, scale)) <= tuning.JumpKneeSymmetry;
+            bool up = hipRise > jumpLine && shoulderRise > jumpLine * .8f && feetUp && kneesLevel;
+            if (airborne) jumpedSinceStep = true;
+            else { stepPeakRise = stepPeakValid ? Math.Max(stepPeakRise, hipRise) : hipRise; stepPeakValid = true; }
             // Jump wins over a crouch that only just confirmed: the dip was the take-off. No refractory lock.
             if (up && Reading.Crouch && windUp) Reading.Crouch = false;
             if (stairs) up = false;
@@ -239,8 +262,8 @@ namespace Muhanok.Domain
             // High knee: one knee rises toward its hip; squats and tucks move both knees, so require asymmetry.
             if (KneesSeen && ActionSeen(PoseJoint.LeftKnee) && ActionSeen(PoseJoint.RightKnee) && !float.IsNaN(bKneeL))
             {
-                float liftL = (bKneeL - KneeDrop(PoseJoint.LeftKnee, PoseJoint.LeftHip)) / scale;
-                float liftR = (bKneeR - KneeDrop(PoseJoint.RightKnee, PoseJoint.RightHip)) / scale;
+                float liftL = KneeLift(PoseJoint.LeftKnee, PoseJoint.LeftHip, bKneeL, scale);
+                float liftR = KneeLift(PoseJoint.RightKnee, PoseJoint.RightHip, bKneeR, scale);
                 float diff = liftL - liftR;
                 // A knee step is the rising edge of a knee crossing the lift line on the other side from the last one.
                 bool upL = !airborne && liftL > tuning.HighKneeLift && diff > tuning.HighKneeLift * .7f;
@@ -248,14 +271,25 @@ namespace Muhanok.Domain
                 if (upL && !kneeUpL && kneeSide != -1) { kneeSide = -1; EmitKneeStep(now); }
                 if (upR && !kneeUpR && kneeSide != 1) { kneeSide = 1; EmitKneeStep(now); }
                 kneeUpL = upL; kneeUpR = upR;
-                // Alternating small lifts are running in place.
+                // Alternating small lifts are running in place. Knees moving in the air are not steps.
                 int sign = Math.Abs(diff) > tuning.StepLift ? Math.Sign(diff) : 0;
-                if (sign != 0 && sign != stepSign) { if (stepSign != 0) RegisterStep(now); stepSign = sign; }
+                if (sign != 0 && sign != stepSign) { if (stepSign != 0 && !airborne) { RegisterStep(now); LearnBounce(); } stepSign = sign; }
             }
             if (Reading.Lane == 0 && !airborne && !Reading.Crouch && now - lastKneeStep >= KneeStepActiveSeconds && Math.Abs(offset) < exit * .5f) Drift();
         }
 
         private void EmitKneeStep(double now) { Reading.KneeStep = true; lastKneeStep = now; }
+        private float KneeLift(int knee, int hip, float baseline, float scale) => (baseline - KneeDrop(knee, hip)) / scale;
+        // Running: a step within the last 0.8 s. Standing still the jump line is JumpRise.
+        private float JumpLine(double now) => now - lastStep < .8 ? Math.Max(tuning.JumpRise, bounce * tuning.JumpBounceFactor) : tuning.JumpRise;
+        // Each step closes one bounce: its highest hip rise feeds the running average. A step with a jump in it is not a bounce,
+        // and a rise of more than three jump lines is a glitch, not running.
+        private void LearnBounce()
+        {
+            if (stepPeakValid && !jumpedSinceStep && stepPeakRise < tuning.JumpRise * 3)
+                bounce += (Math.Max(0f, stepPeakRise) - bounce) * tuning.BounceFollow;
+            stepPeakValid = jumpedSinceStep = false;
+        }
 
         private void TrackUpper(float aspect, double now)
         {
@@ -322,11 +356,22 @@ namespace Muhanok.Domain
             if (Seen(PoseJoint.Nose) && !float.IsNaN(bNose)) bNose += (py[PoseJoint.Nose] - bNose) * d;
         }
 
+        private const double StopSeconds = 1.2;
         private void RegisterStep(double now) { lastStep = now; stepTimes[stepIndex] = now; stepIndex = (stepIndex + 1) % stepTimes.Length; }
+        // Average over the last 3 s: the step intervals inside the window, so a steady pace reads its true rate. After the
+        // last step the rate falls off smoothly (the open interval up to now also counts) until the steps leave the window.
         private void UpdateCadence(double now)
         {
-            int recent = 0; foreach (double t in stepTimes) if (t > 0 && now - t < 3) recent++;
-            StepsPerMinute = recent * 20f;
+            int count = 0; double first = double.MaxValue, last = double.MinValue;
+            foreach (double t in stepTimes)
+            {
+                if (t <= 0 || now - t >= Cadence.WindowSeconds || t > now) continue;
+                count++; if (t < first) first = t; if (t > last) last = t;
+            }
+            // No step for StopSeconds: standing (slower than 50 a minute is not walking in place).
+            if (count < 2 || last <= first || now - last > StopSeconds) { StepsPerMinute = 0; return; }
+            double rate = (count - 1) / (last - first), open = count / Math.Max(now - first, 1e-3);
+            StepsPerMinute = (float)(60 * Math.Min(rate, open));
         }
         private static float Clamp(float v, float min, float max) => v < min ? min : v > max ? max : v;
     }
