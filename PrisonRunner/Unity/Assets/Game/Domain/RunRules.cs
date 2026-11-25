@@ -46,9 +46,6 @@ namespace Muhanok.Domain
         public int CleanBonus = 25; // Unused since score v2; kept for saved settings.
         public float SlipSeconds = 2.4f, SlipSpeedMultiplier = .5f, CartSpeed = 9f;
         public float BananaCatchSeconds=1.2f;
-        // Big movements (exercise plan 6): a jump goes this much higher, a deep slide lasts this much longer, a high knee step
-        // on the stairs takes the police back this far (pressure units), a wide side step crosses in this share of the time.
-        public float BigJumpHeight = 1.35f, DeepSlideFactor = 1.5f, BigKneeRelief = .08f, BigLaneTime = .5f;
         // A single slip strike is forgiven after this many seconds without a second one.
         public float StrikeClearSeconds=8f;
         public float SpeedRampDistance = 120f;
@@ -193,19 +190,6 @@ namespace Muhanok.Domain
             if (command == MotionCommand.KneeStep && !Riding) { lastKneeStep = clock; KneeSteps++; }
         }
         public void Stumble() { stumbleLeft = config.StumbleSeconds; }
-        // A big jump while still rising: the arc reaches BigJumpHeight times the normal height.
-        public bool BoostJump()
-        {
-            if (Riding || Y <= .001f || verticalSpeed <= 0f) return false;
-            float apex = config.JumpHeight * config.BigJumpHeight;
-            if (Y >= apex) return false;
-            verticalSpeed = Math.Max(verticalSpeed, (float)Math.Sqrt(2f * config.Gravity * (apex - Y))); return true;
-        }
-        // A deep crouch keeps the slide going longer.
-        public bool DeepSlide() { if (!Crouching) return false; crouchLeft = Math.Max(crouchLeft, config.CrouchSeconds * config.DeepSlideFactor); return true; }
-        // A wide side step finishes the lane change sooner.
-        public void HurryLane() { laneTime = Math.Max(laneTime, config.LaneSeconds * (1 - config.BigLaneTime)); }
-        public float JumpApex => config.JumpHeight;
         public void Slip() { slowLeft = config.SlipSeconds; }
         public void SetStartZ(float z) { Z = z; }
         public void Tick(float dt, float speed)
@@ -395,23 +379,6 @@ namespace Muhanok.Domain
             }
             return true;
         }
-        public enum BigMove { Jump, Crouch, Knee, Lane }
-        // Big movements seen this run, by kind, and the coins they earned (one each when the matching hazard was close).
-        public readonly int[] BigMoves = new int[4];
-        public int BigCoins { get; private set; }
-        // Applies a big movement's in-game effect; hazardNear: a hazard of the matching action is just ahead, which earns a coin
-        // (the coin line under the bars, the coins in the air). Returns whether the effect applied.
-        public bool Big(BigMove move, bool hazardNear)
-        {
-            if (Flow.State != GameFlowState.Running || Paused) return false;
-            bool applied = move == BigMove.Jump ? Runner.BoostJump() : move == BigMove.Crouch ? Runner.DeepSlide() : true;
-            if (!applied) return false;
-            if (move == BigMove.Knee) { Chase.Recover(Config.BigKneeRelief); PacePressure = Math.Max(0, PacePressure - Config.BigKneeRelief); }
-            if (move == BigMove.Lane) Runner.HurryLane();
-            BigMoves[(int)move]++;
-            if (hazardNear && move != BigMove.Knee) { CollectCoin(); BigCoins++; }
-            return true;
-        }
-        public void Reset() { Array.Clear(BigMoves, 0, BigMoves.Length); BigCoins = 0; Runner.Reset(); Stair.Reset(); Chase.Reset(); Score.Reset(); Workout.Reset(); Items.Reset(); Paused=false; SpeedScale=1f; CadenceScale=1f; PacePressure=0f; clock = 0f; lastHit = -100f;SlipStrikes=0;lastStrike=0f;ShieldSaves=0;DodgeStreak=BestDodgeStreak=0;bananaCatchLeft=0;Reason=CaptureReason.Collision; smoothSpeed = TargetSpeed; }
+        public void Reset() { Runner.Reset(); Stair.Reset(); Chase.Reset(); Score.Reset(); Workout.Reset(); Items.Reset(); Paused=false; SpeedScale=1f; CadenceScale=1f; PacePressure=0f; clock = 0f; lastHit = -100f;SlipStrikes=0;lastStrike=0f;ShieldSaves=0;DodgeStreak=BestDodgeStreak=0;bananaCatchLeft=0;Reason=CaptureReason.Collision; smoothSpeed = TargetSpeed; }
     }
 }

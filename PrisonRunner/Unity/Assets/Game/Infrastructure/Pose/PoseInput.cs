@@ -109,10 +109,6 @@ namespace Muhanok.Infrastructure
         public int RecordedFrames => recorder.Frames;
         public double LastJumpTime { get; private set; } = -10;
         public double LastKneeStepTime { get; private set; } = -10;
-        // Big movements seen so far (exercise plan 6); the bootstrap acts on each new one.
-        public int BigJumps { get; private set; }
-        public int BigKnees { get; private set; }
-        public int BigLanes { get; private set; }
         // When the last calibration finished (Tick time, -1 none) and whether tracking dropped or restarted since.
         public double CalibratedAt { get; private set; } = -1;
         public bool LostSinceCalibration { get; private set; } = true;
@@ -217,9 +213,6 @@ namespace Muhanok.Infrastructure
             calibrated = classifier.Calibrated;
             if (reading.JumpEdge) LastJumpTime = now;
             if (reading.KneeStep) LastKneeStepTime = now;
-            if (reading.BigJump) BigJumps++;
-            if (reading.BigKnee) BigKnees++;
-            if (reading.BigLane) BigLanes++;
             if (feedCommands && classifier.Status == PoseStatus.Tracking) commands.Feed(reading, now);
             else commands.Reset(reading.Lane);
         }

@@ -49,7 +49,7 @@ namespace Muhanok.Presentation
                 skin.Card(rect, Palette.A(Palette.Ground, .82f));
                 GUI.Label(rect, Model.ItemLabels[i], skin.Centered(16, FontStyle.Bold));
             }
-            if (session.Flow.State == GameFlowState.Running && data != null) { DrawPaceEdges(data.PacePressure); Strip.Draw(data.Race, data.HazardNear, Time.unscaledTime); DrawCoach(data.CoachText); }
+            if (session.Flow.State == GameFlowState.Running && data != null) { DrawPaceEdges(data.PacePressure); Strip.Draw(data.Race, data.HazardNear, Time.unscaledTime); }
             if (session.Flow.State == GameFlowState.Running)
             {
                 if (Model.ShowSiren) DrawSiren();
@@ -71,14 +71,6 @@ namespace Muhanok.Presentation
         }
         private static readonly string[] ForkArrows={"↖","↑","↗"};
         // Below the target cadence the screen edges redden with the police pressure (pulsing gently); nothing in the middle.
-        // Coach subtitle: above the notice line, short, in the encouragement colour.
-        public static readonly Rect CoachArea = new Rect(400, 528, 480, 48);
-        private void DrawCoach(string text)
-        {
-            if (string.IsNullOrEmpty(text)) return;
-            skin.Card(CoachArea, Palette.A(Palette.Ground, .85f));
-            GUI.color = Palette.Gold; GUI.Label(CoachArea, text, skin.Centered(24, FontStyle.Bold)); GUI.color = Color.white;
-        }
         private static Texture2D edgeV, edgeH;
         // A ramp from transparent to solid: vertical (rows) or horizontal (columns).
         private static Texture2D Ramp(bool vertical)

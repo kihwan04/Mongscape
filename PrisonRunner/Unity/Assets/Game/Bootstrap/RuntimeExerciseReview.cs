@@ -109,12 +109,6 @@ namespace Muhanok.Bootstrap
             yield return Shot("S3_05_Run_PacePressureEdges");
             game.Session.PacePressure = 0;
             race.Update(5000); yield return new WaitForSecondsRealtime(1.5f); yield return Shot("S3_06_Run_FirstPlace");
-            // Stage 4: coach subtitles (praise for a big jump; the pace line with the red edges).
-            game.CoachState.Reset(); game.CoachState.Tick(Time.realtimeSinceStartup, .1f, new Coach.Input { BigJump = true });
-            yield return new WaitForSecondsRealtime(.1f); ScreenCapture.CaptureScreenshot(Path.Combine(destination, "S4_01_Run_CoachPraise.png")); yield return new WaitForSecondsRealtime(2.5f);
-            game.Session.PacePressure = .5f; game.CoachState.Tick(Time.realtimeSinceStartup, .1f, new Coach.Input { Lagging = true });
-            yield return new WaitForSecondsRealtime(.1f); ScreenCapture.CaptureScreenshot(Path.Combine(destination, "S4_02_Run_CoachPace.png")); yield return new WaitForSecondsRealtime(.6f);
-            game.Session.PacePressure = 0;
             game.enabled = true;
             game.Session.Invincible = false; game.Session.ForceCatch();
             wait = Time.realtimeSinceStartup;

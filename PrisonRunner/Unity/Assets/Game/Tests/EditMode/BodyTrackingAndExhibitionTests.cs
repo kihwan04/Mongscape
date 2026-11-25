@@ -176,7 +176,7 @@ namespace Muhanok.Tests
             CollectionAssert.AreEqual(new[] { "lane-1", "lane0" }, Play(PlayStyle.UpperBody, t => new Body { Dx = In(t, .2, .8) ? -.10f : 0 }, 1.3));
             CollectionAssert.AreEqual(new[] { "jump" }, Play(PlayStyle.UpperBody, t => new Body { WristL = In(t, .2, .6) ? .08f : .6f, WristR = In(t, .2, .6) ? .08f : .6f }, 1.2));
             CollectionAssert.AreEqual(new[] { "crouch", "stand" }, Play(PlayStyle.UpperBody, t => new Body { Shoulder = In(t, .2, 1) ? .07f : 0 }, 1.4));
-            Assert.AreEqual(0, Play(PlayStyle.UpperBody, t => { int s = (int)(t / .3) % 2; bool on = In(t, .2, 1.8); return new Body { WristL = on ? (s == 0 ? .4f : .62f) : .6f, WristR = on ? (s == 1 ? .4f : .62f) : .6f }; }, 2.0).Count(e => e == "knee"), "Arm swings are steps; the stair exercise is the pull-down (exercise plan 6)");
+            Assert.AreEqual(5, Play(PlayStyle.UpperBody, t => { int s = (int)(t / .3) % 2; bool on = In(t, .2, 1.8); return new Body { WristL = on ? (s == 0 ? .4f : .62f) : .6f, WristR = on ? (s == 1 ? .4f : .62f) : .6f }; }, 2.0).Count(e => e == "knee"), "Big alternating pumps are knee steps");
         }
         [Test] public void SmallArmSwingsAreRunningNotKneeSteps()
         {

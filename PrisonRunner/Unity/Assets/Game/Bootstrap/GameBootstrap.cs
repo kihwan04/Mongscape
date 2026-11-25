@@ -49,11 +49,6 @@ namespace Muhanok.Bootstrap
         private bool cadenceRun;
         // The running ranking strip (exercise plan 10-2): this week's board of the play style, loaded once per run.
         private readonly RankRace race = new RankRace();
-        // Big movements (exercise plan 6) and the coach subtitles (plan 10).
-        private readonly Coach coach = new Coach();
-        private int seenBigJumps, seenBigKnees, seenBigLanes;
-        private bool wasDeep, wasCrouch;
-        private double bigUntil = -10, seenKneeStep = -10;
         private int raceTicket;
         // The account (member or guest) is the only source of the current player.
         public AccountSession Account { get; } = new AccountSession();
@@ -320,7 +315,7 @@ namespace Muhanok.Bootstrap
             Pose.Recalibrate(); runCalibrated = false; calibrationDoneAt = -1;
             yield return new WaitForSecondsRealtime(.25f);
             RouteSurface.UsePlan(Session.IsTutorial?TutorialCourse.Plan(Session.Config):new RoutePlan(Session.Config, seed));
-            Session.Reset(); moveTally.Reset(); pace.Reset(); ResetBigMoves(); keyboard.Clear(); poseInput.Clear(); hud.LoadingProgress=.42f;
+            Session.Reset(); moveTally.Reset(); pace.Reset(); keyboard.Clear(); poseInput.Clear(); hud.LoadingProgress=.42f;
             yield return new WaitForSecondsRealtime(.25f);
             Map.Reset(seed); Map.AnimateGates(Session.Runner.Z); hud.LoadingProgress=.78f;
             yield return new WaitForSecondsRealtime(.25f);
@@ -392,7 +387,6 @@ namespace Muhanok.Bootstrap
                 pace.Tick(dt, cadenceRun && !Session.IsTutorial && !Session.Runner.Riding && Pose.Tracking, Pose.StepsPerMinute,
                     Settings != null ? Settings.Motion : null, CadencePace.Target(Settings != null ? Settings.Motion : null));
                 Session.CadenceScale = pace.Scale; Session.PacePressure = pace.Pressure;
-                TickBigMoves(dt);
                 float previousZ = Session.Runner.Z;
                 Session.Tick(dt); race.Update(Session.Score.Score); Map.Tick(Session.Runner.Z); Hero.Apply(Session.Runner); Map.Evaluate(previousZ);
                 Map.AnimateGates(Session.Runner.Z);
@@ -401,7 +395,7 @@ namespace Muhanok.Bootstrap
                 int activity=clock-Pose.LastJumpTime<.65?1:Pose.Reading.Crouch?2:clock-Pose.LastKneeStepTime<.7?3:Pose.Reading.Lane!=0?4:0;
                 bool tracked=Pose.UsesCamera&&Pose.Tracking;
                 if(tracked) moveTally.Observe(clock,Pose.StepCount,Pose.LastJumpTime,Pose.Reading.Crouch,Pose.LastKneeStepTime,Pose.Reading.Lane,Session.Workout);
-                Session.Workout.TickIntensity(dt,Session.Flow.State==GameFlowState.Running,tracked,Pose.CadenceStage,moveTally.Moving(clock),clock<bigUntil,activity);
+                Session.Workout.TickIntensity(dt,Session.Flow.State==GameFlowState.Running,tracked,Pose.CadenceStage,moveTally.Moving(clock),false,activity);
                 runFade += dt; hud.Fade = Mathf.Clamp01(runFade * 2f);
                 if (dust != null && !dust.isPlaying) dust.Play();
                 if (Session.Runner.Stumbling && !previousStumble && hit != null) hit.Play();
@@ -480,7 +474,6 @@ namespace Muhanok.Bootstrap
         }
         internal HUDPresenter Hud => hud;
         internal RankRace Race => race;
-        internal Coach CoachState => coach;
         // Recordings go to <persistent data>/PoseRecordings; copy them (with filled-in labels) to Tools/QA/PoseRecordings/team.
         public static string PoseRecordingFolder => System.IO.Path.Combine(UnityEngine.Application.persistentDataPath, "PoseRecordings");
         private void TogglePoseRecording()
@@ -590,38 +583,6 @@ namespace Muhanok.Bootstrap
                 if(!saved){if(Account.Id==id)lastStatsFailed=true;return;}
                 RefreshMemberStats(reply=>{if(Account.Id!=id)return;lastStats=reply!=null&&reply.ok?reply:null;lastStatsFailed=lastStats==null;});
             });
-        }
-        private void ResetBigMoves()
-        {
-            coach.Reset(); seenBigJumps = Pose.BigJumps; seenBigKnees = Pose.BigKnees; seenBigLanes = Pose.BigLanes;
-            wasDeep = wasCrouch = false; bigUntil = -10; seenKneeStep = Pose.LastKneeStepTime;
-        }
-        // Each new big movement gets its in-game effect once (a coin when the matching hazard is close) and counts +1 MET for a
-        // second; the coach reacts to the depth and the pace. Keyboard play never has big movements.
-        private void TickBigMoves(float dt)
-        {
-            double clock = Time.realtimeSinceStartupAsDouble;
-            bool camera = Pose.UsesCamera && Pose.Tracking;
-            var reading = Pose.Reading; float z = Session.Runner.Z, ahead = Mathf.Max(8f, Session.CurrentSpeed * 1.5f);
-            bool bigJump = Pose.BigJumps > seenBigJumps, bigKnee = Pose.BigKnees > seenBigKnees, bigLane = Pose.BigLanes > seenBigLanes;
-            seenBigJumps = Pose.BigJumps; seenBigKnees = Pose.BigKnees; seenBigLanes = Pose.BigLanes;
-            bool kneeStep = Pose.LastKneeStepTime > seenKneeStep; seenKneeStep = Pose.LastKneeStepTime;
-            bool deep = camera && reading.CrouchDeep, crouch = camera && reading.Crouch, deepStart = deep && !wasDeep;
-            bool crouchStart = crouch && !wasCrouch, crouchEnd = !crouch && wasCrouch;
-            wasDeep = deep; wasCrouch = crouch;
-            if (!camera) return;
-            if (bigJump && Session.Big(RunSession.BigMove.Jump, Map.ActionAhead(HazardAction.Jump, z - 3, ahead + 3))) bigUntil = clock + 1;
-            if (deep) { Session.Runner.DeepSlide(); bigUntil = System.Math.Max(bigUntil, clock + .3); }
-            if (deepStart && Session.Big(RunSession.BigMove.Crouch, Map.ActionAhead(HazardAction.Crouch, z - 3, ahead + 3))) bigUntil = clock + 1;
-            if (bigKnee && Session.Big(RunSession.BigMove.Knee, false)) bigUntil = clock + 1;
-            if (bigLane && Session.Big(RunSession.BigMove.Lane, Map.ActionAhead(HazardAction.Dodge, z, ahead))) bigUntil = clock + 1;
-            if (Session.IsTutorial) return;
-            var line = coach.Tick(Time.realtimeSinceStartup, dt, new Coach.Input
-            {
-                Lagging = pace.Lagging, OnStairs = OnOrBeforeStairs(), KneeStep = kneeStep, BigKnee = bigKnee, CrouchStart = crouchStart, CrouchEnd = crouchEnd,
-                CrouchDeep = deep, DeepStart = deepStart, BigJump = bigJump, BigLane = bigLane, Sprinting = Pose.CadenceStage == CadenceStage.Sprint,
-            });
-            if (line != CoachLine.None) audioPlayer.Bonk();
         }
         // The ranking strip's rows: this week's member board (best per member, without the player's own row) and this PC's guest
         // runs of the week, or with "내 기록만" only the player's own runs on this PC. The live score is the HUD's.
@@ -822,7 +783,6 @@ namespace Muhanok.Bootstrap
         RankRace IHudData.Race => Session.IsTutorial || !playerRun ? null : race;
         bool IHudData.HazardNear => Session.Flow.State == GameFlowState.Running && Map.HazardAhead(Session.Runner.Z, Mathf.Max(8f, Session.CurrentSpeed * 1.2f));
         float IHudData.PacePressure => Session.PacePressure;
-        string IHudData.CoachText => Session.Flow.State == GameFlowState.Running && coach.Showing(Time.realtimeSinceStartup) ? Coach.Text(coach.Line, player.Style) : "";
 
         // A new member (or back to a guest) replaces the player and the face badge; coin or setting updates do not.
         private void AccountChanged()
