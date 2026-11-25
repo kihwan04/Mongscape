@@ -66,11 +66,12 @@ namespace Muhanok.Presentation
                 string season = board.SeasonLine;
                 if (season.Length > 0) skin.Text(new Rect(x + 262, 30, w - 262 - 170, 52), season, 15, Palette.Sand, TextAnchor.MiddleLeft, false, true);
                 else if (best.Length > 0) skin.Text(new Rect(x + 262, 30, 400, 52), best == RankingBoard.GuestBestNote ? best : "(" + best + ")", 18, Palette.Sand, TextAnchor.MiddleLeft, false, true);
+                // The first run of the new season is always a best; the badge says the season started instead.
                 if (board.NewBest || season.Length > 0)
                 {
                     var badge = new Rect(x + w - 150, 36, 150, 42);
                     skin.BorderBox(badge, Palette.Gold, Palette.Cream, 2);
-                    skin.Text(badge, board.NewBest ? RankingBoard.NewBestText : RankingBoard.NewSeasonText, board.NewBest ? 22 : 19, Palette.Outline, TextAnchor.MiddleCenter);
+                    skin.Text(badge, season.Length > 0 ? RankingBoard.NewSeasonText : RankingBoard.NewBestText, season.Length > 0 ? 19 : 22, Palette.Outline, TextAnchor.MiddleCenter);
                 }
                 // Run facts as label/value pairs in fixed columns.
                 for (int i = 0; i < summary.Count; i++)

@@ -166,7 +166,7 @@ namespace Muhanok.Presentation
                 // Best scores keep the previous season's record (the score formula changed and the ranking started anew) under the label.
                 string previous = i >= 2 ? ProfileForm.Previous(stats, i - 2) : "";
                 skin.Text(new Rect(r.x + 24, previous.Length > 0 ? y - 4 : y, 200, previous.Length > 0 ? 28 : 40), labels[i], 17, Palette.Sand, TextAnchor.MiddleLeft, false, true);
-                if (previous.Length > 0) skin.Text(new Rect(r.x + 24, y + 22, 220, 20), previous, 13, Palette.Muted, TextAnchor.MiddleLeft, false, true);
+                if (previous.Length > 0) skin.Text(new Rect(r.x + 24, y + 22, 220, 20), previous, 13, Palette.Sand, TextAnchor.MiddleLeft, false, true);
                 skin.Text(new Rect(r.xMax - 184, y, 160, 40), values[i], 22, Palette.Cream, TextAnchor.MiddleRight);
             }
         }
