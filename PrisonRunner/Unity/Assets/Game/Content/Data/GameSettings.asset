@@ -88,6 +88,7 @@ MonoBehaviour:
     JumpRise: 0.15
     HighKneeLift: 0.2
     StepLift: 0.06
+    StepBob: 0.012
     UpperLaneEnter: 0.75
     UpperLaneExit: 0.42
     UpperCrouchDrop: 0.35
@@ -95,7 +96,8 @@ MonoBehaviour:
     UpperHandsAboveNose: 0.2
     UpperLeanEnterDegrees: 12
     ArmPumpAmplitude: 0.6
-    ArmSwingAmplitude: 0.3
+    ArmSwingAmplitude: 0.5
+    ArmSwingElbow: 0.15
     LostSeconds: 2.5
     BaselineDrift: 0.01
   Render:

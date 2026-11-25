@@ -31,8 +31,8 @@ namespace Muhanok.Tests
             Assert.IsTrue(classifier.Calibrated);
             return classifier;
         }
-        // Running in place: one knee up per step, the body rising by bounce while it is up.
-        private static Body Pace(double t, double stepsPerMinute, float knee = .045f, float bounce = 0)
+        // Running in place: one knee up per step, the body rising by bounce while it is up (a step needs the body to bob).
+        private static Body Pace(double t, double stepsPerMinute, float knee = .045f, float bounce = .006f)
         {
             double phase = t * stepsPerMinute / 60; int step = (int)Math.Floor(phase);
             float lift = (float)Math.Sin(Math.PI * (phase - step));

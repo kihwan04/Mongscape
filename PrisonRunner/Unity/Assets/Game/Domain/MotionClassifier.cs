@@ -44,6 +44,10 @@ namespace Muhanok.Domain
         // Running bounce: the highest hip rise since the last step, and its running average over the steps (body units).
         private float stepPeakRise, bounce;
         private bool stepPeakValid, jumpedSinceStep;
+        // Full body: how far the hips and the shoulders went up and down since the last knee swap (body units). A step of
+        // running in place moves the whole body; knees bent in turn or heels raised while standing do not (QA 2026-11-25).
+        private float bodyRise, bobLow, bobHigh;
+        private bool bobValid, bodyRiseValid;
         // Calibration: when moving last restarted it, and the latest frame time.
         private double calibrationBrokeAt = -10, lastFrameTime;
         public PoseStatus Status { get; private set; } = PoseStatus.Searching;
@@ -87,7 +91,7 @@ namespace Muhanok.Domain
         {
             calibrated = false; samples = 0; smoothed = false; Reading.Clear(); airborne = hopping = handsUp = duckOnLoss = false; jumpBigDone = kneeBigDone = laneBigDone = pullUp = pullDownBig = false; dropRatio = 0; actionLockUntil = 0; laneCandidate = 0;
             crouchPendingSince = -1; crouchSince = -10; lastTrackTime = -1; laneLastTime = -1; lastKneeStep = -10; kneeSide = 0; kneeUpL = kneeUpR = false; pumpUntil = 0; stepSign = pumpSign = 0; StepsPerMinute = 0;
-            Array.Clear(stepTimes, 0, stepTimes.Length); stepIndex = 0; lastStep = -10; bounce = 0; stepPeakValid = jumpedSinceStep = false; calibrationBrokeAt = -10;
+            Array.Clear(stepTimes, 0, stepTimes.Length); stepIndex = 0; lastStep = -10; bounce = 0; stepPeakValid = jumpedSinceStep = bobValid = bodyRiseValid = false; calibrationBrokeAt = -10;
             Status = PoseStatus.Calibrating;
         }
 
@@ -255,6 +259,10 @@ namespace Muhanok.Domain
             bool kneesLevel = !KneesSeen || !ActionSeen(PoseJoint.LeftKnee) || !ActionSeen(PoseJoint.RightKnee) || float.IsNaN(bKneeL)
                 || Math.Abs(KneeLift(PoseJoint.LeftKnee, PoseJoint.LeftHip, bKneeL, scale) - KneeLift(PoseJoint.RightKnee, PoseJoint.RightHip, bKneeR, scale)) <= tuning.JumpKneeSymmetry;
             bool up = hipRise > jumpLine && shoulderRise > jumpLine * .8f && feetUp && kneesLevel;
+            // The body's rise: hips and shoulders together, lightly filtered so joint jitter does not read as a bounce.
+            bodyRise = bodyRiseValid ? bodyRise + ((hipRise + shoulderRise) * .5f - bodyRise) * .5f : (hipRise + shoulderRise) * .5f; bodyRiseValid = true;
+            if (!bobValid) { bobLow = bobHigh = bodyRise; bobValid = true; }
+            else { bobLow = Math.Min(bobLow, bodyRise); bobHigh = Math.Max(bobHigh, bodyRise); }
             if (airborne) jumpedSinceStep = true;
             else { stepPeakRise = stepPeakValid ? Math.Max(stepPeakRise, hipRise) : hipRise; stepPeakValid = true; }
             // Jump wins over a crouch that only just confirmed: the dip was the take-off. No refractory lock.
@@ -298,9 +306,16 @@ namespace Muhanok.Domain
                 float stepping = kneeSide < 0 ? liftL : liftR, thigh = (kneeSide < 0 ? bKneeL : bKneeR) / scale;
                 if (kneeSide != 0 && !kneeBigDone && now - lastKneeStep < KneeStepActiveSeconds && (kneeSide < 0 ? upL : upR) && stepping >= thigh * tuning.BigKneeHipRatio) { kneeBigDone = true; Reading.BigKnee = true; }
                 kneeUpL = upL; kneeUpR = upR;
-                // Alternating small lifts are running in place. Knees moving in the air are not steps.
+                // Alternating small lifts are running in place. Knees moving in the air are not steps, and neither are knees
+                // swapping while the hips and shoulders stay level (bent knees or raised heels standing still). On the stairs
+                // a slow knee raise barely moves the body, so there the knees alone count.
                 int sign = Math.Abs(diff) > tuning.StepLift ? Math.Sign(diff) : 0;
-                if (sign != 0 && sign != stepSign) { if (stepSign != 0 && !airborne) { RegisterStep(now); LearnBounce(); } stepSign = sign; }
+                if (sign != 0 && sign != stepSign)
+                {
+                    bool bounced = stairs || bobHigh - bobLow >= tuning.StepBob;
+                    if (stepSign != 0 && !airborne && bounced) { RegisterStep(now); LearnBounce(); }
+                    stepSign = sign; bobValid = false;
+                }
             }
             if (Reading.Lane == 0 && !airborne && !Reading.Crouch && now - lastKneeStep >= KneeStepActiveSeconds && Math.Abs(offset) < exit * .5f) Drift();
         }
@@ -372,8 +387,9 @@ namespace Muhanok.Domain
             if (stairs && wristsSeen)
             {
                 bool belowHead = py[PoseJoint.LeftWrist] > head && py[PoseJoint.RightWrist] > head;
-                if (hands && !pullUp) { pullUp = true; pullDownBig = false; EmitKneeStep(now); }
-                else if (pullUp && belowHead) { pullUp = false; pullDownBig = true; EmitKneeStep(now); }
+                // Each way is also a step of the cadence: on the stairs the pull-down replaces the arm swing (QA 2026-11-25 H2).
+                if (hands && !pullUp) { pullUp = true; pullDownBig = false; EmitKneeStep(now); RegisterStep(now); }
+                else if (pullUp && belowHead) { pullUp = false; pullDownBig = true; EmitKneeStep(now); RegisterStep(now); }
                 if (pullDownBig && py[PoseJoint.LeftWrist] > ShoulderY && py[PoseJoint.RightWrist] > ShoulderY) { pullDownBig = false; Reading.BigKnee = true; }
             }
             else pullUp = pullDownBig = false;
@@ -382,10 +398,14 @@ namespace Muhanok.Domain
             float headSize = !float.IsNaN(bNose) ? bSy - bNose : bScale * .8f;
             Reading.CrouchDeep = Reading.Crouch && headSize > 0 && ShoulderY - bSy >= headSize;
             // Alternating arm swings are the steps (running in place); the stair exercise is the pull-down above, so they never overlap.
+            // A swing moves the whole arm: wrists flicked with the elbows still are not steps (QA 2026-11-25).
             if (wristsSeen && !handsUp)
             {
                 float diff = (py[PoseJoint.LeftWrist] - py[PoseJoint.RightWrist]) / scale;
-                int sign = Math.Abs(diff) > tuning.ArmSwingAmplitude ? Math.Sign(diff) : 0;
+                bool elbowsSeen = ActionSeen(PoseJoint.LeftElbow) && ActionSeen(PoseJoint.RightElbow);
+                float elbowDiff = elbowsSeen ? (py[PoseJoint.LeftElbow] - py[PoseJoint.RightElbow]) / scale : diff;
+                bool wholeArm = Math.Sign(elbowDiff) == Math.Sign(diff) && Math.Abs(elbowDiff) >= tuning.ArmSwingElbow;
+                int sign = Math.Abs(diff) > tuning.ArmSwingAmplitude && wholeArm ? Math.Sign(diff) : 0;
                 if (sign != 0 && sign != pumpSign)
                 {
                     if (pumpSign != 0) { RegisterStep(now); pumpUntil = now + .8; }
