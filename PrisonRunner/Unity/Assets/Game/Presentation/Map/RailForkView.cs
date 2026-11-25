@@ -214,7 +214,18 @@ namespace Muhanok.Presentation.Map
         {
             if(observer==null)return;
             foreach(var lamp in lamps)lamp.enabled=Mathf.Abs(observer.transform.position.z-lamp.transform.position.z)<32&&Mathf.Abs(observer.transform.position.x-lamp.transform.position.x)<12;
+            // Each lantern hangs 1.1 m beside and 0.6 m above its branch's cart camera. Passing it, the lit glass filled the top
+            // left of the screen as a tall yellow bar (QA 2026-11-25 L14), so it hides while the camera is that close.
+            for(int i=0;i<lampGlass.Length;i++)
+            {
+                if(lampGlass[i]==null)continue;
+                if(glassRenderers[i]==null)glassRenderers[i]=lampGlass[i].GetComponent<Renderer>();
+                if(glassRenderers[i]!=null)glassRenderers[i].enabled=!TooClose(observer.transform.position,lampGlass[i].position);
+            }
         }
+        private readonly Renderer[] glassRenderers=new Renderer[3];
+        public const float LanternHideDistance=3.5f;
+        public static bool TooClose(Vector3 camera,Vector3 lantern)=>(camera-lantern).sqrMagnitude<LanternHideDistance*LanternHideDistance;
         public void Release()
         {
             if(environment!=null)environment.gameObject.SetActive(restoreEnvironment);

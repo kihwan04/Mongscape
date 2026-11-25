@@ -36,7 +36,8 @@ namespace Muhanok.Domain
             if (input.CrouchStart) deepThisCrouch = false;
             if (input.CrouchDeep) deepThisCrouch = true;
             CoachLine want = CoachLine.None;
-            if (input.Lagging) want = CoachLine.PaceUp;
+            // Never "faster" on the stairs: the stair exercise is slower than running and the pace rests there (QA 2026-11-25 H2).
+            if (input.Lagging && !input.OnStairs) want = CoachLine.PaceUp;
             if (input.OnStairs && input.KneeStep && !input.BigKnee && ++shallowKnees >= ShallowKnees && want == CoachLine.None) want = CoachLine.KneesHigher;
             if (input.CrouchEnd)
             {

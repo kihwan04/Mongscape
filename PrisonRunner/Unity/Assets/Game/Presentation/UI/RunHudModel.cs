@@ -118,8 +118,8 @@ namespace Muhanok.Presentation
             ShowStrikeCleared = running && now < strikeClearedUntil && !ShowStrike;
             if (session.Score.Coins != coins) { coins = session.Score.Coins; Coins = coins.ToString(); }
             CoinBoost = session.Items.IsActive(ItemKind.DoubleScore);
-            // Keyboard runs count no calories, so the goal card only shows for camera styles.
-            ShowWorkout = PlayStyleInfo.UsesCamera(style);
+            // Keyboard runs and the tutorial count no calories, so the goal card only shows for camera runs (QA 2026-11-25 L9).
+            ShowWorkout = PlayStyleInfo.UsesCamera(style) && !session.IsTutorial;
             int mode = ShowWorkout ? 2 : 0;
             GoalProgress = ShowWorkout ? (float)session.Workout.GoalProgress : 0;
             if (ShowWorkout)

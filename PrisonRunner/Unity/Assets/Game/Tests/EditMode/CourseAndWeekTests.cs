@@ -70,7 +70,7 @@ namespace Muhanok.Tests
             log.Add("other", wednesday, 9000, 9000, null);
             Assert.AreEqual(30, log.WeekModerateMinutes("m", wednesday), 1e-9);
             Assert.AreEqual(.2, log.WeekGoalProgress("m", wednesday), 1e-9);
-            Assert.AreEqual("주간 목표 30 / 150분", WorkoutReport.WeekGoal(30.9));
+            Assert.AreEqual("주간 중강도 30 / 150분", WorkoutReport.WeekGoal(30.9));
         }
 
         [Test] public void StreakNeedsTenMinutesADayAndPaysOnceADay()
@@ -94,6 +94,10 @@ namespace Muhanok.Tests
             Assert.AreEqual(ExerciseKind.Cardio, log.Recommend("", now));
             log.Add("", now, 100, 0, new double[] { 0, 0, 900, 0 });
             Assert.AreEqual(ExerciseKind.Balance, log.Recommend("", now));
+            // QA 2026-11-25 L8: a tie for the least (a new week, a first-time player) recommends nothing rather than strength.
+            Assert.AreEqual(ExerciseKind.Warmup, new ExerciseLog().Recommend("", now));
+            var tied = new ExerciseLog(); tied.Add("", now, 100, 0, new double[] { 0, 0, 0, 300 });
+            Assert.AreEqual(ExerciseKind.Warmup, tied.Recommend("", now), "Strength and cardio both at 0");
         }
 
         [Test] public void TodaysChallengeIsOneMapPerKstDayWithItsOwnBoard()

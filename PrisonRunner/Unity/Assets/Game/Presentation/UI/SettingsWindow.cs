@@ -15,6 +15,8 @@ namespace Muhanok.Presentation
         IHudData Hud { get; }
         void ApplySettings(bool save);
         void RefreshCamera();
+        // "달리는 중 랭킹: 내 기록만" is for members; guests on one PC have no own runs to tell apart (QA 2026-11-25 M4).
+        bool MemberSignedIn => true;
     }
 
     // UI Toolkit settings window. Layout and look live in Resources/MuhanokUI/SettingsWindow.uxml/.uss so the
@@ -154,6 +156,8 @@ namespace Muhanok.Presentation
             // The pose diagnostics switch only exists in developer mode.
             var diagnostics = root.Q<Toggle>("pose-diagnostics");
             if (diagnostics != null) diagnostics.style.display = host.Settings.DeveloperMode ? DisplayStyle.Flex : DisplayStyle.None;
+            var mine = root.Q<Toggle>("rank-strip-mine");
+            if (mine != null) mine.style.display = host.MemberSignedIn ? DisplayStyle.Flex : DisplayStyle.None;
             var camera = root.Q<DropdownField>("camera-device");
             if (camera != null)
             {

@@ -42,6 +42,8 @@ namespace Muhanok.Presentation
         // No camera or model (developer tests, a missing webcam): the camera and pace lessons pass at once instead of waiting forever.
         public Func<bool> NoCamera;
         public Func<float> StepsPerMinute, PaceScale, PacePressure;
+        // The camera sees the player now; while it does not, the police lesson never passes (QA 2026-11-25 L15).
+        public Func<bool> Tracking;
         public float RunCadence = 100f;
         // The demo window (character clip); null keeps it hidden.
         public TutorialDemo Demo;
@@ -84,7 +86,7 @@ namespace Muhanok.Presentation
             if (session.TutorialMisses > seenMisses)
             {
                 // A slip inside the chunk of a lesson already passed (an early jump landing on its crate) is forgiven.
-                if (runner.Z < forgiveUntilZ) seenMisses = session.TutorialMisses;
+                if (runner.Z < forgiveUntilZ || TutorialCourse.ForgivesStairMiss(Script, RouteSurface.SequenceAt(runner.Z))) seenMisses = session.TutorialMisses;
                 else { Miss(now); return; }
             }
             session.SpeedScale = 1;
@@ -123,7 +125,7 @@ namespace Muhanok.Presentation
                     float pressure = PacePressure?.Invoke() ?? 0;
                     if (pressure >= PoliceNear) policeCame = true;
                     Message = policeCame ? TutorialScript.PoliceAway : TutorialScript.Instruction(step, Script.Style);
-                    if (PacePressure == null || policeCame && pressure <= .02f) Next(now);
+                    if (PacePressure == null || policeCame && pressure <= .02f && (Tracking == null || Tracking())) Next(now);
                     return;
                 }
                 case TutorialPass.ObstaclePassed when step == TutorialStep.Banana:
@@ -328,6 +330,8 @@ namespace Muhanok.Presentation
             GUI.DrawTexture(new Rect(frame.x + 6, frame.y + 30, side, Mathf.Min(side, frame.height - 36)), texture, ScaleMode.ScaleAndCrop);
             if (follow) DrawJoints(new Rect(frame.xMax + 12, frame.y, 430, frame.height));
         }
+        // The joint comparison is on screen (the follow-along view of a step that has one), where the HUD notice would sit.
+        public bool ComparingJoints => Active && Script != null && !Script.Finished && Script.FollowAlong && Demo?.Texture != null && JointDemo.Compares(Script.Current);
         // After three misses: the reference stick figure doing the lesson next to the player's own joints, each with the
         // line the classifier uses (the player's from their calibration; green once crossed).
         private void DrawJoints(Rect panel)

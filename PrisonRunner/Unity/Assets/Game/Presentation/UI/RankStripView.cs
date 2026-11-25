@@ -48,20 +48,26 @@ namespace Muhanok.Presentation
             // The player's row slides up from one place lower while the effect plays; close to the next row it leans upward.
             float lift = effect ? (1 - Ease(t)) * RowHeight : 0;
             float lean = race.Close ? 4 + Mathf.Sin(now * 9) * 2 : 0;
-            for (int i = 0; i < rows.Count; i++)
+            // The player's row is drawn last, over the others; while it slides up, the row it passed (now just below) fades in
+            // under it, so the two rows' ranks and scores never print over each other (QA 2026-11-25 L13).
+            int mine = rows.IndexOf(-1);
+            for (int pass = 0; pass < rows.Count; pass++)
             {
+                int i = pass < rows.Count - 1 ? (pass < mine ? pass : pass + 1) : mine;
+                if (i < 0 || i >= rows.Count) continue;
                 int index = rows[i];
                 var r = new Rect(Area.x, Area.y + i * RowHeight, Area.width, RowHeight - 4);
                 bool me = index < 0;
                 if (me) r.y += lift - lean;
+                float fade = effect && !me && i == mine + 1 ? Ease(t) : 1f;
                 // The row just above the player trembles when the player is close.
                 bool next = !me && i + 1 < rows.Count && rows[i + 1] < 0;
                 if (next && race.Close) r.x += Mathf.Sin(now * 60) * 1.5f;
-                skin.Card(r, me ? Palette.A(Palette.Gold, alpha) : Palette.A(Palette.Ground, alpha * .85f));
+                skin.Card(r, me ? Palette.A(Palette.Gold, alpha) : Palette.A(Palette.Ground, alpha * .85f * fade));
                 int rank = me ? race.Rank : index + (index < race.Rank - 1 ? 1 : 2);
                 string name = me ? "나" : race.Others[index].Name;
                 int score = me ? race.Score : race.Others[index].Score;
-                GUI.color = me ? Palette.Outline : Palette.Cream;
+                GUI.color = me ? Palette.Outline : Palette.A(Palette.Cream, fade);
                 float pop = me && effect ? 1 + .45f * Mathf.Sin(Mathf.Clamp01(t * 1.6f) * Mathf.PI) : 1;
                 GUI.Label(new Rect(r.x + 8, r.y, 42, r.height), rank.ToString(Num), skin.Style(Mathf.RoundToInt(18 * pop), FontStyle.Bold));
                 GUI.Label(new Rect(r.x + 50, r.y, 120, r.height), (me ? "▶ " : "") + name, skin.Style(17, me ? FontStyle.Bold : FontStyle.Normal));

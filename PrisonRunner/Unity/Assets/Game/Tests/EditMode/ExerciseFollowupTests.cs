@@ -21,7 +21,8 @@ namespace Muhanok.Tests
             w.TickIntensity(10, true, true, CadenceStage.Sprint, true, false, 1);
             Assert.AreEqual(10, w.ActiveSeconds); Assert.AreEqual(10, w.MoveSeconds);
             Assert.AreEqual(IntensityMet.Move * 10, w.MetSeconds, 1e-9, "A jump moment counts at the motion MET, not the sprint MET");
-            Assert.AreEqual(0, w.StageSeconds(CadenceStage.Sprint)); Assert.AreEqual(0, w.ModerateSeconds);
+            Assert.AreEqual(0, w.StageSeconds(CadenceStage.Sprint));
+            Assert.AreEqual(10, w.ModerateSeconds, "A motion moment of a full body run counts toward the weekly goal (QA H1)");
             w.TickIntensity(4, true, true, CadenceStage.Standing, true, true, 2);
             Assert.AreEqual(IntensityMet.Move * 10 + (IntensityMet.Move + IntensityMet.BigMove) * 4, w.MetSeconds, 1e-9, "A deep crouch adds 1");
             w.TickIntensity(5, true, false, CadenceStage.Run, true, false, 1);
@@ -29,6 +30,7 @@ namespace Muhanok.Tests
             var upper = new WorkoutEstimate { CadenceCounts = false, StyleScale = IntensityMet.Scale(PlayStyle.UpperBody) };
             upper.TickIntensity(10, true, true, CadenceStage.Run, true, false, 1);
             Assert.AreEqual(IntensityMet.Move * .6 * 10, upper.MetSeconds, 1e-9);
+            Assert.AreEqual(0, upper.ModerateSeconds, "The upper body's moments are 3 MET, under moderate (QA M5)");
             w.Reset(); Assert.AreEqual(0, w.MoveSeconds); Assert.IsFalse(w.CadenceCounts, "Reset keeps the option");
         }
 

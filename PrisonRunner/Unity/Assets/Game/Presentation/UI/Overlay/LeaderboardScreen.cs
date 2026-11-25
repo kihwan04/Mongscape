@@ -40,7 +40,9 @@ namespace Muhanok.Presentation
             summary.Add(new KeyValuePair<string, string>("시간", RunHudModel.Clock(session.Elapsed)));
             summary.Add(new KeyValuePair<string, string>("거리", Dist(session.Score.Distance)));
             summary.Add(new KeyValuePair<string, string>("코인", "+" + session.Score.Coins.ToString(Num)));
-            summary.Add(new KeyValuePair<string, string>("최고 콤보", session.BestDodgeStreak.ToString(Num)));
+            // No combos in the exercise patch: a camera run shows its big movements instead (QA 2026-11-25 L11).
+            bool camera = PlayStyleInfo.UsesCamera(data?.Player?.Style ?? PlayStyle.Keyboard);
+            if (camera) summary.Add(new KeyValuePair<string, string>(WorkoutReport.BigMovesLabel, WorkoutReport.BigMoves(session)));
             guestName.Show(data);
             board.OpenResult(data, account);
         }
@@ -182,11 +184,22 @@ namespace Muhanok.Presentation
             }
             GUI.color = Palette.Gold; GUI.Label(new Rect(panel.x + 14, panel.y + 132, panel.width - 28, 22), WorkoutReport.WeekChange(stats), note); GUI.color = old;
         }
-        // Bottom of the week panel: the weekly goal bar (moderate minutes, this PC) and the streak with its coins.
+        // Bottom of the week panel: the weekly goal bar (moderate minutes) and the streak with its coins. A keyboard run is not
+        // counted at all (QA 2026-11-25 L10); a guest sees this run's moderate minutes only, no PC-wide week or streak (L3).
         void DrawGoal(IHudData data, Rect panel)
         {
             if (data == null) return;
+            if (!PlayStyleInfo.UsesCamera(data.Player?.Style ?? PlayStyle.Keyboard))
+            {
+                skin.Text(new Rect(panel.x + 14, panel.y + 160, panel.width - 28, 18), WorkoutReport.KeyboardWeekNote, 12, Palette.Sand, TextAnchor.MiddleLeft, false, true);
+                return;
+            }
             double minutes = data.WeekMinutes;
+            if (!board.MemberResult)
+            {
+                skin.Text(new Rect(panel.x + 14, panel.y + 160, panel.width - 28, 18), WorkoutReport.RunModerate(minutes), 12, Palette.Sand, TextAnchor.MiddleLeft, false, true);
+                return;
+            }
             skin.Text(new Rect(panel.x + 14, panel.y + 150, panel.width - 28, 18), WorkoutReport.WeekGoal(minutes), 12, Palette.Sand, TextAnchor.MiddleLeft, false, true);
             var track = new Rect(panel.x + 14, panel.y + 170, panel.width - 28, 6);
             skin.Box(track, Palette.A(Palette.Ground, .9f));

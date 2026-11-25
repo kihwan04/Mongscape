@@ -34,12 +34,18 @@ namespace Muhanok.Domain
         }
         public static float Target(MotionTuning tuning) => (tuning ?? new MotionTuning()).RunCadence - TargetBelowRun;
         // enabled: a camera run with "달리기 속도 조절" on, on foot. Off (keyboard, the option off, riding): base speed, no pace pressure.
-        public void Tick(float dt, bool enabled, float stepsPerMinute, MotionTuning tuning, float target)
+        public void Tick(float dt, bool enabled, float stepsPerMinute, MotionTuning tuning, float target) => Tick(dt, enabled, stepsPerMinute, tuning, target, true, false);
+        // tracked: the camera sees the player. While it does not, everything holds where it was (the last speed, the lag and the
+        // police), so stepping out of view is never better than standing still (QA 2026-11-25 M6).
+        // stairs: on or right before a stair chunk the pace rests: no slow-down below the running speed, no lag and the police
+        // fall back. The stair exercise (knee raises, the upper body's pull-down) is slower than running in place (QA H2).
+        public void Tick(float dt, bool enabled, float stepsPerMinute, MotionTuning tuning, float target, bool tracked, bool stairs)
         {
             if (dt <= 0 || float.IsNaN(dt)) return;
-            float goal = enabled ? Factor(stepsPerMinute, tuning) : Run;
+            if (enabled && !tracked) return;
+            float goal = !enabled ? Run : stairs ? Math.Max(Run, Factor(stepsPerMinute, tuning)) : Factor(stepsPerMinute, tuning);
             Scale = Scale < goal ? Math.Min(goal, Scale + ScaleRate * dt) : Math.Max(goal, Scale - ScaleRate * dt);
-            LagFor = enabled && stepsPerMinute < target ? LagFor + dt : 0;
+            LagFor = enabled && !stairs && stepsPerMinute < target ? LagFor + dt : 0;
             Pressure = Lagging ? Math.Min(MaxPressure, Pressure + PressureRise * dt) : Math.Max(0, Pressure - PressureFall * dt);
         }
         public void Reset() { Scale = 1f; LagFor = 0; Pressure = 0; }
