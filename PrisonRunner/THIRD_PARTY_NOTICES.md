@@ -31,3 +31,7 @@ The optional local identity service bundles OpenCV, NumPy, YuNet/SFace models an
 Docker 중앙 배포는 PostgreSQL 공식 이미지와 Psycopg 3를 사용합니다. 각 배포 패키지의 라이선스 원문을 따릅니다. 비밀번호 secret 파일과 실제 DB/백업은 소스 및 공개 ZIP에서 제외합니다.
 
 Black Han Sans 저작권·OFL 원문은 [로컬 라이선스](Unity/Assets/Game/Content/UI/Resources/MuhanokUI/BlackHanSans-OFL.txt)에 보존하며 Windows ZIP에도 함께 제공합니다.
+
+## MCP for Blender (개발 도구)
+
+Blender MCP 연결용 애드온 `Tools/BlenderMCP/addon.py`는 Siddharth Ahuja의 [MCP for Blender](https://github.com/ahujasid/mcp-for-blender)(옛 이름 blender-mcp) 커밋 `a5a8acf2c6ae44a73670e0caf34663f16456d645`의 원본을 수정 없이 넣은 것입니다. MIT 라이선스이며 원문은 [Tools/BlenderMCP/LICENSE](Tools/BlenderMCP/LICENSE)에 있습니다. MCP 서버는 PyPI `mcp-for-blender` 2.3.1을 `uvx`로 받아 실행하며 저장소에 넣지 않습니다. 개발용 도구일 뿐 게임 빌드에는 들어가지 않습니다.
