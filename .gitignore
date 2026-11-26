@@ -6,3 +6,7 @@
 /Builds/
 /Deliverables/
 *.log
+
+# Claude Code: personal settings and agent worktrees stay local
+.claude/settings.local.json
+.claude/worktrees/
